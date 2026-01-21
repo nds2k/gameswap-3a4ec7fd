@@ -1,17 +1,26 @@
-import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
@@ -130,17 +139,17 @@ const Settings = () => {
 
   const menuItems = [
     {
-      section: "Préférences",
+      section: t("settings.preferences"),
       items: [
-        { icon: Bell, label: "Notifications", toggle: true, value: notifications, onChange: setNotifications },
-        { icon: isDarkMode ? Moon : Sun, label: "Mode sombre", toggle: true, value: isDarkMode, onChange: handleDarkModeChange },
+        { icon: Bell, label: t("settings.notifications"), toggle: true, value: notifications, onChange: setNotifications },
+        { icon: isDarkMode ? Moon : Sun, label: t("settings.darkMode"), toggle: true, value: isDarkMode, onChange: handleDarkModeChange },
       ],
     },
     {
-      section: "Informations",
+      section: t("settings.info"),
       items: [
-        { icon: Scale, label: "Mentions légales", href: "/legal" },
-        { icon: HelpCircle, label: "Aide et FAQ", href: "/support" },
+        { icon: Scale, label: t("settings.legal"), href: "/legal" },
+        { icon: HelpCircle, label: t("settings.help"), href: "/support" },
       ],
     },
   ];
@@ -252,6 +261,30 @@ const Settings = () => {
             </div>
           </div>
 
+          {/* Language Selector */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
+              {t("settings.language")}
+            </h2>
+            <div className="bg-card rounded-2xl border border-border p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Globe className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">{t("settings.language")}</span>
+                </div>
+                <Select value={language} onValueChange={(value: "fr" | "en") => setLanguage(value)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                    <SelectItem value="en">🇬🇧 English</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
           {/* Save Button */}
           <Button
             variant="gameswap"
@@ -259,7 +292,7 @@ const Settings = () => {
             onClick={handleSaveProfile}
             disabled={saving}
           >
-            {saving ? "Sauvegarde..." : "Sauvegarder les modifications"}
+            {saving ? t("settings.saving") : t("settings.save")}
           </Button>
 
           {/* Menu Sections */}
@@ -328,7 +361,7 @@ const Settings = () => {
             className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-destructive/10 text-destructive font-semibold hover:bg-destructive/20 transition-colors"
           >
             <LogOut className="h-5 w-5" />
-            Se déconnecter
+            {t("settings.signOut")}
           </button>
         </div>
 

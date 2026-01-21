@@ -70,7 +70,7 @@ const Friends = () => {
           </TabsList>
 
           <TabsContent value="messages">
-            <MessagesTab />
+            <MessagesTab friends={friends} />
           </TabsContent>
 
           <TabsContent value="games">

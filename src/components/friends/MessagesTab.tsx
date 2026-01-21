@@ -1,4 +1,4 @@
-import { MessageCircle, Send, ArrowLeft, Users, Plus, Settings, Flag, AlertTriangle } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Users, Plus, Settings, Flag, AlertTriangle, UserPlus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { CreateGroupModal } from "@/components/messages/CreateGroupModal";
 import { GroupSettingsSheet } from "@/components/messages/GroupSettingsSheet";
 import { ReportMessageModal } from "@/components/messages/ReportMessageModal";
+import { StartConversationModal } from "@/components/friends/StartConversationModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { FriendWithProfile } from "@/hooks/useFriends";
 
 interface Message {
   id: string;
@@ -25,7 +27,11 @@ interface Message {
   };
 }
 
-export const MessagesTab = () => {
+interface MessagesTabProps {
+  friends?: FriendWithProfile[];
+}
+
+export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
   const { user } = useAuth();
   const {
     conversations,
@@ -43,6 +49,7 @@ export const MessagesTab = () => {
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [startConvoOpen, setStartConvoOpen] = useState(false);
   const [groupSettingsOpen, setGroupSettingsOpen] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportingMessage, setReportingMessage] = useState<{ id: string; senderId: string } | null>(null);
@@ -332,19 +339,29 @@ export const MessagesTab = () => {
   // Conversations list
   return (
     <div>
-      {/* Header with Create Group button */}
+      {/* Header with buttons */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-muted-foreground">
           {conversations.length} conversation{conversations.length !== 1 ? "s" : ""}
         </p>
-        <Button
-          variant="gameswap"
-          size="sm"
-          onClick={() => setCreateGroupOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Groupe
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setStartConvoOpen(true)}
+          >
+            <UserPlus className="h-4 w-4 mr-1" />
+            Nouvelle
+          </Button>
+          <Button
+            variant="gameswap"
+            size="sm"
+            onClick={() => setCreateGroupOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Groupe
+          </Button>
+        </div>
       </div>
 
       {/* Conversations */}
@@ -444,6 +461,17 @@ export const MessagesTab = () => {
         open={createGroupOpen}
         onOpenChange={setCreateGroupOpen}
         onSuccess={handleGroupCreated}
+      />
+
+      {/* Start Conversation Modal */}
+      <StartConversationModal
+        open={startConvoOpen}
+        onOpenChange={setStartConvoOpen}
+        friends={friends}
+        onConversationStarted={(convoId) => {
+          refreshConversations();
+          setSelectedConversationId(convoId);
+        }}
       />
     </div>
   );
