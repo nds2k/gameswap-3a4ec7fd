@@ -152,8 +152,20 @@ export const useMessages = () => {
           table: "messages",
           filter: `conversation_id=eq.${conversationId}`,
         },
-        (payload) => {
-          onNewMessage(payload.new as Message);
+        async (payload) => {
+          const newMsg = payload.new as Message;
+          
+          // Fetch sender profile for the new message
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("full_name, avatar_url")
+            .eq("user_id", newMsg.sender_id)
+            .single();
+          
+          onNewMessage({
+            ...newMsg,
+            sender: profileData || { full_name: null, avatar_url: null },
+          });
         }
       )
       .subscribe();
