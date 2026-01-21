@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, Map, MessageCircle, Bell } from "lucide-react";
+import { Settings, Map, Bell } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   DropdownMenu,
@@ -23,17 +23,6 @@ export const SettingsFab = () => {
           className="w-11 h-11 rounded-full bg-card shadow-lg border border-border flex items-center justify-center transition-all duration-200 hover:shadow-xl hover:scale-105 active:scale-95"
         >
           <Map className="h-5 w-5 text-muted-foreground" />
-        </Link>
-
-        {/* Messages button */}
-        <Link
-          to="/messages"
-          className="relative w-11 h-11 rounded-full bg-card shadow-lg border border-border flex items-center justify-center transition-all duration-200 hover:shadow-xl hover:scale-105 active:scale-95"
-        >
-          <MessageCircle className="h-5 w-5 text-muted-foreground" />
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-            2
-          </span>
         </Link>
 
         {/* Notifications */}
