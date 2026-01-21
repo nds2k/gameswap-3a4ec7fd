@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
 import JoinGroup from "./pages/JoinGroup";
 import Friends from "./pages/Friends";
+import MyGames from "./pages/MyGames";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const AppRoutes = () => {
       <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       <Route path="/join/:conversationId" element={<ProtectedRoute><JoinGroup /></ProtectedRoute>} />
       <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+      <Route path="/my-games" element={<ProtectedRoute><MyGames /></ProtectedRoute>} />
       <Route path="/legal" element={<Legal />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
