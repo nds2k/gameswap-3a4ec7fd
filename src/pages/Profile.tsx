@@ -4,12 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload, MapPin, Save, Loader2, User } from "lucide-react";
+import { Camera, Upload, Loader2, User, Plus, Settings } from "lucide-react";
+import { PostGameModal } from "@/components/games/PostGameModal";
+import { GameDetailModal } from "@/components/games/GameDetailModal";
+import { Link } from "react-router-dom";
 
 interface Profile {
   id: string;
@@ -17,9 +17,15 @@ interface Profile {
   full_name: string | null;
   username: string | null;
   avatar_url: string | null;
-  location_lat: number | null;
-  location_lng: number | null;
-  show_on_map: boolean | null;
+}
+
+interface Game {
+  id: string;
+  title: string;
+  image_url: string | null;
+  price: number | null;
+  game_type: string;
+  created_at: string;
 }
 
 const Profile = () => {
@@ -30,16 +36,11 @@ const Profile = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-
-  const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
-  const [showOnMap, setShowOnMap] = useState(true);
-  const [locationLat, setLocationLat] = useState<number | null>(null);
-  const [locationLng, setLocationLng] = useState<number | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [postModalOpen, setPostModalOpen] = useState(false);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -47,6 +48,7 @@ const Profile = () => {
       return;
     }
     fetchProfile();
+    fetchUserGames();
   }, [user, navigate]);
 
   const fetchProfile = async () => {
@@ -55,7 +57,7 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, user_id, full_name, username, avatar_url")
         .eq("user_id", user.id)
         .single();
 
@@ -65,22 +67,28 @@ const Profile = () => {
 
       if (data) {
         setProfile(data);
-        setFullName(data.full_name || "");
-        setUsername(data.username || "");
-        setShowOnMap(data.show_on_map ?? true);
-        setLocationLat(data.location_lat);
-        setLocationLng(data.location_lng);
-        setAvatarUrl(data.avatar_url);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger le profil",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserGames = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("games")
+        .select("id, title, image_url, price, game_type, created_at")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setGames(data || []);
+    } catch (error) {
+      console.error("Error fetching games:", error);
     }
   };
 
@@ -88,7 +96,6 @@ const Profile = () => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Erreur",
@@ -98,7 +105,6 @@ const Profile = () => {
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Erreur",
@@ -114,31 +120,28 @@ const Profile = () => {
       const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}/avatar.${fileExt}`;
 
-      // Delete old avatar if exists
       await supabase.storage.from("avatars").remove([fileName]);
 
-      // Upload new avatar
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(fileName);
 
       const newAvatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-      setAvatarUrl(newAvatarUrl);
 
-      // Update profile with new avatar URL
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: newAvatarUrl })
         .eq("user_id", user.id);
 
       if (updateError) throw updateError;
+
+      setProfile((prev) => prev ? { ...prev, avatar_url: newAvatarUrl } : null);
 
       toast({
         title: "Photo mise à jour",
@@ -156,74 +159,9 @@ const Profile = () => {
     }
   };
 
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      toast({
-        title: "Erreur",
-        description: "La géolocalisation n'est pas supportée par votre navigateur",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocationLat(position.coords.latitude);
-        setLocationLng(position.coords.longitude);
-        toast({
-          title: "Position détectée",
-          description: "Votre position a été mise à jour",
-        });
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible d'obtenir votre position",
-          variant: "destructive",
-        });
-      }
-    );
-  };
-
-  const handleSave = async () => {
-    if (!user) return;
-
-    setSaving(true);
-
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: fullName || null,
-          username: username || null,
-          show_on_map: showOnMap,
-          location_lat: locationLat,
-          location_lng: locationLng,
-        })
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Profil sauvegardé",
-        description: "Vos modifications ont été enregistrées",
-      });
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder le profil",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   if (loading) {
     return (
-      <MainLayout>
+      <MainLayout showSearch={false}>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -232,162 +170,135 @@ const Profile = () => {
   }
 
   return (
-    <MainLayout>
-      <div className="max-w-lg mx-auto space-y-6 pb-24">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Mon Profil</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Gérez vos informations personnelles
-          </p>
-        </div>
-
-        {/* Avatar Section */}
-        <div className="bg-card rounded-2xl border border-border p-6">
-          <Label className="text-sm font-medium mb-4 block">Photo de profil</Label>
-          
-          <div className="flex flex-col items-center gap-4">
-            <Avatar className="h-24 w-24 border-2 border-primary/20">
-              <AvatarImage src={avatarUrl || undefined} alt={fullName || "Avatar"} />
-              <AvatarFallback className="bg-primary/10 text-primary text-2xl">
-                {fullName?.[0]?.toUpperCase() || <User className="h-10 w-10" />}
+    <MainLayout showSearch={false}>
+      <div className="max-w-2xl mx-auto pb-24">
+        {/* Profile Header */}
+        <div className="flex flex-col items-center pt-6 pb-8">
+          <div className="relative">
+            <Avatar className="h-28 w-28 border-4 border-primary/20">
+              <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "Avatar"} />
+              <AvatarFallback className="bg-primary/10 text-primary text-3xl">
+                {profile?.full_name?.[0]?.toUpperCase() || <User className="h-12 w-12" />}
               </AvatarFallback>
             </Avatar>
-
-            <div className="flex gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="user"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-              >
-                {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-2" />
-                )}
-                Importer
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => cameraInputRef.current?.click()}
-                disabled={uploading}
-              >
-                <Camera className="h-4 w-4 mr-2" />
-                Photo
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Personal Info */}
-        <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
-          <h2 className="font-semibold">Informations</h2>
-          
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Nom complet</Label>
-            <Input
-              id="fullName"
-              placeholder="Votre nom"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="username">Nom d'utilisateur</Label>
-            <Input
-              id="username"
-              placeholder="@username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input
-              value={user?.email || ""}
-              disabled
-              className="bg-muted"
-            />
-            <p className="text-xs text-muted-foreground">
-              L'email ne peut pas être modifié
-            </p>
-          </div>
-        </div>
-
-        {/* Location Preferences */}
-        <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
-          <h2 className="font-semibold">Localisation</h2>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="showOnMap">Apparaître sur la carte</Label>
-              <p className="text-xs text-muted-foreground">
-                Les autres utilisateurs pourront vous trouver
-              </p>
-            </div>
-            <Switch
-              id="showOnMap"
-              checked={showOnMap}
-              onCheckedChange={setShowOnMap}
-            />
-          </div>
-
-          <div className="pt-2">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleGetLocation}
-            >
-              <MapPin className="h-4 w-4 mr-2" />
-              {locationLat && locationLng
-                ? "Mettre à jour ma position"
-                : "Détecter ma position"}
-            </Button>
             
-            {locationLat && locationLng && (
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                Position: {locationLat.toFixed(4)}, {locationLng.toFixed(4)}
-              </p>
-            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="user"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute bottom-0 right-0 w-9 h-9 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4" />
+              )}
+            </button>
           </div>
+
+          <h1 className="text-2xl font-bold mt-4">{profile?.full_name || "Utilisateur"}</h1>
+          {profile?.username && (
+            <p className="text-sm text-muted-foreground">@{profile.username}</p>
+          )}
+
+          <Link to="/settings" className="mt-4">
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Paramètres
+            </Button>
+          </Link>
         </div>
 
-        {/* Save Button */}
-        <Button
-          variant="gameswap"
-          className="w-full"
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        {/* User Posts */}
+        <div className="px-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Mes annonces</h2>
+            <Button variant="gameswap" size="sm" onClick={() => setPostModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Publier
+            </Button>
+          </div>
+
+          {games.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center bg-card rounded-2xl border border-border">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <span className="text-3xl">🎲</span>
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Aucune annonce</h3>
+              <p className="text-muted-foreground mb-4">Publiez votre premier jeu</p>
+              <Button variant="gameswap" onClick={() => setPostModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Publier un jeu
+              </Button>
+            </div>
           ) : (
-            <Save className="h-4 w-4 mr-2" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {games.map((game) => (
+                <div
+                  key={game.id}
+                  onClick={() => setSelectedGameId(game.id)}
+                  className="bg-card rounded-xl border border-border overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
+                >
+                  <div className="aspect-square overflow-hidden bg-muted">
+                    {game.image_url ? (
+                      <img
+                        src={game.image_url}
+                        alt={game.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-3xl">🎲</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <h3 className="font-medium text-sm truncate">{game.title}</h3>
+                    {game.game_type === "sale" && game.price != null && (
+                      <p className="text-primary font-semibold text-sm">{game.price}€</p>
+                    )}
+                    {game.game_type !== "sale" && (
+                      <span className="text-xs text-muted-foreground">
+                        {game.game_type === "trade" ? "Échange" : "Présentation"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-          Sauvegarder
-        </Button>
+        </div>
       </div>
+
+      <PostGameModal
+        open={postModalOpen}
+        onOpenChange={setPostModalOpen}
+        onSuccess={() => {
+          setPostModalOpen(false);
+          fetchUserGames();
+        }}
+      />
+
+      <GameDetailModal
+        gameId={selectedGameId}
+        open={!!selectedGameId}
+        onOpenChange={(open) => !open && setSelectedGameId(null)}
+      />
     </MainLayout>
   );
 };
