@@ -4,105 +4,14 @@ import { useWishlist } from "@/hooks/useWishlist";
 import { useGames, type Game } from "@/hooks/useGames";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 
-// Mock games for fallback
-const mockGames: Game[] = [
-  {
-    id: "mock-1",
-    title: "Catan",
-    price: 25,
-    game_type: "sale",
-    image_url: "https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=400",
-    owner_id: "",
-    condition: "Excellent",
-    description: null,
-    created_at: new Date().toISOString(),
-    status: "available",
-    view_count: 45,
-    owner: { full_name: "Marie", avatar_url: null },
-  },
-  {
-    id: "mock-2",
-    title: "Ticket to Ride",
-    price: 35,
-    game_type: "sale",
-    image_url: "https://images.unsplash.com/photo-1606503153255-59d7088e26c4?w=400",
-    owner_id: "",
-    condition: "Très bon",
-    description: null,
-    created_at: new Date().toISOString(),
-    status: "available",
-    view_count: 32,
-    owner: { full_name: "Pierre", avatar_url: null },
-  },
-  {
-    id: "mock-3",
-    title: "Pandemic",
-    price: 0,
-    game_type: "trade",
-    image_url: "https://images.unsplash.com/photo-1611371805429-8b5c1b2c34ba?w=400",
-    owner_id: "",
-    condition: "Bon",
-    description: null,
-    created_at: new Date().toISOString(),
-    status: "available",
-    view_count: 28,
-    owner: { full_name: "Sophie", avatar_url: null },
-  },
-  {
-    id: "mock-4",
-    title: "7 Wonders",
-    price: 30,
-    game_type: "sale",
-    image_url: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=400",
-    owner_id: "",
-    condition: "Comme neuf",
-    description: null,
-    created_at: new Date().toISOString(),
-    status: "available",
-    view_count: 56,
-    owner: { full_name: "Lucas", avatar_url: null },
-  },
-  {
-    id: "mock-5",
-    title: "Wingspan",
-    price: 0,
-    game_type: "showcase",
-    image_url: "https://images.unsplash.com/photo-1566694271453-390536dd1f0d?w=400",
-    owner_id: "",
-    condition: "Collection",
-    description: null,
-    created_at: new Date().toISOString(),
-    status: "available",
-    view_count: 89,
-    owner: { full_name: "Emma", avatar_url: null },
-  },
-  {
-    id: "mock-6",
-    title: "Azul",
-    price: 28,
-    game_type: "sale",
-    image_url: "https://images.unsplash.com/photo-1563941402830-3a422052096b?w=400",
-    owner_id: "",
-    condition: "Excellent",
-    description: null,
-    created_at: new Date().toISOString(),
-    status: "available",
-    view_count: 41,
-    owner: { full_name: "Hugo", avatar_url: null },
-  },
-];
-
 interface GameGridProps {
   searchQuery: string;
   filter: string;
 }
 
 export const GameGrid = ({ searchQuery, filter }: GameGridProps) => {
-  const { games: dbGames, loading } = useGames();
+  const { games, loading } = useGames();
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-
-  // Use DB games if available, otherwise fall back to mock games
-  const games = dbGames.length > 0 ? dbGames : mockGames;
 
   const filteredGames = games.filter((game) => {
     const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase());
