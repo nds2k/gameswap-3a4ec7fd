@@ -39,7 +39,7 @@ const Legal = () => {
               <h2 className="text-lg font-bold">Hébergement</h2>
             </div>
             <div className="space-y-2 text-muted-foreground">
-              <p><strong className="text-foreground">Hébergeur :</strong> Lovable Cloud</p>
+              <p><strong className="text-foreground">Hébergeur :</strong> Infrastructure Cloud Européenne</p>
               <p><strong className="text-foreground">Adresse :</strong> Services Cloud Européens</p>
               <p>L'application est hébergée sur une infrastructure sécurisée conforme aux normes européennes de protection des données.</p>
             </div>
