@@ -10,7 +10,7 @@ import Wishlist from "./pages/Wishlist";
 import Forum from "./pages/Forum";
 import Settings from "./pages/Settings";
 import MapPage from "./pages/MapPage";
-import Messages from "./pages/Messages";
+
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Legal from "./pages/Legal";
@@ -71,7 +71,7 @@ const AppRoutes = () => {
       <Route path="/forum" element={<ProtectedRoute><Forum /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
-      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+      <Route path="/messages" element={<Navigate to="/friends" replace />} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       <Route path="/join/:conversationId" element={<ProtectedRoute><JoinGroup /></ProtectedRoute>} />
