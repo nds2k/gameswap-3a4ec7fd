@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MessageSquare, Plus, ThumbsUp, MessageCircle, Loader2, Send, Filter, AlertTriangle, Trash2, Flag } from "lucide-react";
+import { MessageSquare, Plus, ThumbsUp, MessageCircle, Loader2, Send, Filter, AlertTriangle, Trash2, Flag, X } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -533,12 +533,26 @@ const Forum = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {posts.map((post) => (
+{posts.map((post) => (
               <div
                 key={post.id}
                 onClick={() => openPost(post)}
-                className="bg-card rounded-2xl border border-border p-4 cursor-pointer transition-all hover:shadow-md"
+                className="bg-card rounded-2xl border border-border p-4 cursor-pointer transition-all hover:shadow-md relative"
               >
+                {/* Delete X button in upper right - only for own posts */}
+                {user && post.author_id === user.id && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletePostId(post.id);
+                    }}
+                    className="absolute top-3 right-3 p-1 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+                    title="Supprimer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                
                 <div className="flex items-start gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={post.author?.avatar_url || undefined} />
@@ -546,7 +560,7 @@ const Forum = () => {
                       {post.author?.full_name?.[0]?.toUpperCase() || "?"}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-6">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium">{post.author?.full_name || "Anonyme"}</span>
                       <span className="text-xs text-muted-foreground">
@@ -577,18 +591,8 @@ const Forum = () => {
                         {post.replies_count || 0}
                       </span>
                       
-                      {/* Delete button - only for own posts */}
-                      {user && post.author_id === user.id ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletePostId(post.id);
-                          }}
-                          className="flex items-center gap-1 text-sm text-destructive hover:text-destructive/80 ml-auto"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      ) : user && post.author_id !== user.id && (
+                      {/* Report button - only for other users' posts */}
+                      {user && post.author_id !== user.id && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
