@@ -1,19 +1,48 @@
-import { Search, Plus, ChevronDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
 }
 
 export const Header = ({ onSearch }: HeaderProps) => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("user_id", user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setProfile(data);
+        });
+    }
+  }, [user]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "U";
+  const avatarLetter = displayName[0]?.toUpperCase() || "U";
+
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50">
       <div className="container flex items-center justify-between h-16 gap-4">
@@ -51,22 +80,48 @@ export const Header = ({ onSearch }: HeaderProps) => {
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-1 p-1 rounded-full hover:bg-muted transition-colors">
                 <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
-                  <span className="text-sm font-semibold text-primary">U</span>
+                  {profile?.avatar_url ? (
+                    <img 
+                      src={profile.avatar_url} 
+                      alt="" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-sm font-semibold text-primary">{avatarLetter}</span>
+                  )}
                 </div>
                 <ChevronDown className="h-4 w-4 text-muted-foreground hidden sm:block" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              <div className="px-2 py-1.5 text-sm font-medium truncate">
+                {displayName}
+              </div>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to="/profile">Mon profil</Link>
+                <Link to="/profile" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Mon profil
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/settings">Paramètres</Link>
+                <Link to="/settings" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Paramètres
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/legal">Mentions légales</Link>
+                <Link to="/legal" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Mentions légales
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleSignOut}
+                className="text-destructive focus:text-destructive flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
                 Se déconnecter
               </DropdownMenuItem>
             </DropdownMenuContent>
