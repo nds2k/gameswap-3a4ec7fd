@@ -1,11 +1,44 @@
 import { Settings as SettingsIcon, User, Bell, Shield, Palette, HelpCircle, LogOut, ChevronRight, Moon, Sun } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
+  const [showOnMap, setShowOnMap] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from("profiles")
+        .select("show_on_map")
+        .eq("user_id", user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setShowOnMap(data.show_on_map ?? true);
+        });
+    }
+  }, [user]);
+
+  const handleShowOnMapChange = async (value: boolean) => {
+    setShowOnMap(value);
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ show_on_map: value })
+        .eq("user_id", user.id);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
   const menuItems = [
     {
@@ -13,7 +46,7 @@ const Settings = () => {
       items: [
         { icon: User, label: "Modifier le profil", href: "/profile" },
         { icon: Bell, label: "Notifications", toggle: true, value: notifications, onChange: setNotifications },
-        { icon: Shield, label: "Confidentialité", href: "/privacy" },
+        { icon: Shield, label: "Visible sur la carte", toggle: true, value: showOnMap, onChange: handleShowOnMapChange },
       ],
     },
     {
@@ -107,7 +140,10 @@ const Settings = () => {
 
         {/* Sign Out */}
         <div className="mt-8">
-          <button className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-destructive/10 text-destructive font-semibold hover:bg-destructive/20 transition-colors">
+          <button 
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-destructive/10 text-destructive font-semibold hover:bg-destructive/20 transition-colors"
+          >
             <LogOut className="h-5 w-5" />
             Se déconnecter
           </button>
