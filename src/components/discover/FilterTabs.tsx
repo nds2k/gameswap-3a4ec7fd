@@ -1,16 +1,20 @@
+import { useLanguage } from "@/contexts/LanguageContext";
+
 interface FilterTabsProps {
   activeFilter: string;
   onFilterChange: (filter: string) => void;
 }
 
-const filters = [
-  { id: "all", label: "Tout" },
-  { id: "sale", label: "Vente" },
-  { id: "trade", label: "Échange" },
-  { id: "showcase", label: "Présentation" },
-];
-
 export const FilterTabs = ({ activeFilter, onFilterChange }: FilterTabsProps) => {
+  const { t } = useLanguage();
+
+  const filters = [
+    { id: "all", labelKey: "discover.all" },
+    { id: "sale", labelKey: "discover.sale" },
+    { id: "trade", labelKey: "discover.trade" },
+    { id: "showcase", labelKey: "discover.showcase" },
+  ];
+
   return (
     <div className="flex flex-wrap gap-2">
       {filters.map((filter) => (
@@ -23,7 +27,7 @@ export const FilterTabs = ({ activeFilter, onFilterChange }: FilterTabsProps) =>
               : "filter-pill-inactive"
           }`}
         >
-          {filter.label}
+          {t(filter.labelKey)}
         </button>
       ))}
     </div>

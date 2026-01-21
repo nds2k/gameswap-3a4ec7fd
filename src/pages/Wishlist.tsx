@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 
@@ -31,6 +32,7 @@ interface WishlistList {
 
 const Wishlist = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   
   const [wishlistItems, setWishlistItems] = useState<WishlistGame[]>([]);
@@ -80,7 +82,7 @@ const Wishlist = () => {
       // Extract unique lists
       const listCounts: Record<string, number> = {};
       data?.forEach((item) => {
-        const listName = item.list_name || "Non classé";
+        const listName = item.list_name || t("wishlist.uncategorized");
         listCounts[listName] = (listCounts[listName] || 0) + 1;
       });
 
@@ -99,13 +101,11 @@ const Wishlist = () => {
     setCreateListModalOpen(false);
     setNewListName("");
 
-    // Lists are created by assigning games to them, so just show success
     toast({
-      title: "Liste créée",
-      description: `La liste "${newListName}" a été créée`,
+      title: t("common.success"),
+      description: `${newListName} created`,
     });
 
-    // Add empty list to UI
     setLists((prev) => [...prev, { name: newListName.trim(), count: 0 }]);
   };
 
@@ -120,21 +120,21 @@ const Wishlist = () => {
         .from("wishlist")
         .update({ list_name: newName.trim() })
         .eq("user_id", user.id)
-        .eq("list_name", oldName === "Non classé" ? null : oldName);
+        .eq("list_name", oldName === t("wishlist.uncategorized") ? null : oldName);
 
       if (error) throw error;
 
       toast({
-        title: "Liste renommée",
-        description: `La liste a été renommée en "${newName}"`,
+        title: t("common.success"),
+        description: `List renamed to "${newName}"`,
       });
 
       fetchWishlist();
     } catch (error) {
       console.error("Error renaming list:", error);
       toast({
-        title: "Erreur",
-        description: "Impossible de renommer la liste",
+        title: t("common.error"),
+        description: "Could not rename list",
         variant: "destructive",
       });
     } finally {
@@ -155,8 +155,8 @@ const Wishlist = () => {
       if (error) throw error;
 
       toast({
-        title: "Jeu déplacé",
-        description: listName ? `Déplacé vers "${listName}"` : "Déplacé vers Non classé",
+        title: t("common.success"),
+        description: listName ? `Moved to "${listName}"` : `Moved to uncategorized`,
       });
 
       fetchWishlist();
@@ -180,8 +180,8 @@ const Wishlist = () => {
       setWishlistItems((prev) => prev.filter((item) => item.id !== itemId));
 
       toast({
-        title: "Retiré de la wishlist",
-        description: "Le jeu a été retiré de votre wishlist",
+        title: t("common.success"),
+        description: t("discover.removeFromWishlist"),
       });
 
       fetchWishlist();
@@ -191,7 +191,7 @@ const Wishlist = () => {
   };
 
   const filteredItems = selectedList
-    ? wishlistItems.filter((item) => (item.list_name || "Non classé") === selectedList)
+    ? wishlistItems.filter((item) => (item.list_name || t("wishlist.uncategorized")) === selectedList)
     : wishlistItems;
 
   return (
@@ -214,17 +214,17 @@ const Wishlist = () => {
             )}
             <div>
               <h1 className="text-2xl font-bold">
-                {selectedList || "Ma Wishlist"}
+                {selectedList || t("wishlist.title")}
               </h1>
               <p className="text-muted-foreground">
-                {filteredItems.length} jeu{filteredItems.length !== 1 ? "x" : ""} sauvegardé{filteredItems.length !== 1 ? "s" : ""}
+                {filteredItems.length} {filteredItems.length !== 1 ? t("profile.games") : "game"}
               </p>
             </div>
           </div>
           {!selectedList && (
             <Button variant="outline" size="sm" onClick={() => setCreateListModalOpen(true)}>
               <FolderPlus className="h-4 w-4 mr-1" />
-              Nouvelle liste
+              {t("group.create")}
             </Button>
           )}
         </div>
@@ -256,12 +256,12 @@ const Wishlist = () => {
                       <span className="font-medium truncate flex-1">{list.name}</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {list.count} jeu{list.count !== 1 ? "x" : ""}
+                      {list.count} {list.count !== 1 ? t("profile.games") : "game"}
                     </p>
                   </div>
                 )}
                 
-                {list.name !== "Non classé" && !editingList && (
+                {list.name !== t("wishlist.uncategorized") && !editingList && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="absolute top-2 right-2 w-8 h-8 rounded-full bg-muted/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -276,7 +276,7 @@ const Wishlist = () => {
                         }}
                       >
                         <Edit2 className="h-4 w-4 mr-2" />
-                        Renommer
+                        {t("profile.edit")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -297,10 +297,10 @@ const Wishlist = () => {
               <Heart className="h-10 w-10 text-muted-foreground" />
             </div>
             <h3 className="font-semibold text-lg mb-2">
-              {selectedList ? "Cette liste est vide" : "Votre wishlist est vide"}
+              {selectedList ? t("wishlist.empty") : t("wishlist.empty")}
             </h3>
             <p className="text-muted-foreground mb-4">
-              {selectedList ? "Déplacez des jeux dans cette liste" : "Explorez les jeux et ajoutez vos favoris"}
+              {selectedList ? t("wishlist.emptyDesc") : t("wishlist.emptyDesc")}
             </p>
           </div>
         ) : (
@@ -331,7 +331,7 @@ const Wishlist = () => {
                   onClick={() => item.game && setSelectedGameId(item.game.id)}
                   className="flex-1 min-w-0 cursor-pointer"
                 >
-                  <h3 className="font-bold text-lg">{item.game?.title || "Jeu supprimé"}</h3>
+                  <h3 className="font-bold text-lg">{item.game?.title || "Deleted game"}</h3>
                   {item.game?.game_type === "sale" && item.game?.price != null && (
                     <p className="text-primary font-semibold">{item.game.price}€</p>
                   )}
@@ -350,14 +350,14 @@ const Wishlist = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {lists
-                      .filter((l) => l.name !== (item.list_name || "Non classé"))
+                      .filter((l) => l.name !== (item.list_name || t("wishlist.uncategorized")))
                       .map((list) => (
                         <DropdownMenuItem
                           key={list.name}
-                          onClick={() => handleMoveToList(item.id, list.name === "Non classé" ? null : list.name)}
+                          onClick={() => handleMoveToList(item.id, list.name === t("wishlist.uncategorized") ? null : list.name)}
                         >
                           <Folder className="h-4 w-4 mr-2" />
-                          Déplacer vers {list.name}
+                          Move to {list.name}
                         </DropdownMenuItem>
                       ))}
                     <DropdownMenuItem
@@ -365,7 +365,7 @@ const Wishlist = () => {
                       className="text-destructive"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Retirer
+                      {t("common.delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -379,18 +379,18 @@ const Wishlist = () => {
       <Dialog open={createListModalOpen} onOpenChange={setCreateListModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nouvelle liste</DialogTitle>
+            <DialogTitle>{t("group.create")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <Input
-              placeholder="Nom de la liste"
+              placeholder={t("group.name")}
               value={newListName}
               onChange={(e) => setNewListName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreateList()}
             />
             <Button variant="gameswap" className="w-full" onClick={handleCreateList}>
               <Plus className="h-4 w-4 mr-2" />
-              Créer la liste
+              {t("group.create")}
             </Button>
           </div>
         </DialogContent>
