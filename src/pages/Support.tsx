@@ -77,7 +77,7 @@ const Support = () => {
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="font-medium">Contactez-nous</p>
-                <p className="text-sm text-muted-foreground">support@gameswap.app</p>
+                <p className="text-sm text-muted-foreground">gameswapcontact@gmail.com</p>
               </div>
             </div>
           </div>
