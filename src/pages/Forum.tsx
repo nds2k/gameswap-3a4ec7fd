@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MessageSquare, Plus, ThumbsUp, MessageCircle, Loader2, Send, Filter, AlertTriangle, Trash2 } from "lucide-react";
+import { MessageSquare, Plus, ThumbsUp, MessageCircle, Loader2, Send, Filter, AlertTriangle, Trash2, Flag } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const REPORT_REASONS = [
+  { value: "spam", label: "Spam" },
+  { value: "harassment", label: "Harcèlement" },
+  { value: "inappropriate", label: "Contenu inapproprié" },
+  { value: "illegal", label: "Contenu illégal" },
+  { value: "other", label: "Autre" },
+];
 
 interface ForumPost {
   id: string;
@@ -83,6 +92,14 @@ const Forum = () => {
   const [deletePostId, setDeletePostId] = useState<string | null>(null);
   const [deleteReplyId, setDeleteReplyId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // Report state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportContentType, setReportContentType] = useState<"post" | "reply">("post");
+  const [reportContentId, setReportContentId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDescription, setReportDescription] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   useEffect(() => {
     fetchPosts();
@@ -401,6 +418,54 @@ const Forum = () => {
     fetchReplies(post.id);
   };
 
+  const openReportModal = (contentType: "post" | "reply", contentId: string) => {
+    if (!user) {
+      toast({
+        title: "Connexion requise",
+        description: "Connectez-vous pour signaler du contenu",
+        variant: "destructive",
+      });
+      return;
+    }
+    setReportContentType(contentType);
+    setReportContentId(contentId);
+    setReportReason("");
+    setReportDescription("");
+    setReportModalOpen(true);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!user || !reportContentId || !reportReason) return;
+
+    setSubmittingReport(true);
+    try {
+      const { error } = await supabase.from("content_reports").insert({
+        reporter_id: user.id,
+        content_type: reportContentType,
+        content_id: reportContentId,
+        reason: reportReason,
+        description: reportDescription.trim() || null,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Signalement envoyé",
+        description: "Merci, nous examinerons ce contenu rapidement",
+      });
+      setReportModalOpen(false);
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'envoyer le signalement",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
   return (
     <MainLayout showSearch={false}>
       <div className="container py-6 pb-24">
@@ -513,7 +578,7 @@ const Forum = () => {
                       </span>
                       
                       {/* Delete button - only for own posts */}
-                      {user && post.author_id === user.id && (
+                      {user && post.author_id === user.id ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -522,6 +587,16 @@ const Forum = () => {
                           className="flex items-center gap-1 text-sm text-destructive hover:text-destructive/80 ml-auto"
                         >
                           <Trash2 className="h-4 w-4" />
+                        </button>
+                      ) : user && post.author_id !== user.id && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openReportModal("post", post.id);
+                          }}
+                          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground ml-auto"
+                        >
+                          <Flag className="h-4 w-4" />
                         </button>
                       )}
                     </div>
@@ -657,13 +732,20 @@ const Forum = () => {
                                 {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: fr })}
                               </span>
                               
-                              {/* Delete button - only for own replies */}
-                              {user && reply.author_id === user.id && (
+                              {/* Delete or Report button */}
+                              {user && reply.author_id === user.id ? (
                                 <button
                                   onClick={() => setDeleteReplyId(reply.id)}
                                   className="ml-auto text-destructive hover:text-destructive/80 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              ) : user && reply.author_id !== user.id && (
+                                <button
+                                  onClick={() => openReportModal("reply", reply.id)}
+                                  className="ml-auto text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Flag className="h-3.5 w-3.5" />
                                 </button>
                               )}
                             </div>
@@ -745,6 +827,69 @@ const Forum = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Report Modal */}
+      <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-destructive" />
+              Signaler ce contenu
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div>
+              <Label>Raison du signalement</Label>
+              <Select value={reportReason} onValueChange={setReportReason}>
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="Sélectionnez une raison" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REPORT_REASONS.map((reason) => (
+                    <SelectItem key={reason.value} value={reason.value}>
+                      {reason.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label>Détails (optionnel)</Label>
+              <Textarea
+                placeholder="Décrivez le problème..."
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+                rows={3}
+                className="mt-1.5"
+              />
+            </div>
+            
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setReportModalOpen(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleSubmitReport}
+                disabled={submittingReport || !reportReason}
+              >
+                {submittingReport ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Flag className="h-4 w-4 mr-2" />
+                )}
+                Signaler
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
