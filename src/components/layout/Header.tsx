@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,7 @@ interface HeaderProps {
 
 export const Header = ({ onSearch }: HeaderProps) => {
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
   const [postModalOpen, setPostModalOpen] = useState(false);
@@ -69,7 +71,7 @@ export const Header = ({ onSearch }: HeaderProps) => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Rechercher un jeu..."
+                placeholder={t("header.search")}
                 className="search-input pl-11"
                 onChange={(e) => onSearch?.(e.target.value)}
               />
@@ -85,7 +87,7 @@ export const Header = ({ onSearch }: HeaderProps) => {
               onClick={handlePublishClick}
             >
               <Plus className="h-4 w-4 mr-1" />
-              Publier
+              {t("header.publish")}
             </Button>
             <Button 
               variant="gameswap" 
@@ -123,19 +125,19 @@ export const Header = ({ onSearch }: HeaderProps) => {
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      Mon profil
+                      {t("header.profile")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/settings" className="flex items-center gap-2">
                       <Settings className="h-4 w-4" />
-                      Paramètres
+                      {t("header.settings")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/legal" className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
-                      Mentions légales
+                      {t("header.legal")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -144,7 +146,7 @@ export const Header = ({ onSearch }: HeaderProps) => {
                     className="text-destructive focus:text-destructive flex items-center gap-2"
                   >
                     <LogOut className="h-4 w-4" />
-                    Se déconnecter
+                    {t("header.signOut")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -156,7 +158,7 @@ export const Header = ({ onSearch }: HeaderProps) => {
                 className="gap-2"
               >
                 <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Connexion</span>
+                <span className="hidden sm:inline">{t("header.login")}</span>
               </Button>
             )}
           </div>

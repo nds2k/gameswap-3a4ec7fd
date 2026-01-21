@@ -1,19 +1,21 @@
 import { Compass, Heart, MessageSquare, User, Users } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-
-const navItems = [
-  { path: "/", icon: Compass, label: "Découvrir", requiresAuth: false },
-  { path: "/friends", icon: Users, label: "Amis", requiresAuth: true },
-  { path: "/wishlist", icon: Heart, label: "Wishlist", requiresAuth: true },
-  { path: "/forum", icon: MessageSquare, label: "Forum", requiresAuth: true },
-  { path: "/profile", icon: User, label: "Profil", requiresAuth: true },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { path: "/", icon: Compass, labelKey: "nav.discover", requiresAuth: false },
+    { path: "/friends", icon: Users, labelKey: "nav.friends", requiresAuth: true },
+    { path: "/wishlist", icon: Heart, labelKey: "nav.wishlist", requiresAuth: true },
+    { path: "/forum", icon: MessageSquare, labelKey: "nav.forum", requiresAuth: true },
+    { path: "/profile", icon: User, labelKey: "nav.profile", requiresAuth: true },
+  ];
 
   const handleNavClick = (e: React.MouseEvent, path: string, requiresAuth: boolean) => {
     if (requiresAuth && !user) {
@@ -36,7 +38,7 @@ export const BottomNav = () => {
             className={`nav-tab ${isActive ? "active" : ""}`}
           >
             <Icon className={`nav-icon h-6 w-6 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />
-            <span className="text-xs font-semibold">{item.label}</span>
+            <span className="text-xs font-semibold">{t(item.labelKey)}</span>
           </Link>
         );
       })}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, Map, Bell } from "lucide-react";
+import { Map, Settings, Bell } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   DropdownMenu,
@@ -9,10 +9,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NotificationsSidebar } from "@/components/notifications/NotificationsSidebar";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const SettingsFab = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { unreadCount } = useNotifications();
+  const { t } = useLanguage();
 
   return (
     <>
@@ -47,16 +49,16 @@ export const SettingsFab = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="left" className="w-48">
             <DropdownMenuItem asChild>
-              <Link to="/settings">Paramètres</Link>
+              <Link to="/settings">{t("header.settings")}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/profile">Mon profil</Link>
+              <Link to="/profile">{t("header.profile")}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/legal">Mentions légales</Link>
+              <Link to="/legal">{t("header.legal")}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/support">Support</Link>
+              <Link to="/support">{t("support.title")}</Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
