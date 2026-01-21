@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MessageSquare, Plus, ThumbsUp, MessageCircle, Loader2, Send, Filter, AlertTriangle } from "lucide-react";
+import { MessageSquare, Plus, ThumbsUp, MessageCircle, Loader2, Send, Filter, AlertTriangle, Trash2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,16 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ForumPost {
   id: string;
@@ -69,6 +79,10 @@ const Forum = () => {
   const [creatingPost, setCreatingPost] = useState(false);
   
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  
+  const [deletePostId, setDeletePostId] = useState<string | null>(null);
+  const [deleteReplyId, setDeleteReplyId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchPosts();
@@ -317,6 +331,71 @@ const Forum = () => {
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!user || !deletePostId) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("forum_posts")
+        .delete()
+        .eq("id", deletePostId)
+        .eq("author_id", user.id);
+
+      if (error) throw error;
+
+      setPosts((prev) => prev.filter((p) => p.id !== deletePostId));
+      if (selectedPost?.id === deletePostId) {
+        setSelectedPost(null);
+      }
+      toast({
+        title: "Message supprimé",
+        description: "Votre message a été supprimé avec succès",
+      });
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le message",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setDeletePostId(null);
+    }
+  };
+
+  const handleDeleteReply = async () => {
+    if (!user || !deleteReplyId || !selectedPost) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("forum_replies")
+        .delete()
+        .eq("id", deleteReplyId)
+        .eq("author_id", user.id);
+
+      if (error) throw error;
+
+      setReplies((prev) => prev.filter((r) => r.id !== deleteReplyId));
+      toast({
+        title: "Réponse supprimée",
+        description: "Votre réponse a été supprimée avec succès",
+      });
+    } catch (error) {
+      console.error("Error deleting reply:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la réponse",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteReplyId(null);
+    }
+  };
+
   const openPost = (post: ForumPost) => {
     setSelectedPost(post);
     fetchReplies(post.id);
@@ -432,6 +511,19 @@ const Forum = () => {
                         <MessageCircle className="h-4 w-4" />
                         {post.replies_count || 0}
                       </span>
+                      
+                      {/* Delete button - only for own posts */}
+                      {user && post.author_id === user.id && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletePostId(post.id);
+                          }}
+                          className="flex items-center gap-1 text-sm text-destructive hover:text-destructive/80 ml-auto"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -551,19 +643,29 @@ const Forum = () => {
                   ) : (
                     <div className="space-y-4">
                       {replies.map((reply) => (
-                        <div key={reply.id} className="flex items-start gap-3">
+                        <div key={reply.id} className="flex items-start gap-3 group">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={reply.author?.avatar_url || undefined} />
                             <AvatarFallback className="bg-primary/10 text-primary text-xs">
                               {reply.author?.full_name?.[0]?.toUpperCase() || "?"}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 bg-muted rounded-lg p-3">
+                          <div className="flex-1 bg-muted rounded-lg p-3 relative">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium text-sm">{reply.author?.full_name || "Anonyme"}</span>
                               <span className="text-xs text-muted-foreground">
                                 {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: fr })}
                               </span>
+                              
+                              {/* Delete button - only for own replies */}
+                              {user && reply.author_id === user.id && (
+                                <button
+                                  onClick={() => setDeleteReplyId(reply.id)}
+                                  className="ml-auto text-destructive hover:text-destructive/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                             </div>
                             <p className="text-sm">{reply.content}</p>
                           </div>
@@ -600,6 +702,49 @@ const Forum = () => {
           )}
         </DialogContent>
       </Dialog>
+      {/* Delete Post Confirmation Dialog */}
+      <AlertDialog open={!!deletePostId} onOpenChange={(open) => !open && setDeletePostId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce message ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le message et toutes ses réponses seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePost}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Suppression..." : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Reply Confirmation Dialog */}
+      <AlertDialog open={!!deleteReplyId} onOpenChange={(open) => !open && setDeleteReplyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette réponse ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La réponse sera définitivement supprimée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteReply}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Suppression..." : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
