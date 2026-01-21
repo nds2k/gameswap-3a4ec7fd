@@ -11,6 +11,9 @@ interface Message {
   message_type: string;
   read_at: string | null;
   created_at: string;
+  reactions?: Record<string, string[]>;
+  reply_to_id?: string | null;
+  image_url?: string | null;
   sender?: {
     full_name: string | null;
     avatar_url: string | null;
@@ -114,6 +117,7 @@ export const useMessages = () => {
               profile: profilesMap.get(p.user_id) || null,
             }));
 
+          const lastMessage = messages?.[0];
           return {
             id: conv.id,
             created_at: conv.created_at,
@@ -123,7 +127,12 @@ export const useMessages = () => {
             is_group: conv.is_group || false,
             created_by: conv.created_by,
             participants,
-            last_message: messages?.[0],
+            last_message: lastMessage ? {
+              ...lastMessage,
+              reactions: (lastMessage.reactions as Record<string, string[]>) || {},
+              reply_to_id: lastMessage.reply_to_id || null,
+              image_url: lastMessage.image_url || null,
+            } : undefined,
             unread_count: count || 0,
           };
         })
@@ -181,14 +190,21 @@ export const useMessages = () => {
     }
   }, [activeChannel]);
 
-  const sendMessage = async (conversationId: string, content: string) => {
+  const sendMessage = async (
+    conversationId: string, 
+    content: string, 
+    imageUrl?: string,
+    replyToId?: string
+  ) => {
     if (!user) return { error: new Error("Not authenticated") };
 
     const { error } = await supabase.from("messages").insert({
       conversation_id: conversationId,
       sender_id: user.id,
       content,
-      message_type: "text",
+      message_type: imageUrl ? "image" : "text",
+      image_url: imageUrl || null,
+      reply_to_id: replyToId || null,
     });
 
     if (!error) {
@@ -198,6 +214,39 @@ export const useMessages = () => {
         .update({ updated_at: new Date().toISOString() })
         .eq("id", conversationId);
     }
+
+    return { error };
+  };
+
+  const addReaction = async (messageId: string, emoji: string) => {
+    if (!user) return { error: new Error("Not authenticated") };
+
+    // Get current reactions
+    const { data: message, error: fetchError } = await supabase
+      .from("messages")
+      .select("reactions")
+      .eq("id", messageId)
+      .single();
+
+    if (fetchError) return { error: fetchError };
+
+    const reactions = (message?.reactions as Record<string, string[]>) || {};
+    const userReactions = reactions[emoji] || [];
+
+    // Toggle reaction
+    if (userReactions.includes(user.id)) {
+      reactions[emoji] = userReactions.filter(id => id !== user.id);
+      if (reactions[emoji].length === 0) {
+        delete reactions[emoji];
+      }
+    } else {
+      reactions[emoji] = [...userReactions, user.id];
+    }
+
+    const { error } = await supabase
+      .from("messages")
+      .update({ reactions })
+      .eq("id", messageId);
 
     return { error };
   };
@@ -311,5 +360,6 @@ export const useMessages = () => {
     markAsRead,
     subscribeToMessages,
     unsubscribe,
+    addReaction,
   };
 };
