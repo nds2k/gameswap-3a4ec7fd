@@ -308,6 +308,44 @@ export type Database = {
         }
         Relationships: []
       }
+      message_reports: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          message_id: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          message_id: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          message_id?: string
+          reason?: string
+          reported_user_id?: string
+          reporter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reports_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -385,6 +423,30 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      user_bans: {
+        Row: {
+          banned_until: string
+          created_at: string
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          banned_until: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          banned_until?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -500,6 +562,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_moderator: { Args: { _user_id: string }; Returns: boolean }
+      is_user_banned: { Args: { check_user_id: string }; Returns: boolean }
       is_username_available: {
         Args: { check_username: string }
         Returns: boolean

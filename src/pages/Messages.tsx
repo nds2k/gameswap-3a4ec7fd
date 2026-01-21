@@ -1,4 +1,4 @@
-import { MessageCircle, Send, ArrowLeft, Users, Plus, Settings } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Users, Plus, Settings, Flag, AlertTriangle } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +8,10 @@ import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { CreateGroupModal } from "@/components/messages/CreateGroupModal";
 import { GroupSettingsSheet } from "@/components/messages/GroupSettingsSheet";
+import { ReportMessageModal } from "@/components/messages/ReportMessageModal";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
@@ -44,6 +47,10 @@ const Messages = () => {
   const [sending, setSending] = useState(false);
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [groupSettingsOpen, setGroupSettingsOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportingMessage, setReportingMessage] = useState<{ id: string; senderId: string } | null>(null);
+  const [isBanned, setIsBanned] = useState(false);
+  const [bannedUntil, setBannedUntil] = useState<Date | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
@@ -70,6 +77,30 @@ const Messages = () => {
       subtitle: "En ligne",
     };
   };
+
+  // Check if user is banned
+  useEffect(() => {
+    const checkBan = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("user_bans")
+        .select("banned_until")
+        .eq("user_id", user.id)
+        .gt("banned_until", new Date().toISOString())
+        .order("banned_until", { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (data) {
+        setIsBanned(true);
+        setBannedUntil(new Date(data.banned_until));
+      } else {
+        setIsBanned(false);
+        setBannedUntil(null);
+      }
+    };
+    checkBan();
+  }, [user]);
 
   // Load messages when conversation is selected
   useEffect(() => {
@@ -107,6 +138,11 @@ const Messages = () => {
   const handleSend = async () => {
     if (!newMessage.trim() || !selectedConversationId) return;
 
+    if (isBanned && bannedUntil) {
+      toast.error(`Vous êtes banni jusqu'à ${bannedUntil.toLocaleTimeString("fr-FR")}`);
+      return;
+    }
+
     setSending(true);
     const { error } = await sendMessage(selectedConversationId, newMessage.trim());
 
@@ -114,6 +150,11 @@ const Messages = () => {
       setNewMessage("");
     }
     setSending(false);
+  };
+
+  const handleReport = (messageId: string, senderId: string) => {
+    setReportingMessage({ id: messageId, senderId });
+    setReportModalOpen(true);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -140,6 +181,18 @@ const Messages = () => {
     return (
       <MainLayout showSearch={false}>
         <div className="container py-4 max-w-2xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
+          {/* Ban warning */}
+          {isBanned && bannedUntil && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-xl flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0" />
+              <div className="text-sm">
+                <span className="font-medium text-destructive">Compte temporairement suspendu</span>
+                <p className="text-muted-foreground">
+                  Vous ne pouvez pas envoyer de messages jusqu'à {bannedUntil.toLocaleTimeString("fr-FR")}
+                </p>
+              </div>
+            </div>
+          )}
           {/* Chat Header */}
           <div className="flex items-center gap-3 pb-4 border-b border-border">
             <button
@@ -191,31 +244,43 @@ const Messages = () => {
                   return (
                     <div
                       key={msg.id}
-                      className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                      className={`flex ${isMe ? "justify-end" : "justify-start"} group`}
                     >
-                      <div
-                        className={`max-w-[80%] px-4 py-2 rounded-2xl ${
-                          isMe
-                            ? "bg-primary text-primary-foreground rounded-br-md"
-                            : "bg-muted rounded-bl-md"
-                        }`}
-                      >
-                        {isGroup && !isMe && msg.sender?.full_name && (
-                          <p className="text-xs font-semibold mb-1 text-primary">
-                            {msg.sender.full_name}
-                          </p>
-                        )}
-                        <p>{msg.content}</p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            isMe ? "text-primary-foreground/70" : "text-muted-foreground"
+                      <div className={`flex items-start gap-1 max-w-[80%] ${isMe ? "flex-row-reverse" : ""}`}>
+                        <div
+                          className={`px-4 py-2 rounded-2xl ${
+                            isMe
+                              ? "bg-primary text-primary-foreground rounded-br-md"
+                              : "bg-muted rounded-bl-md"
                           }`}
                         >
-                          {formatDistanceToNow(new Date(msg.created_at), {
-                            addSuffix: true,
-                            locale: fr,
-                          })}
-                        </p>
+                          {isGroup && !isMe && msg.sender?.full_name && (
+                            <p className="text-xs font-semibold mb-1 text-primary">
+                              {msg.sender.full_name}
+                            </p>
+                          )}
+                          <p>{msg.content}</p>
+                          <p
+                            className={`text-xs mt-1 ${
+                              isMe ? "text-primary-foreground/70" : "text-muted-foreground"
+                            }`}
+                          >
+                            {formatDistanceToNow(new Date(msg.created_at), {
+                              addSuffix: true,
+                              locale: fr,
+                            })}
+                          </p>
+                        </div>
+                        {/* Report button - only for other users' messages */}
+                        {!isMe && (
+                          <button
+                            onClick={() => handleReport(msg.id, msg.sender_id)}
+                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                            title="Signaler ce message"
+                          >
+                            <Flag className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -232,13 +297,13 @@ const Messages = () => {
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Écrivez un message..."
-              className="flex-1 bg-muted rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              disabled={sending}
+              placeholder={isBanned ? "Vous êtes temporairement suspendu..." : "Écrivez un message..."}
+              className="flex-1 bg-muted rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
+              disabled={sending || isBanned}
             />
             <button
               onClick={handleSend}
-              disabled={!newMessage.trim() || sending}
+              disabled={!newMessage.trim() || sending || isBanned}
               className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               <Send className="h-5 w-5" />
@@ -253,6 +318,19 @@ const Messages = () => {
             onOpenChange={setGroupSettingsOpen}
             conversationId={selectedConversationId}
             onLeaveGroup={handleLeaveGroup}
+          />
+        )}
+
+        {/* Report Message Modal */}
+        {reportingMessage && (
+          <ReportMessageModal
+            open={reportModalOpen}
+            onOpenChange={(open) => {
+              setReportModalOpen(open);
+              if (!open) setReportingMessage(null);
+            }}
+            messageId={reportingMessage.id}
+            reportedUserId={reportingMessage.senderId}
           />
         )}
       </MainLayout>
