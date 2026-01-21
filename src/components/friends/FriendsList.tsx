@@ -6,6 +6,16 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface FriendsListProps {
   friends: FriendWithProfile[];
@@ -17,6 +27,7 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
   const navigate = useNavigate();
   const { user } = useAuth();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [friendToRemove, setFriendToRemove] = useState<FriendWithProfile | null>(null);
 
   const handleMessage = async (friendUserId: string) => {
     if (!user) return;
@@ -76,10 +87,12 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
     }
   };
 
-  const handleRemove = async (friendshipId: string) => {
-    setActionLoading(friendshipId);
-    await onRemove(friendshipId);
+  const handleConfirmRemove = async () => {
+    if (!friendToRemove) return;
+    setActionLoading(friendToRemove.id);
+    await onRemove(friendToRemove.id);
     setActionLoading(null);
+    setFriendToRemove(null);
   };
 
   if (loading) {
@@ -102,55 +115,81 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
   }
 
   return (
-    <div className="space-y-3">
-      {friends.map((friendship) => (
-        <div
-          key={friendship.id}
-          className="flex items-center justify-between p-4 bg-card rounded-xl border border-border"
-        >
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={friendship.friend.avatar_url || undefined} />
-              <AvatarFallback>
-                {friendship.friend.full_name?.[0] || friendship.friend.username?.[0] || "?"}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-medium">{friendship.friend.full_name || "Utilisateur"}</p>
-              {friendship.friend.username && (
-                <p className="text-sm text-muted-foreground">@{friendship.friend.username}</p>
-              )}
+    <>
+      <div className="space-y-3">
+        {friends.map((friendship) => (
+          <div
+            key={friendship.id}
+            className="flex items-center justify-between p-4 bg-card rounded-xl border border-border"
+          >
+            <div className="flex items-center gap-3">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={friendship.friend.avatar_url || undefined} />
+                <AvatarFallback>
+                  {friendship.friend.full_name?.[0] || friendship.friend.username?.[0] || "?"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium">{friendship.friend.full_name || "Utilisateur"}</p>
+                {friendship.friend.username && (
+                  <p className="text-sm text-muted-foreground">@{friendship.friend.username}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleMessage(friendship.friend.user_id)}
+                disabled={actionLoading === friendship.friend.user_id}
+              >
+                {actionLoading === friendship.friend.user_id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageSquare className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFriendToRemove(friendship)}
+                disabled={actionLoading === friendship.id}
+                className="text-destructive hover:text-destructive"
+              >
+                {actionLoading === friendship.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserMinus className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleMessage(friendship.friend.user_id)}
-              disabled={actionLoading === friendship.friend.user_id}
+        ))}
+      </div>
+
+      <AlertDialog open={!!friendToRemove} onOpenChange={(open) => !open && setFriendToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet ami ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir retirer{" "}
+              <span className="font-semibold">
+                {friendToRemove?.friend.full_name || friendToRemove?.friend.username || "cet utilisateur"}
+              </span>{" "}
+              de votre liste d'amis ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemove}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {actionLoading === friendship.friend.user_id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MessageSquare className="h-4 w-4" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleRemove(friendship.id)}
-              disabled={actionLoading === friendship.id}
-              className="text-destructive hover:text-destructive"
-            >
-              {actionLoading === friendship.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <UserMinus className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
-      ))}
-    </div>
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
