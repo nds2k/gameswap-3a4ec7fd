@@ -164,6 +164,7 @@ const MapPage = () => {
         {/* Map */}
         <div className="relative bg-card rounded-2xl border border-border overflow-hidden h-[60vh] mb-6">
           <MapContainer
+            key={`map-${center.lat}-${center.lng}`}
             center={[center.lat, center.lng]}
             zoom={13}
             style={{ height: "100%", width: "100%", borderRadius: "1rem" }}
