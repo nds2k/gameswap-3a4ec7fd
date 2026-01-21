@@ -1,10 +1,14 @@
-import { MessageCircle, Send, ArrowLeft } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Users, Plus, Settings } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { CreateGroupModal } from "@/components/messages/CreateGroupModal";
+import { GroupSettingsSheet } from "@/components/messages/GroupSettingsSheet";
+import { useNavigate } from "react-router-dom";
 
 interface Message {
   id: string;
@@ -22,6 +26,7 @@ interface Message {
 
 const Messages = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const {
     conversations,
     loading,
@@ -30,18 +35,41 @@ const Messages = () => {
     markAsRead,
     subscribeToMessages,
     unsubscribe,
+    refreshConversations,
   } = useMessages();
 
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [groupSettingsOpen, setGroupSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
+  const isGroup = selectedConversation?.is_group;
   const otherParticipant = selectedConversation?.participants.find(
     (p) => p.user_id !== user?.id
   );
+
+  // Get display info for conversation
+  const getConversationDisplay = (conversation: typeof conversations[0]) => {
+    if (conversation.is_group) {
+      return {
+        name: conversation.name || "Groupe",
+        image: conversation.image_url,
+        initials: (conversation.name || "G").charAt(0).toUpperCase(),
+        subtitle: `${conversation.participants.length} membres`,
+      };
+    }
+    const other = conversation.participants.find((p) => p.user_id !== user?.id);
+    return {
+      name: other?.profile?.full_name || "Utilisateur",
+      image: other?.profile?.avatar_url,
+      initials: (other?.profile?.full_name || "?").charAt(0).toUpperCase(),
+      subtitle: "En ligne",
+    };
+  };
 
   // Load messages when conversation is selected
   useEffect(() => {
@@ -84,7 +112,6 @@ const Messages = () => {
 
     if (!error) {
       setNewMessage("");
-      // Message will be added via real-time subscription
     }
     setSending(false);
   };
@@ -96,8 +123,20 @@ const Messages = () => {
     }
   };
 
+  const handleGroupCreated = (conversationId: string) => {
+    refreshConversations();
+    setSelectedConversationId(conversationId);
+  };
+
+  const handleLeaveGroup = () => {
+    setSelectedConversationId(null);
+    refreshConversations();
+  };
+
   // Chat view
   if (selectedConversationId && selectedConversation) {
+    const display = getConversationDisplay(selectedConversation);
+
     return (
       <MainLayout showSearch={false}>
         <div className="container py-4 max-w-2xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
@@ -113,22 +152,30 @@ const Messages = () => {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
-              {otherParticipant?.profile?.avatar_url ? (
+              {display.image ? (
                 <img
-                  src={otherParticipant.profile.avatar_url}
+                  src={display.image}
                   alt=""
                   className="w-full h-full object-cover"
                 />
+              ) : isGroup ? (
+                <Users className="h-5 w-5 text-primary" />
               ) : (
-                <span className="font-bold text-primary">
-                  {otherParticipant?.profile?.full_name?.[0]?.toUpperCase() || "?"}
-                </span>
+                <span className="font-bold text-primary">{display.initials}</span>
               )}
             </div>
-            <div>
-              <h2 className="font-bold">{otherParticipant?.profile?.full_name || "Utilisateur"}</h2>
-              <p className="text-sm text-muted-foreground">En ligne</p>
+            <div className="flex-1">
+              <h2 className="font-bold">{display.name}</h2>
+              <p className="text-sm text-muted-foreground">{display.subtitle}</p>
             </div>
+            {isGroup && (
+              <button
+                onClick={() => setGroupSettingsOpen(true)}
+                className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
+            )}
           </div>
 
           {/* Messages */}
@@ -153,6 +200,11 @@ const Messages = () => {
                             : "bg-muted rounded-bl-md"
                         }`}
                       >
+                        {isGroup && !isMe && msg.sender?.full_name && (
+                          <p className="text-xs font-semibold mb-1 text-primary">
+                            {msg.sender.full_name}
+                          </p>
+                        )}
                         <p>{msg.content}</p>
                         <p
                           className={`text-xs mt-1 ${
@@ -193,6 +245,16 @@ const Messages = () => {
             </button>
           </div>
         </div>
+
+        {/* Group Settings Sheet */}
+        {isGroup && (
+          <GroupSettingsSheet
+            open={groupSettingsOpen}
+            onOpenChange={setGroupSettingsOpen}
+            conversationId={selectedConversationId}
+            onLeaveGroup={handleLeaveGroup}
+          />
+        )}
       </MainLayout>
     );
   }
@@ -202,16 +264,26 @@ const Messages = () => {
     <MainLayout showSearch={false}>
       <div className="container py-6 max-w-2xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <MessageCircle className="h-6 w-6 text-primary" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <MessageCircle className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Messages</h1>
+              <p className="text-muted-foreground">
+                {conversations.length} conversation{conversations.length !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Messages</h1>
-            <p className="text-muted-foreground">
-              {conversations.length} conversation{conversations.length !== 1 ? "s" : ""}
-            </p>
-          </div>
+          <Button
+            variant="gameswap"
+            size="sm"
+            onClick={() => setCreateGroupOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Groupe
+          </Button>
         </div>
 
         {/* Conversations */}
@@ -238,16 +310,18 @@ const Messages = () => {
               <MessageCircle className="h-10 w-10 text-muted-foreground" />
             </div>
             <h3 className="font-semibold text-lg mb-2">Aucune conversation</h3>
-            <p className="text-muted-foreground">
-              Contactez un vendeur pour démarrer une conversation
+            <p className="text-muted-foreground mb-4">
+              Contactez un vendeur ou créez un groupe
             </p>
+            <Button variant="gameswap" onClick={() => setCreateGroupOpen(true)}>
+              <Users className="h-4 w-4 mr-2" />
+              Créer un groupe
+            </Button>
           </div>
         ) : (
           <div className="space-y-2 animate-fade-in">
             {conversations.map((conversation) => {
-              const other = conversation.participants.find(
-                (p) => p.user_id !== user?.id
-              );
+              const display = getConversationDisplay(conversation);
 
               return (
                 <button
@@ -257,16 +331,16 @@ const Messages = () => {
                 >
                   <div className="relative">
                     <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
-                      {other?.profile?.avatar_url ? (
+                      {display.image ? (
                         <img
-                          src={other.profile.avatar_url}
+                          src={display.image}
                           alt=""
                           className="w-full h-full object-cover"
                         />
+                      ) : conversation.is_group ? (
+                        <Users className="h-5 w-5 text-primary" />
                       ) : (
-                        <span className="font-bold text-primary">
-                          {other?.profile?.full_name?.[0]?.toUpperCase() || "?"}
-                        </span>
+                        <span className="font-bold text-primary">{display.initials}</span>
                       )}
                     </div>
                     {conversation.unread_count > 0 && (
@@ -277,9 +351,14 @@ const Messages = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold">
-                        {other?.profile?.full_name || "Utilisateur"}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{display.name}</h3>
+                        {conversation.is_group && (
+                          <span className="px-1.5 py-0.5 text-xs bg-primary/10 text-primary rounded">
+                            Groupe
+                          </span>
+                        )}
+                      </div>
                       {conversation.last_message && (
                         <span className="text-xs text-muted-foreground">
                           {formatDistanceToNow(
@@ -299,6 +378,13 @@ const Messages = () => {
           </div>
         )}
       </div>
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        open={createGroupOpen}
+        onOpenChange={setCreateGroupOpen}
+        onSuccess={handleGroupCreated}
+      />
     </MainLayout>
   );
 };

@@ -21,6 +21,10 @@ interface Conversation {
   id: string;
   created_at: string;
   updated_at: string;
+  name: string | null;
+  image_url: string | null;
+  is_group: boolean;
+  created_by: string | null;
   participants: {
     user_id: string;
     profile: {
@@ -58,10 +62,10 @@ export const useMessages = () => {
         return;
       }
 
-      // Get conversation details with participants
+      // Get conversation details with participants (including new group fields)
       const { data: convData, error: convError } = await supabase
         .from("conversations")
-        .select("*")
+        .select("id, created_at, updated_at, name, image_url, is_group, created_by")
         .in("id", conversationIds)
         .order("updated_at", { ascending: false });
 
@@ -111,7 +115,13 @@ export const useMessages = () => {
             }));
 
           return {
-            ...conv,
+            id: conv.id,
+            created_at: conv.created_at,
+            updated_at: conv.updated_at,
+            name: conv.name,
+            image_url: conv.image_url,
+            is_group: conv.is_group || false,
+            created_by: conv.created_by,
             participants,
             last_message: messages?.[0],
             unread_count: count || 0,
@@ -126,6 +136,10 @@ export const useMessages = () => {
       setLoading(false);
     }
   }, [user]);
+
+  const refreshConversations = useCallback(() => {
+    fetchConversations();
+  }, [fetchConversations]);
 
   const subscribeToMessages = useCallback((conversationId: string, onNewMessage: (message: Message) => void) => {
     const channel = supabase
@@ -207,7 +221,7 @@ export const useMessages = () => {
   const createConversation = async (otherUserId: string) => {
     if (!user) return { data: null, error: new Error("Not authenticated") };
 
-    // Check if conversation already exists
+    // Check if conversation already exists (only for 1-on-1 conversations)
     const { data: existingParticipants } = await supabase
       .from("conversation_participants")
       .select("conversation_id")
@@ -216,22 +230,33 @@ export const useMessages = () => {
     const myConvIds = existingParticipants?.map((p) => p.conversation_id) || [];
 
     if (myConvIds.length > 0) {
-      const { data: otherParticipants } = await supabase
-        .from("conversation_participants")
-        .select("conversation_id")
-        .eq("user_id", otherUserId)
-        .in("conversation_id", myConvIds);
+      // Get non-group conversations
+      const { data: nonGroupConvs } = await supabase
+        .from("conversations")
+        .select("id")
+        .in("id", myConvIds)
+        .or("is_group.is.null,is_group.eq.false");
 
-      if (otherParticipants && otherParticipants.length > 0) {
-        // Conversation exists
-        return { data: { id: otherParticipants[0].conversation_id }, error: null };
+      const nonGroupIds = nonGroupConvs?.map((c) => c.id) || [];
+
+      if (nonGroupIds.length > 0) {
+        const { data: otherParticipants } = await supabase
+          .from("conversation_participants")
+          .select("conversation_id")
+          .eq("user_id", otherUserId)
+          .in("conversation_id", nonGroupIds);
+
+        if (otherParticipants && otherParticipants.length > 0) {
+          // Conversation exists
+          return { data: { id: otherParticipants[0].conversation_id }, error: null };
+        }
       }
     }
 
     // Create new conversation
     const { data: conv, error: convError } = await supabase
       .from("conversations")
-      .insert({})
+      .insert({ is_group: false })
       .select()
       .single();
 
@@ -267,6 +292,7 @@ export const useMessages = () => {
     conversations,
     loading,
     fetchConversations,
+    refreshConversations,
     sendMessage,
     getMessages,
     createConversation,
