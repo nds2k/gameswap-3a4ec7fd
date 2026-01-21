@@ -11,6 +11,7 @@ import MyGames from "./pages/MyGames";
 import Settings from "./pages/Settings";
 import MapPage from "./pages/MapPage";
 import Messages from "./pages/Messages";
+import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -65,6 +66,7 @@ const AppRoutes = () => {
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
