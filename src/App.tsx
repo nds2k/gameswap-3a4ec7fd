@@ -65,7 +65,8 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-      <Route path="/" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
+      {/* Discover is public - users can browse without login */}
+      <Route path="/" element={<Discover />} />
       <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
       <Route path="/forum" element={<ProtectedRoute><Forum /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
