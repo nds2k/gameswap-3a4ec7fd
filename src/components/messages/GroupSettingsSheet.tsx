@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Users, Loader2, X, Camera, UserPlus, LogOut, 
-  Edit2, Check, Search 
+  Edit2, Check, Search, ExternalLink, Copy
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -363,6 +363,31 @@ export const GroupSettingsSheet = ({
                   </Button>
                 </div>
               )}
+            </div>
+
+            {/* Invite Link */}
+            <div className="space-y-2">
+              <Label>Inviter des amis</Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={`${window.location.origin}/join/${conversationId}`}
+                  className="text-sm bg-muted/50"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/join/${conversationId}`);
+                    toast({ title: "Lien copié !" });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Partagez ce lien pour inviter des amis à rejoindre le groupe
+              </p>
             </div>
 
             <Separator />
