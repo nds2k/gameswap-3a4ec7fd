@@ -123,7 +123,7 @@ const Auth = () => {
         } else {
           toast({
             title: "Compte créé !",
-            description: "Bienvenue sur GameSwap !",
+            description: "Bienvenue !",
           });
           navigate("/");
         }
@@ -158,7 +158,7 @@ const Auth = () => {
       {/* Title */}
       <div className="text-center mb-8 animate-fade-in">
         <h1 className="text-3xl font-bold mb-2">
-          Bienvenue sur <span className="text-primary">GameSwap</span>
+          Bienvenue !
         </h1>
         <p className="text-muted-foreground">
           Le marché privé dédié à votre groupe de jeux de société.
