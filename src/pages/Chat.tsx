@@ -1,5 +1,5 @@
-import { MessageCircle, ArrowLeft, Users, Settings, AlertTriangle, MoreVertical } from "lucide-react";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { MessageCircle, ArrowLeft, Users, Settings, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,7 +14,6 @@ import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNotifications } from "@/hooks/useNotifications";
 
 interface Message {
   id: string;
@@ -52,7 +51,6 @@ const Chat = () => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const { sendMessage, getMessages, markAsRead, subscribeToMessages, unsubscribe } = useMessages();
-  const { requestPermission } = useNotifications();
   const { typingUsers, onlineUsers, startTyping, stopTyping } = useChatPresence(conversationId);
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -65,12 +63,6 @@ const Chat = () => {
   const [isBanned, setIsBanned] = useState(false);
   const [bannedUntil, setBannedUntil] = useState<Date | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-
-  // Request notification permission on mount
-  useEffect(() => {
-    requestPermission();
-  }, [requestPermission]);
 
   // Load conversation details
   useEffect(() => {
@@ -88,17 +80,25 @@ const Chat = () => {
 
         const { data: participantsData, error: participantsError } = await supabase
           .from("conversation_participants")
-          .select(`
-            user_id,
-            profile:profiles!conversation_participants_user_id_fkey(full_name, avatar_url)
-          `)
+          .select("user_id")
           .eq("conversation_id", conversationId);
 
         if (participantsError) throw participantsError;
 
+        // Fetch profiles separately
+        const userIds = participantsData?.map(p => p.user_id) || [];
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_url")
+          .in("user_id", userIds);
+
+        const profilesMap = new Map(
+          (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+        );
+
         const participants = (participantsData || []).map((p: any) => ({
           user_id: p.user_id,
-          profile: Array.isArray(p.profile) ? p.profile[0] : p.profile,
+          profile: profilesMap.get(p.user_id) || { full_name: null, avatar_url: null },
         }));
 
         setConversation({
@@ -156,24 +156,14 @@ const Chat = () => {
     loadMessages();
 
     // Subscribe to real-time messages
-    const channel = subscribeToMessages(conversationId, (newMsg) => {
+    subscribeToMessages(conversationId, (newMsg) => {
       setMessages((prev) => {
-        // Avoid duplicates
         if (prev.some((m) => m.id === newMsg.id)) return prev;
         return [...prev, newMsg];
       });
       
       if (newMsg.sender_id !== user?.id) {
         markAsRead(conversationId);
-        // Show browser notification
-        if (Notification.permission === "granted" && document.hidden) {
-          const senderName = newMsg.sender?.full_name || (language === 'fr' ? "Nouveau message" : "New message");
-          new Notification(senderName, {
-            body: newMsg.content,
-            icon: "/favicon.png",
-            tag: conversationId,
-          });
-        }
       }
     });
 
@@ -181,7 +171,7 @@ const Chat = () => {
       unsubscribe();
       stopTyping();
     };
-  }, [conversationId, user?.id, language]);
+  }, [conversationId, user?.id]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -223,19 +213,14 @@ const Chat = () => {
 
   // Get display info for the conversation header
   const displayInfo = useMemo(() => {
-    if (!conversation) return { name: "", image: null, initials: "?", subtitle: "", isOnline: false };
+    if (!conversation) return { name: "", image: null, initials: "?", isOnline: false };
 
     if (conversation.is_group) {
-      const onlineCount = conversation.participants.filter(
-        (p) => onlineUsers.includes(p.user_id)
-      ).length;
-      
       return {
         name: conversation.name || (language === 'fr' ? "Groupe" : "Group"),
         image: conversation.image_url,
         initials: (conversation.name || "G").charAt(0).toUpperCase(),
-        subtitle: `${conversation.participants.length} ${t("messages.members")}${onlineCount > 0 ? ` • ${onlineCount} ${language === 'fr' ? 'en ligne' : 'online'}` : ''}`,
-        isOnline: onlineCount > 0,
+        isOnline: false,
       };
     }
 
@@ -246,10 +231,9 @@ const Chat = () => {
       name: other?.profile?.full_name || (language === 'fr' ? "Utilisateur" : "User"),
       image: other?.profile?.avatar_url,
       initials: (other?.profile?.full_name || "?").charAt(0).toUpperCase(),
-      subtitle: isOnline ? t("messages.online") : "",
       isOnline,
     };
-  }, [conversation, user?.id, onlineUsers, t, language]);
+  }, [conversation, user?.id, onlineUsers, language]);
 
   // Group messages by date and consecutive sender
   const groupedMessages = useMemo(() => {
@@ -262,7 +246,6 @@ const Chat = () => {
       const nextMsg = messages[index + 1];
       const prevMsg = messages[index - 1];
 
-      // Check if we need a new date group
       if (!currentDate || !isSameDay(currentDate, msgDate)) {
         if (currentGroup.length > 0) {
           groups.push({ date: currentDate!, messages: currentGroup });
@@ -271,7 +254,6 @@ const Chat = () => {
         currentGroup = [];
       }
 
-      // Determine if we should show avatar and timestamp
       const isLastInGroup =
         !nextMsg ||
         nextMsg.sender_id !== msg.sender_id ||
@@ -289,7 +271,6 @@ const Chat = () => {
       });
     });
 
-    // Add last group
     if (currentGroup.length > 0 && currentDate) {
       groups.push({ date: currentDate, messages: currentGroup });
     }
@@ -328,38 +309,34 @@ const Chat = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background/95 backdrop-blur-xl sticky top-0 z-10">
+      <header className="flex items-center gap-3 px-4 py-3 bg-background border-b border-border">
         <button
           onClick={() => navigate("/friends")}
-          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors -ml-1"
+          className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         
+        {/* Avatar */}
         <div className="relative">
-          <div className="w-11 h-11 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+          <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center overflow-hidden">
             {displayInfo.image ? (
               <img src={displayInfo.image} alt="" className="w-full h-full object-cover" />
             ) : isGroup ? (
-              <Users className="h-5 w-5 text-primary" />
+              <Users className="h-5 w-5 text-primary-foreground" />
             ) : (
-              <span className="font-bold text-primary text-lg">{displayInfo.initials}</span>
+              <span className="font-bold text-primary-foreground text-lg">{displayInfo.initials}</span>
             )}
           </div>
-          {/* Online indicator */}
-          {displayInfo.isOnline && !isGroup && (
-            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background" />
-          )}
         </div>
         
+        {/* Name and status */}
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold truncate">{displayInfo.name}</h2>
-          {displayInfo.subtitle && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              {displayInfo.isOnline && !isGroup && (
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-              )}
-              {displayInfo.subtitle}
+          <h2 className="font-semibold truncate text-foreground">{displayInfo.name}</h2>
+          {displayInfo.isOnline && (
+            <p className="text-xs text-green-500 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+              {language === 'fr' ? 'En ligne' : 'Online'}
             </p>
           )}
         </div>
@@ -388,10 +365,7 @@ const Chat = () => {
       )}
 
       {/* Messages */}
-      <div 
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-2"
-      >
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -400,7 +374,7 @@ const Chat = () => {
             <p className="text-muted-foreground">{t("messages.startConversation")}</p>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div>
             {groupedMessages.map((group) => (
               <div key={group.date.toISOString()}>
                 <DateSeparator date={group.date} />

@@ -47,7 +47,7 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
             .single();
           
           if (convo && !convo.is_group) {
-            navigate(`/messages?conversation=${convoId}`);
+            navigate(`/chat/${convoId}`);
             return;
           }
         }
@@ -68,7 +68,7 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
         { conversation_id: newConvo.id, user_id: friendUserId },
       ]);
 
-      navigate(`/messages?conversation=${newConvo.id}`);
+      navigate(`/chat/${newConvo.id}`);
     } catch (error) {
       console.error("Error creating conversation:", error);
     } finally {
