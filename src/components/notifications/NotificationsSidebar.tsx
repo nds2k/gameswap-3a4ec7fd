@@ -1,5 +1,5 @@
 import { Bell, MessageCircle, Heart, CreditCard, Info, Check, X } from "lucide-react";
-import { useNotifications, type Notification } from "@/hooks/useNotifications";
+import { useNotifications, type AppNotification } from "@/hooks/useNotifications";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
@@ -10,7 +10,7 @@ interface NotificationsSidebarProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const getNotificationIcon = (type: Notification["type"]) => {
+const getNotificationIcon = (type: AppNotification["type"]) => {
   switch (type) {
     case "message":
       return <MessageCircle className="h-5 w-5 text-blue-500" />;

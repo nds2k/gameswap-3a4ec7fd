@@ -1,64 +1,26 @@
-import { MessageCircle, Send, ArrowLeft, Users, Plus, Settings, Flag, AlertTriangle, UserPlus } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { MessageCircle, Users, Plus, UserPlus } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { CreateGroupModal } from "@/components/messages/CreateGroupModal";
-import { GroupSettingsSheet } from "@/components/messages/GroupSettingsSheet";
-import { ReportMessageModal } from "@/components/messages/ReportMessageModal";
 import { StartConversationModal } from "@/components/friends/StartConversationModal";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { FriendWithProfile } from "@/hooks/useFriends";
-
-interface Message {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  content: string;
-  message_type: string;
-  read_at: string | null;
-  created_at: string;
-  sender?: {
-    full_name: string | null;
-    avatar_url: string | null;
-  };
-}
 
 interface MessagesTabProps {
   friends?: FriendWithProfile[];
 }
 
 export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const {
-    conversations,
-    loading,
-    sendMessage,
-    getMessages,
-    markAsRead,
-    subscribeToMessages,
-    unsubscribe,
-    refreshConversations,
-  } = useMessages();
+  const { conversations, loading, refreshConversations } = useMessages();
 
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [startConvoOpen, setStartConvoOpen] = useState(false);
-  const [groupSettingsOpen, setGroupSettingsOpen] = useState(false);
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportingMessage, setReportingMessage] = useState<{ id: string; senderId: string } | null>(null);
-  const [isBanned, setIsBanned] = useState(false);
-  const [bannedUntil, setBannedUntil] = useState<Date | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
-  const isGroup = selectedConversation?.is_group;
 
   // Get display info for conversation
   const getConversationDisplay = (conversation: typeof conversations[0]) => {
@@ -79,264 +41,15 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
     };
   };
 
-  // Check if user is banned
-  useEffect(() => {
-    const checkBan = async () => {
-      if (!user) return;
-      const { data } = await supabase
-        .from("user_bans")
-        .select("banned_until")
-        .eq("user_id", user.id)
-        .gt("banned_until", new Date().toISOString())
-        .order("banned_until", { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (data) {
-        setIsBanned(true);
-        setBannedUntil(new Date(data.banned_until));
-      } else {
-        setIsBanned(false);
-        setBannedUntil(null);
-      }
-    };
-    checkBan();
-  }, [user]);
-
-  // Load messages when conversation is selected
-  useEffect(() => {
-    if (selectedConversationId) {
-      loadMessages();
-      markAsRead(selectedConversationId);
-
-      // Subscribe to real-time messages
-      const channel = subscribeToMessages(selectedConversationId, (newMsg) => {
-        setMessages((prev) => [...prev, newMsg]);
-        if (newMsg.sender_id !== user?.id) {
-          markAsRead(selectedConversationId);
-        }
-      });
-
-      return () => {
-        unsubscribe();
-      };
-    }
-  }, [selectedConversationId]);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const loadMessages = async () => {
-    if (!selectedConversationId) return;
-    const { data } = await getMessages(selectedConversationId);
-    if (data) {
-      setMessages(data);
-    }
-  };
-
-  const handleSend = async () => {
-    if (!newMessage.trim() || !selectedConversationId) return;
-
-    if (isBanned && bannedUntil) {
-      toast.error(`Vous êtes banni jusqu'à ${bannedUntil.toLocaleTimeString("fr-FR")}`);
-      return;
-    }
-
-    setSending(true);
-    const { error } = await sendMessage(selectedConversationId, newMessage.trim());
-
-    if (!error) {
-      setNewMessage("");
-    }
-    setSending(false);
-  };
-
-  const handleReport = (messageId: string, senderId: string) => {
-    setReportingMessage({ id: messageId, senderId });
-    setReportModalOpen(true);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  const handleConversationClick = (conversationId: string) => {
+    navigate(`/chat/${conversationId}`);
   };
 
   const handleGroupCreated = (conversationId: string) => {
     refreshConversations();
-    setSelectedConversationId(conversationId);
+    navigate(`/chat/${conversationId}`);
   };
 
-  const handleLeaveGroup = () => {
-    setSelectedConversationId(null);
-    refreshConversations();
-  };
-
-  // Chat view
-  if (selectedConversationId && selectedConversation) {
-    const display = getConversationDisplay(selectedConversation);
-
-    return (
-      <div className="h-[calc(100vh-16rem)] flex flex-col">
-        {/* Ban warning */}
-        {isBanned && bannedUntil && (
-          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-xl flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0" />
-            <div className="text-sm">
-              <span className="font-medium text-destructive">Compte temporairement suspendu</span>
-              <p className="text-muted-foreground">
-                Vous ne pouvez pas envoyer de messages jusqu'à {bannedUntil.toLocaleTimeString("fr-FR")}
-              </p>
-            </div>
-          </div>
-        )}
-        {/* Chat Header */}
-        <div className="flex items-center gap-3 pb-4 border-b border-border">
-          <button
-            onClick={() => {
-              setSelectedConversationId(null);
-              setMessages([]);
-            }}
-            className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
-            {display.image ? (
-              <img
-                src={display.image}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : isGroup ? (
-              <Users className="h-5 w-5 text-primary" />
-            ) : (
-              <span className="font-bold text-primary">{display.initials}</span>
-            )}
-          </div>
-          <div className="flex-1">
-            <h2 className="font-bold">{display.name}</h2>
-            <p className="text-sm text-muted-foreground">{display.subtitle}</p>
-          </div>
-          {isGroup && (
-            <button
-              onClick={() => setGroupSettingsOpen(true)}
-              className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
-            >
-              <Settings className="h-5 w-5" />
-            </button>
-          )}
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 py-4 overflow-y-auto">
-          {messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <p>Commencez la conversation !</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((msg) => {
-                const isMe = msg.sender_id === user?.id;
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex ${isMe ? "justify-end" : "justify-start"} group`}
-                  >
-                    <div className={`flex items-start gap-1 max-w-[80%] ${isMe ? "flex-row-reverse" : ""}`}>
-                      <div
-                        className={`px-4 py-2 rounded-2xl ${
-                          isMe
-                            ? "bg-primary text-primary-foreground rounded-br-md"
-                            : "bg-muted rounded-bl-md"
-                        }`}
-                      >
-                        {isGroup && !isMe && msg.sender?.full_name && (
-                          <p className="text-xs font-semibold mb-1 text-primary">
-                            {msg.sender.full_name}
-                          </p>
-                        )}
-                        <p>{msg.content}</p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            isMe ? "text-primary-foreground/70" : "text-muted-foreground"
-                          }`}
-                        >
-                          {formatDistanceToNow(new Date(msg.created_at), {
-                            addSuffix: true,
-                            locale: fr,
-                          })}
-                        </p>
-                      </div>
-                      {/* Report button - only for other users' messages */}
-                      {!isMe && (
-                        <button
-                          onClick={() => handleReport(msg.id, msg.sender_id)}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                          title="Signaler ce message"
-                        >
-                          <Flag className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* Input */}
-        <div className="flex gap-3 pt-4 border-t border-border">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={isBanned ? "Vous êtes temporairement suspendu..." : "Écrivez un message..."}
-            className="flex-1 bg-muted rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
-            disabled={sending || isBanned}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!newMessage.trim() || sending || isBanned}
-            className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            <Send className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Group Settings Sheet */}
-        {isGroup && (
-          <GroupSettingsSheet
-            open={groupSettingsOpen}
-            onOpenChange={setGroupSettingsOpen}
-            conversationId={selectedConversationId}
-            onLeaveGroup={handleLeaveGroup}
-          />
-        )}
-
-        {/* Report Message Modal */}
-        {reportingMessage && (
-          <ReportMessageModal
-            open={reportModalOpen}
-            onOpenChange={(open) => {
-              setReportModalOpen(open);
-              if (!open) setReportingMessage(null);
-            }}
-            messageId={reportingMessage.id}
-            reportedUserId={reportingMessage.senderId}
-          />
-        )}
-      </div>
-    );
-  }
-
-  // Conversations list
   return (
     <div>
       {/* Header with buttons */}
@@ -404,7 +117,7 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
             return (
               <button
                 key={conversation.id}
-                onClick={() => setSelectedConversationId(conversation.id)}
+                onClick={() => handleConversationClick(conversation.id)}
                 className="w-full bg-card rounded-2xl border border-border p-4 flex items-center gap-4 hover:border-primary/50 transition-all text-left"
               >
                 <div className="relative">
@@ -470,7 +183,7 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
         friends={friends}
         onConversationStarted={(convoId) => {
           refreshConversations();
-          setSelectedConversationId(convoId);
+          navigate(`/chat/${convoId}`);
         }}
       />
     </div>

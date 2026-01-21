@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export interface Notification {
+export interface AppNotification {
   id: string;
   type: "message" | "wishlist" | "sale" | "system";
   title: string;
@@ -14,11 +14,19 @@ export interface Notification {
 
 export const useNotifications = () => {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>("default");
 
-  // For now, we'll use mock notifications until we add a notifications table
+  // Check push permission status
+  useEffect(() => {
+    if ("Notification" in window) {
+      setPushPermission(Notification.permission);
+    }
+  }, []);
+
+  // Fetch notifications (mock + real unread messages)
   const fetchNotifications = useCallback(async () => {
     if (!user) {
       setNotifications([]);
@@ -36,7 +44,7 @@ export const useNotifications = () => {
         .neq("sender_id", user.id);
 
       // Create notifications from unread messages
-      const mockNotifications: Notification[] = [];
+      const mockNotifications: AppNotification[] = [];
 
       if (messagesCount && messagesCount > 0) {
         mockNotifications.push({
@@ -58,13 +66,34 @@ export const useNotifications = () => {
     }
   }, [user]);
 
+  // Show browser push notification
+  const showPushNotification = useCallback((title: string, body: string, options?: NotificationOptions) => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      const notification = new Notification(title, {
+        body,
+        icon: "/favicon.png",
+        badge: "/favicon.png",
+        tag: options?.tag || "default",
+        ...options,
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+
+      return notification;
+    }
+    return null;
+  }, []);
+
   useEffect(() => {
     fetchNotifications();
 
     // Subscribe to new messages for real-time notifications
     if (user) {
       const channel = supabase
-        .channel("notifications")
+        .channel("notifications-realtime")
         .on(
           "postgres_changes",
           {
@@ -72,16 +101,28 @@ export const useNotifications = () => {
             schema: "public",
             table: "messages",
           },
-          (payload) => {
+          async (payload) => {
             if (payload.new && payload.new.sender_id !== user.id) {
-              fetchNotifications();
-              // Show browser notification if permission granted
-              if (Notification.permission === "granted") {
-                new Notification("Nouveau message", {
-                  body: "Vous avez reçu un nouveau message",
-                  icon: "/favicon.ico",
+              // Fetch sender info for the notification
+              const { data: senderProfile } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("user_id", payload.new.sender_id)
+                .single();
+
+              const senderName = senderProfile?.full_name || "Quelqu'un";
+              const messageContent = (payload.new as { content?: string }).content || "Nouveau message";
+
+              // Show browser push notification if page is hidden
+              if (document.hidden && Notification.permission === "granted") {
+                showPushNotification(senderName, messageContent, {
+                  tag: payload.new.conversation_id as string,
+                  data: { conversationId: payload.new.conversation_id },
                 });
               }
+
+              // Refresh notifications
+              fetchNotifications();
             }
           }
         )
@@ -91,7 +132,7 @@ export const useNotifications = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [user, fetchNotifications]);
+  }, [user, fetchNotifications, showPushNotification]);
 
   const markAsRead = useCallback((notificationId: string) => {
     setNotifications((prev) =>
@@ -108,6 +149,7 @@ export const useNotifications = () => {
   const requestPermission = useCallback(async () => {
     if ("Notification" in window) {
       const permission = await Notification.requestPermission();
+      setPushPermission(permission);
       return permission === "granted";
     }
     return false;
@@ -121,5 +163,10 @@ export const useNotifications = () => {
     markAllAsRead,
     requestPermission,
     refetch: fetchNotifications,
+    pushPermission,
+    showPushNotification,
   };
 };
+
+// Re-export the type with a different name for backwards compatibility
+export type Notification = AppNotification;
