@@ -1,6 +1,5 @@
-import { format, isToday, isYesterday } from "date-fns";
-import { fr } from "date-fns/locale";
-import { Check, CheckCheck, Flag } from "lucide-react";
+import { format } from "date-fns";
+import { fr, enUS } from "date-fns/locale";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MessageBubbleProps {
@@ -27,97 +26,64 @@ export const MessageBubble = ({
   isMe,
   isGroup,
   sender,
-  readAt,
   showAvatar,
   showTimestamp,
   onReport,
   senderId,
 }: MessageBubbleProps) => {
   const { language } = useLanguage();
-  
+  const locale = language === 'fr' ? fr : enUS;
+
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    if (isToday(date)) {
-      return format(date, "HH:mm", { locale: fr });
-    } else if (isYesterday(date)) {
-      return `${language === 'fr' ? 'Hier' : 'Yesterday'} ${format(date, "HH:mm", { locale: fr })}`;
-    }
-    return format(date, "dd/MM HH:mm", { locale: fr });
+    return format(new Date(dateString), "HH:mm", { locale });
   };
 
   return (
-    <div className={`flex ${isMe ? "justify-end" : "justify-start"} group`}>
-      <div className={`flex items-end gap-2 max-w-[80%] ${isMe ? "flex-row-reverse" : ""}`}>
-        {/* Avatar */}
+    <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1`}>
+      <div className={`flex items-end gap-2 max-w-[75%] ${isMe ? "flex-row-reverse" : ""}`}>
+        {/* Avatar for received messages */}
         {!isMe && showAvatar && (
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden flex-shrink-0 mb-0.5">
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center overflow-hidden flex-shrink-0 mb-5">
             {sender?.avatar_url ? (
               <img src={sender.avatar_url} alt="" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-xs font-bold text-primary">
+              <span className="text-sm font-bold text-primary-foreground">
                 {(sender?.full_name || "?").charAt(0).toUpperCase()}
               </span>
             )}
           </div>
         )}
         
-        {/* Spacer when no avatar */}
-        {!isMe && !showAvatar && <div className="w-8 flex-shrink-0" />}
+        {/* Spacer when no avatar shown */}
+        {!isMe && !showAvatar && <div className="w-9 flex-shrink-0" />}
         
-        {/* Message content */}
+        {/* Message content with timestamp */}
         <div className="flex flex-col">
           {/* Sender name for groups */}
           {isGroup && !isMe && showAvatar && sender?.full_name && (
-            <span className="text-xs font-semibold text-primary ml-1 mb-0.5">
+            <span className="text-xs font-medium text-muted-foreground ml-1 mb-1">
               {sender.full_name}
             </span>
           )}
           
+          {/* Bubble */}
           <div
             className={`relative px-4 py-2.5 ${
               isMe
-                ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
-                : "bg-muted rounded-2xl rounded-bl-md"
+                ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm"
+                : "bg-muted text-foreground rounded-2xl rounded-bl-sm"
             }`}
           >
-            <p className="whitespace-pre-wrap break-words text-[15px]">{content}</p>
-            
-            {/* Time and read status */}
-            {showTimestamp && (
-              <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : ""}`}>
-                <span
-                  className={`text-[10px] ${
-                    isMe ? "text-primary-foreground/60" : "text-muted-foreground"
-                  }`}
-                >
-                  {formatTime(timestamp)}
-                </span>
-                
-                {/* Read receipts for my messages */}
-                {isMe && (
-                  <span className="text-primary-foreground/60">
-                    {readAt ? (
-                      <CheckCheck className="h-3.5 w-3.5" />
-                    ) : (
-                      <Check className="h-3.5 w-3.5" />
-                    )}
-                  </span>
-                )}
-              </div>
-            )}
+            <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{content}</p>
           </div>
+          
+          {/* Timestamp below bubble */}
+          {showTimestamp && (
+            <span className={`text-[11px] text-muted-foreground mt-1 ${isMe ? "text-right mr-1" : "ml-1"}`}>
+              {formatTime(timestamp)}
+            </span>
+          )}
         </div>
-        
-        {/* Report button */}
-        {!isMe && onReport && (
-          <button
-            onClick={() => onReport(id, senderId)}
-            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all self-center"
-            title={language === 'fr' ? "Signaler ce message" : "Report this message"}
-          >
-            <Flag className="h-3.5 w-3.5" />
-          </button>
-        )}
       </div>
     </div>
   );

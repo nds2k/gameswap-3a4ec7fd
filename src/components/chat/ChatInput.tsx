@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Image, Mic } from "lucide-react";
+import { Send, Smile } from "lucide-react";
 import { EmojiPicker } from "./EmojiPicker";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -18,37 +18,22 @@ export const ChatInput = ({
   disabledMessage,
   sending = false,
 }: ChatInputProps) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [message, setMessage] = useState("");
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 120)}px`;
-    }
-  }, [message]);
 
   const handleTyping = () => {
     if (onTyping) {
-      // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      
-      // Notify typing
       onTyping();
-      
-      // Stop typing indicator after 2 seconds of inactivity
-      typingTimeoutRef.current = setTimeout(() => {
-        // Typing stopped - could emit a stop typing event here
-      }, 2000);
+      typingTimeoutRef.current = setTimeout(() => {}, 2000);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessage(e.target.value);
     handleTyping();
   };
@@ -71,23 +56,24 @@ export const ChatInput = ({
     }
   };
 
+  const placeholder = disabledMessage || (language === 'fr' ? "Écrire votre message..." : "Write your message...");
+
   return (
-    <div className="flex items-end gap-2 p-3 bg-background border-t border-border">
+    <div className="flex items-center gap-3 p-3 bg-background border-t border-border">
       {/* Emoji picker */}
       <EmojiPicker onEmojiSelect={handleEmojiSelect} />
 
-      {/* Input container */}
+      {/* Input */}
       <div className="flex-1 relative">
-        <textarea
+        <input
           ref={inputRef}
+          type="text"
           value={message}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={disabledMessage || t("messages.placeholder")}
+          placeholder={placeholder}
           disabled={disabled}
-          rows={1}
-          className="w-full bg-muted rounded-2xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 resize-none max-h-30 text-[15px] placeholder:text-muted-foreground"
-          style={{ minHeight: "48px" }}
+          className="w-full bg-muted rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 text-[15px] placeholder:text-muted-foreground"
         />
       </div>
 
@@ -95,13 +81,13 @@ export const ChatInput = ({
       <button
         onClick={handleSend}
         disabled={!message.trim() || disabled || sending}
-        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
+        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
           message.trim() && !disabled && !sending
-            ? "bg-primary text-primary-foreground hover:bg-primary/90 scale-100"
-            : "bg-muted text-muted-foreground scale-95"
+            ? "bg-primary text-primary-foreground hover:bg-primary/90"
+            : "bg-muted text-muted-foreground"
         }`}
       >
-        <Send className={`h-5 w-5 transition-transform ${message.trim() ? "translate-x-0.5" : ""}`} />
+        <Send className="h-5 w-5" />
       </button>
     </div>
   );
