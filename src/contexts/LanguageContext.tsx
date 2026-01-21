@@ -251,6 +251,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.english": "English",
     "settings.info": "Informations",
     "settings.legal": "Mentions légales",
+    "settings.privacy": "Politique de confidentialité",
     "settings.help": "Aide et FAQ",
     "settings.signOut": "Se déconnecter",
     
@@ -553,6 +554,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.english": "English",
     "settings.info": "Information",
     "settings.legal": "Legal notice",
+    "settings.privacy": "Privacy policy",
     "settings.help": "Help & FAQ",
     "settings.signOut": "Sign out",
     
