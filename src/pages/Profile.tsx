@@ -6,10 +6,20 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload, Loader2, User, Plus, Settings } from "lucide-react";
+import { Camera, Loader2, User, Plus, Settings, Trash2 } from "lucide-react";
 import { PostGameModal } from "@/components/games/PostGameModal";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 import { Link } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Profile {
   id: string;
@@ -41,6 +51,8 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [deleteGameId, setDeleteGameId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -159,6 +171,37 @@ const Profile = () => {
     }
   };
 
+  const handleDeleteGame = async () => {
+    if (!user || !deleteGameId) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("games")
+        .delete()
+        .eq("id", deleteGameId)
+        .eq("owner_id", user.id);
+
+      if (error) throw error;
+
+      setGames((prev) => prev.filter((g) => g.id !== deleteGameId));
+      toast({
+        title: "Annonce supprimée",
+        description: "Votre annonce a été supprimée avec succès",
+      });
+    } catch (error) {
+      console.error("Error deleting game:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'annonce",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteGameId(null);
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout showSearch={false}>
@@ -251,10 +294,12 @@ const Profile = () => {
               {games.map((game) => (
                 <div
                   key={game.id}
-                  onClick={() => setSelectedGameId(game.id)}
-                  className="bg-card rounded-xl border border-border overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
+                  className="bg-card rounded-xl border border-border overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 relative group"
                 >
-                  <div className="aspect-square overflow-hidden bg-muted">
+                  <div 
+                    onClick={() => setSelectedGameId(game.id)}
+                    className="aspect-square overflow-hidden bg-muted"
+                  >
                     {game.image_url ? (
                       <img
                         src={game.image_url}
@@ -267,7 +312,19 @@ const Profile = () => {
                       </div>
                     )}
                   </div>
-                  <div className="p-3">
+                  
+                  {/* Delete button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteGameId(game.id);
+                    }}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-destructive/90 text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  
+                  <div className="p-3" onClick={() => setSelectedGameId(game.id)}>
                     <h3 className="font-medium text-sm truncate">{game.title}</h3>
                     {game.game_type === "sale" && game.price != null && (
                       <p className="text-primary font-semibold text-sm">{game.price}€</p>
@@ -299,6 +356,28 @@ const Profile = () => {
         open={!!selectedGameId}
         onOpenChange={(open) => !open && setSelectedGameId(null)}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteGameId} onOpenChange={(open) => !open && setDeleteGameId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette annonce ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. L'annonce sera définitivement supprimée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteGame}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Suppression..." : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
