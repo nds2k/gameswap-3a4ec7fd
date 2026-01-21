@@ -149,6 +149,7 @@ const Settings = () => {
       section: t("settings.info"),
       items: [
         { icon: Scale, label: t("settings.legal"), href: "/legal" },
+        { icon: Shield, label: t("settings.privacy"), href: "/privacy" },
         { icon: HelpCircle, label: t("settings.help"), href: "/support" },
       ],
     },
@@ -365,8 +366,16 @@ const Settings = () => {
           </button>
         </div>
 
+        {/* Credits */}
+        <div className="mt-8 text-center pt-6 border-t border-border">
+          <p className="text-sm font-medium text-foreground">© 2026 GameSwap</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {language === 'fr' ? 'Tous droits réservés' : 'All rights reserved'}
+          </p>
+        </div>
+
         {/* Version */}
-        <p className="text-center text-sm text-muted-foreground mt-6">
+        <p className="text-center text-sm text-muted-foreground mt-4">
           GameSwap v1.0.0
         </p>
       </div>

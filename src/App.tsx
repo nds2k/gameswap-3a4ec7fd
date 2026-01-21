@@ -14,6 +14,7 @@ import MapPage from "./pages/MapPage";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Legal from "./pages/Legal";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
 import JoinGroup from "./pages/JoinGroup";
@@ -81,6 +82,7 @@ const AppRoutes = () => {
       <Route path="/my-games" element={<ProtectedRoute><MyGames /></ProtectedRoute>} />
       <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
       <Route path="/legal" element={<Legal />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
