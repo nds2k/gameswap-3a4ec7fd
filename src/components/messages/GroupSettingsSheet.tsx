@@ -91,14 +91,14 @@ export const GroupSettingsSheet = ({
 
       if (partError) throw partError;
 
-      // Fetch profiles for participants
+      // Fetch profiles for participants using security definer function
       const userIds = partData.map(p => p.user_id);
-      const { data: profiles, error: profError } = await supabase
-        .from("public_profiles")
-        .select("user_id, full_name, avatar_url")
-        .in("user_id", userIds);
+      const { data: allProfiles, error: profError } = await supabase.rpc("get_public_profiles");
 
       if (profError) throw profError;
+
+      // Filter to only participants
+      const profiles = (allProfiles || []).filter(p => userIds.includes(p.user_id));
 
       const participantsWithProfiles = partData.map(p => ({
         user_id: p.user_id,
@@ -195,19 +195,23 @@ export const GroupSettingsSheet = ({
 
     setSearching(true);
     try {
-      const { data, error } = await supabase
-        .from("public_profiles")
-        .select("id, user_id, full_name, avatar_url")
-        .or(`full_name.ilike.%${query}%,username.ilike.%${query}%`)
-        .limit(10);
+      // Use security definer function for public profile access
+      const { data, error } = await supabase.rpc("get_public_profiles");
 
       if (error) throw error;
 
-      // Filter out existing participants
+      // Filter by search query and exclude existing participants
+      const queryLower = query.toLowerCase();
       const existingUserIds = participants.map(p => p.user_id);
-      const filtered = (data || []).filter(
-        profile => !existingUserIds.includes(profile.user_id)
-      );
+      const filtered = (data || [])
+        .filter(
+          (profile) =>
+            (profile.full_name?.toLowerCase().includes(queryLower) ||
+              profile.username?.toLowerCase().includes(queryLower)) &&
+            !existingUserIds.includes(profile.user_id)
+        )
+        .slice(0, 10) as UserProfile[];
+
       setSearchResults(filtered);
     } catch (error) {
       console.error("Error searching users:", error);

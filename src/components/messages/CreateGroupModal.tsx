@@ -53,19 +53,23 @@ export const CreateGroupModal = ({ open, onOpenChange, onSuccess }: CreateGroupM
 
     setSearching(true);
     try {
-      const { data, error } = await supabase
-        .from("public_profiles")
-        .select("id, user_id, full_name, avatar_url")
-        .or(`full_name.ilike.%${query}%,username.ilike.%${query}%`)
-        .neq("user_id", user?.id || "")
-        .limit(10);
+      // Use security definer function for public profile access
+      const { data, error } = await supabase.rpc("get_public_profiles");
 
       if (error) throw error;
 
-      // Filter out already selected users
-      const filtered = (data || []).filter(
-        (profile) => !selectedUsers.some((u) => u.user_id === profile.user_id)
-      );
+      // Filter by search query and exclude current user
+      const queryLower = query.toLowerCase();
+      const filtered = (data || [])
+        .filter(
+          (profile) =>
+            (profile.full_name?.toLowerCase().includes(queryLower) ||
+              profile.username?.toLowerCase().includes(queryLower)) &&
+            profile.user_id !== user?.id &&
+            !selectedUsers.some((u) => u.user_id === profile.user_id)
+        )
+        .slice(0, 10) as UserProfile[];
+
       setSearchResults(filtered);
     } catch (error) {
       console.error("Error searching users:", error);

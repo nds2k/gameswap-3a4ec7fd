@@ -65,21 +65,24 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
 
     setSearching(true);
     try {
-      // Search in public_profiles view
-      const { data, error } = await supabase
-        .from("public_profiles")
-        .select("id, full_name, avatar_url")
-        .or(`full_name.ilike.%${query}%`)
-        .neq("id", user?.id || "")
-        .limit(5);
+      // Use security definer function for public profile access
+      const { data, error } = await supabase.rpc("get_public_profiles");
 
       if (error) throw error;
 
-      // We need to get emails from auth - for now just use the profile data
-      const results: BuyerProfile[] = (data || []).map(profile => ({
+      // Filter by search query and exclude current user
+      const queryLower = query.toLowerCase();
+      const filtered = (data || []).filter(
+        (profile) =>
+          profile.full_name?.toLowerCase().includes(queryLower) &&
+          profile.user_id !== user?.id
+      ).slice(0, 5);
+
+      // Map to buyer profile format
+      const results: BuyerProfile[] = filtered.map(profile => ({
         id: profile.id,
         full_name: profile.full_name,
-        email: "", // Email not available in public_profiles for privacy
+        email: "", // Email not available for privacy
         avatar_url: profile.avatar_url,
       }));
 
