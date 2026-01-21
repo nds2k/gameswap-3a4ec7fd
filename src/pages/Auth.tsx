@@ -1,26 +1,95 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DecorativeBlobs } from "@/components/layout/DecorativeBlobs";
-import { Mail, Lock, User, ArrowRight, Plus, Users, RefreshCw } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Plus, Users, RefreshCw, AtSign, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import logo from "@/assets/gameswap-logo.png";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Check username availability with debounce
+  useEffect(() => {
+    if (isLogin || !username.trim() || username.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    // Validate username format (alphanumeric + underscores only)
+    const isValidFormat = /^[a-zA-Z0-9_]+$/.test(username);
+    if (!isValidFormat) {
+      setUsernameAvailable(false);
+      return;
+    }
+
+    setCheckingUsername(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc("is_username_available", {
+          check_username: username,
+        });
+        
+        if (!error) {
+          setUsernameAvailable(data);
+        }
+      } catch (error) {
+        console.error("Error checking username:", error);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [username, isLogin]);
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isLogin) {
+      // Validate username
+      if (!username.trim() || username.length < 3) {
+        toast({
+          title: "Pseudo requis",
+          description: "Le pseudo doit contenir au moins 3 caractères.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        toast({
+          title: "Format invalide",
+          description: "Le pseudo ne peut contenir que des lettres, chiffres et underscores.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!usernameAvailable) {
+        toast({
+          title: "Pseudo indisponible",
+          description: "Ce pseudo est déjà pris. Choisissez-en un autre.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -36,7 +105,7 @@ const Auth = () => {
           navigate("/");
         }
       } else {
-        const { error } = await signUpWithEmail(email, password, fullName);
+        const { error } = await signUpWithEmail(email, password, fullName, username);
         if (error) {
           if (error.message.includes("already registered")) {
             toast({
@@ -111,21 +180,57 @@ const Auth = () => {
         </p>
 
         <form onSubmit={handleEmailAuth} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <Label htmlFor="fullName">Nom complet</Label>
-              <div className="relative mt-1.5">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="Ex: Nicolas"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="pl-10"
-                />
+        {!isLogin && (
+            <>
+              <div>
+                <Label htmlFor="fullName">Nom complet</Label>
+                <div className="relative mt-1.5">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="Ex: Nicolas"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-            </div>
+
+              <div>
+                <Label htmlFor="username">Pseudo (unique)</Label>
+                <div className="relative mt-1.5">
+                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Ex: nicolas_42"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                    className="pl-10 pr-10"
+                    required
+                    minLength={3}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {checkingUsername && (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                    {!checkingUsername && username.length >= 3 && usernameAvailable === true && (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    )}
+                    {!checkingUsername && username.length >= 3 && usernameAvailable === false && (
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    )}
+                  </div>
+                </div>
+                {username.length >= 3 && usernameAvailable === false && (
+                  <p className="text-xs text-destructive mt-1">Ce pseudo est déjà pris</p>
+                )}
+                {username.length > 0 && username.length < 3 && (
+                  <p className="text-xs text-muted-foreground mt-1">Minimum 3 caractères</p>
+                )}
+              </div>
+            </>
           )}
 
           <div>
