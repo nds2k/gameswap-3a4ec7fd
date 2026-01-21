@@ -46,17 +46,29 @@ export type Database = {
       conversations: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
+          image_url: string | null
+          is_group: boolean | null
+          name: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
+          image_url?: string | null
+          is_group?: boolean | null
+          name?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
+          image_url?: string | null
+          is_group?: boolean | null
+          name?: string | null
           updated_at?: string
         }
         Relationships: []
