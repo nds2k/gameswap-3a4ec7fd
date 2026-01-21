@@ -230,6 +230,33 @@ export type Database = {
           },
         ]
       }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       games: {
         Row: {
           condition: string | null
@@ -419,6 +446,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_friends_games: {
+        Args: { user_uuid: string }
+        Returns: {
+          condition: string
+          created_at: string
+          description: string
+          game_type: string
+          id: string
+          image_url: string
+          owner_avatar_url: string
+          owner_full_name: string
+          owner_id: string
+          owner_username: string
+          price: number
+          status: string
+          title: string
+        }[]
+      }
       get_public_profile: {
         Args: { target_user_id: string }
         Returns: {
@@ -455,6 +500,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_moderator: { Args: { _user_id: string }; Returns: boolean }
+      is_username_available: {
+        Args: { check_username: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
