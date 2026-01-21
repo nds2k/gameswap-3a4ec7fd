@@ -22,10 +22,29 @@ interface GameFormData {
   price: string;
   gameType: "sale" | "trade" | "showcase";
   condition: string;
+  category: string;
   players: string;
   playtime: string;
   age: string;
 }
+
+const GAME_CATEGORIES = [
+  { value: "strategy", labelFr: "Stratégie", labelEn: "Strategy" },
+  { value: "adventure", labelFr: "Aventure", labelEn: "Adventure" },
+  { value: "family", labelFr: "Famille", labelEn: "Family" },
+  { value: "party", labelFr: "Ambiance", labelEn: "Party" },
+  { value: "cooperative", labelFr: "Coopératif", labelEn: "Cooperative" },
+  { value: "horror", labelFr: "Horreur", labelEn: "Horror" },
+  { value: "fantasy", labelFr: "Fantastique", labelEn: "Fantasy" },
+  { value: "scifi", labelFr: "Science-fiction", labelEn: "Sci-Fi" },
+  { value: "war", labelFr: "Guerre", labelEn: "War" },
+  { value: "cards", labelFr: "Cartes", labelEn: "Cards" },
+  { value: "dice", labelFr: "Dés", labelEn: "Dice" },
+  { value: "puzzle", labelFr: "Puzzle", labelEn: "Puzzle" },
+  { value: "trivia", labelFr: "Culture générale", labelEn: "Trivia" },
+  { value: "rpg", labelFr: "Jeu de rôle", labelEn: "Role-playing" },
+  { value: "other", labelFr: "Autre", labelEn: "Other" },
+];
 
 export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalProps) => {
   const { user } = useAuth();
@@ -41,6 +60,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
     price: "",
     gameType: "sale",
     condition: "",
+    category: "",
     players: "",
     playtime: "",
     age: "",
@@ -119,6 +139,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         price: formData.gameType === "sale" ? parseFloat(formData.price) || 0 : null,
         game_type: formData.gameType,
         condition: formData.condition || null,
+        category: formData.category || null,
         image_url: imageUrl,
         status: "available",
       });
@@ -136,6 +157,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         price: "",
         gameType: "sale",
         condition: "",
+        category: "",
         players: "",
         playtime: "",
         age: "",
@@ -222,6 +244,26 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
               onChange={(e) => setFormData((f) => ({ ...f, title: e.target.value }))}
               placeholder="Ex: Catan, Ticket to Ride..."
             />
+          </div>
+
+          {/* Category */}
+          <div className="space-y-2">
+            <Label>Catégorie *</Label>
+            <Select
+              value={formData.category}
+              onValueChange={(v) => setFormData((f) => ({ ...f, category: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner une catégorie" />
+              </SelectTrigger>
+              <SelectContent>
+                {GAME_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.labelFr}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Type & Price */}

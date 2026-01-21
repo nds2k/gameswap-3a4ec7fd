@@ -259,6 +259,7 @@ export type Database = {
       }
       games: {
         Row: {
+          category: string | null
           condition: string | null
           created_at: string
           description: string | null
@@ -275,6 +276,7 @@ export type Database = {
           view_count: number | null
         }
         Insert: {
+          category?: string | null
           condition?: string | null
           created_at?: string
           description?: string | null
@@ -291,6 +293,7 @@ export type Database = {
           view_count?: number | null
         }
         Update: {
+          category?: string | null
           condition?: string | null
           created_at?: string
           description?: string | null
