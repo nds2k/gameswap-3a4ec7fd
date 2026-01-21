@@ -1,116 +1,406 @@
-import { Heart, Trash2, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Heart, Trash2, Plus, FolderPlus, Folder, MoreVertical, Edit2, ChevronLeft } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { GameDetailModal } from "@/components/games/GameDetailModal";
 
-interface WishlistItem {
+interface WishlistGame {
   id: string;
-  title: string;
-  price: number;
-  image: string;
-  seller: string;
-  distance: string;
-  addedAt: string;
+  game_id: string;
+  created_at: string;
+  list_name: string | null;
+  game: {
+    id: string;
+    title: string;
+    price: number | null;
+    image_url: string | null;
+    game_type: string;
+  } | null;
 }
 
-const mockWishlist: WishlistItem[] = [
-  {
-    id: "1",
-    title: "Catan",
-    price: 25,
-    image: "https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=400",
-    seller: "Marie",
-    distance: "2.3 km",
-    addedAt: "Il y a 2 jours",
-  },
-  {
-    id: "2",
-    title: "Ticket to Ride",
-    price: 35,
-    image: "https://images.unsplash.com/photo-1606503153255-59d7088e26c4?w=400",
-    seller: "Pierre",
-    distance: "1.8 km",
-    addedAt: "Il y a 1 semaine",
-  },
-  {
-    id: "3",
-    title: "Azul",
-    price: 28,
-    image: "https://images.unsplash.com/photo-1563941402830-3a422052096b?w=400",
-    seller: "Hugo",
-    distance: "0.8 km",
-    addedAt: "Aujourd'hui",
-  },
-];
+interface WishlistList {
+  name: string;
+  count: number;
+}
 
 const Wishlist = () => {
-  const [items, setItems] = useState(mockWishlist);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [wishlistItems, setWishlistItems] = useState<WishlistGame[]>([]);
+  const [lists, setLists] = useState<WishlistList[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedList, setSelectedList] = useState<string | null>(null);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  
+  const [createListModalOpen, setCreateListModalOpen] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const [editingList, setEditingList] = useState<string | null>(null);
+  const [editListName, setEditListName] = useState("");
 
-  const removeItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
+  useEffect(() => {
+    if (user) {
+      fetchWishlist();
+    }
+  }, [user]);
+
+  const fetchWishlist = async () => {
+    if (!user) return;
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("wishlist")
+        .select(`
+          id,
+          game_id,
+          created_at,
+          list_name,
+          game:games (
+            id,
+            title,
+            price,
+            image_url,
+            game_type
+          )
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setWishlistItems(data || []);
+
+      // Extract unique lists
+      const listCounts: Record<string, number> = {};
+      data?.forEach((item) => {
+        const listName = item.list_name || "Non classé";
+        listCounts[listName] = (listCounts[listName] || 0) + 1;
+      });
+
+      const listArray = Object.entries(listCounts).map(([name, count]) => ({ name, count }));
+      setLists(listArray);
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleCreateList = async () => {
+    if (!newListName.trim()) return;
+
+    setCreateListModalOpen(false);
+    setNewListName("");
+
+    // Lists are created by assigning games to them, so just show success
+    toast({
+      title: "Liste créée",
+      description: `La liste "${newListName}" a été créée`,
+    });
+
+    // Add empty list to UI
+    setLists((prev) => [...prev, { name: newListName.trim(), count: 0 }]);
+  };
+
+  const handleRenameList = async (oldName: string, newName: string) => {
+    if (!user || !newName.trim() || oldName === newName) {
+      setEditingList(null);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("wishlist")
+        .update({ list_name: newName.trim() })
+        .eq("user_id", user.id)
+        .eq("list_name", oldName === "Non classé" ? null : oldName);
+
+      if (error) throw error;
+
+      toast({
+        title: "Liste renommée",
+        description: `La liste a été renommée en "${newName}"`,
+      });
+
+      fetchWishlist();
+    } catch (error) {
+      console.error("Error renaming list:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de renommer la liste",
+        variant: "destructive",
+      });
+    } finally {
+      setEditingList(null);
+    }
+  };
+
+  const handleMoveToList = async (itemId: string, listName: string | null) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from("wishlist")
+        .update({ list_name: listName })
+        .eq("id", itemId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Jeu déplacé",
+        description: listName ? `Déplacé vers "${listName}"` : "Déplacé vers Non classé",
+      });
+
+      fetchWishlist();
+    } catch (error) {
+      console.error("Error moving item:", error);
+    }
+  };
+
+  const handleRemoveFromWishlist = async (itemId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from("wishlist")
+        .delete()
+        .eq("id", itemId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setWishlistItems((prev) => prev.filter((item) => item.id !== itemId));
+
+      toast({
+        title: "Retiré de la wishlist",
+        description: "Le jeu a été retiré de votre wishlist",
+      });
+
+      fetchWishlist();
+    } catch (error) {
+      console.error("Error removing item:", error);
+    }
+  };
+
+  const filteredItems = selectedList
+    ? wishlistItems.filter((item) => (item.list_name || "Non classé") === selectedList)
+    : wishlistItems;
 
   return (
     <MainLayout showSearch={false}>
-      <div className="container py-6">
+      <div className="container py-6 pb-24">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center">
-            <Heart className="h-6 w-6 text-destructive" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            {selectedList ? (
+              <button
+                onClick={() => setSelectedList(null)}
+                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            ) : (
+              <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                <Heart className="h-6 w-6 text-destructive" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold">
+                {selectedList || "Ma Wishlist"}
+              </h1>
+              <p className="text-muted-foreground">
+                {filteredItems.length} jeu{filteredItems.length !== 1 ? "x" : ""} sauvegardé{filteredItems.length !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Ma Wishlist</h1>
-            <p className="text-muted-foreground">{items.length} jeux sauvegardés</p>
-          </div>
+          {!selectedList && (
+            <Button variant="outline" size="sm" onClick={() => setCreateListModalOpen(true)}>
+              <FolderPlus className="h-4 w-4 mr-1" />
+              Nouvelle liste
+            </Button>
+          )}
         </div>
 
-        {/* List */}
-        {items.length === 0 ? (
+        {/* Lists Grid (when no list selected) */}
+        {!selectedList && lists.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+            {lists.map((list) => (
+              <div
+                key={list.name}
+                className="bg-card rounded-xl border border-border p-4 cursor-pointer transition-all hover:shadow-md group relative"
+              >
+                {editingList === list.name ? (
+                  <Input
+                    autoFocus
+                    value={editListName}
+                    onChange={(e) => setEditListName(e.target.value)}
+                    onBlur={() => handleRenameList(list.name, editListName)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRenameList(list.name, editListName);
+                      if (e.key === "Escape") setEditingList(null);
+                    }}
+                    className="text-sm"
+                  />
+                ) : (
+                  <div onClick={() => setSelectedList(list.name)}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Folder className="h-5 w-5 text-primary" />
+                      <span className="font-medium truncate flex-1">{list.name}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {list.count} jeu{list.count !== 1 ? "x" : ""}
+                    </p>
+                  </div>
+                )}
+                
+                {list.name !== "Non classé" && !editingList && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="absolute top-2 right-2 w-8 h-8 rounded-full bg-muted/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditingList(list.name);
+                          setEditListName(list.name);
+                        }}
+                      >
+                        <Edit2 className="h-4 w-4 mr-2" />
+                        Renommer
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Games List */}
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
               <Heart className="h-10 w-10 text-muted-foreground" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Votre wishlist est vide</h3>
-            <p className="text-muted-foreground mb-4">Explorez les jeux et ajoutez vos favoris</p>
-            <Button variant="gameswap">Découvrir des jeux</Button>
+            <h3 className="font-semibold text-lg mb-2">
+              {selectedList ? "Cette liste est vide" : "Votre wishlist est vide"}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {selectedList ? "Déplacez des jeux dans cette liste" : "Explorez les jeux et ajoutez vos favoris"}
+            </p>
           </div>
         ) : (
-          <div className="space-y-4 animate-fade-in">
-            {items.map((item) => (
+          <div className="space-y-3">
+            {filteredItems.map((item) => (
               <div
                 key={item.id}
                 className="bg-card rounded-2xl border border-border p-4 flex gap-4 items-center transition-all hover:shadow-md"
               >
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="w-20 h-20 rounded-xl object-cover"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-lg">{item.title}</h3>
-                  <p className="text-primary font-semibold">{item.price}€</p>
-                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                    <span>{item.seller}</span>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {item.distance}
+                <div
+                  onClick={() => item.game && setSelectedGameId(item.game.id)}
+                  className="cursor-pointer"
+                >
+                  {item.game?.image_url ? (
+                    <img
+                      src={item.game.image_url}
+                      alt={item.game?.title || ""}
+                      className="w-20 h-20 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center">
+                      <span className="text-2xl">🎲</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div
+                  onClick={() => item.game && setSelectedGameId(item.game.id)}
+                  className="flex-1 min-w-0 cursor-pointer"
+                >
+                  <h3 className="font-bold text-lg">{item.game?.title || "Jeu supprimé"}</h3>
+                  {item.game?.game_type === "sale" && item.game?.price != null && (
+                    <p className="text-primary font-semibold">{item.game.price}€</p>
+                  )}
+                  {item.list_name && (
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-muted text-xs">
+                      {item.list_name}
                     </span>
-                  </div>
+                  )}
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span className="text-xs text-muted-foreground">{item.addedAt}</span>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="w-9 h-9 rounded-full bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors">
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {lists
+                      .filter((l) => l.name !== (item.list_name || "Non classé"))
+                      .map((list) => (
+                        <DropdownMenuItem
+                          key={list.name}
+                          onClick={() => handleMoveToList(item.id, list.name === "Non classé" ? null : list.name)}
+                        >
+                          <Folder className="h-4 w-4 mr-2" />
+                          Déplacer vers {list.name}
+                        </DropdownMenuItem>
+                      ))}
+                    <DropdownMenuItem
+                      onClick={() => handleRemoveFromWishlist(item.id)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Retirer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Create List Modal */}
+      <Dialog open={createListModalOpen} onOpenChange={setCreateListModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouvelle liste</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <Input
+              placeholder="Nom de la liste"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateList()}
+            />
+            <Button variant="gameswap" className="w-full" onClick={handleCreateList}>
+              <Plus className="h-4 w-4 mr-2" />
+              Créer la liste
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <GameDetailModal
+        gameId={selectedGameId}
+        open={!!selectedGameId}
+        onOpenChange={(open) => !open && setSelectedGameId(null)}
+      />
     </MainLayout>
   );
 };

@@ -7,8 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import Discover from "./pages/Discover";
 import Wishlist from "./pages/Wishlist";
-import Lists from "./pages/Lists";
-import MyGames from "./pages/MyGames";
+import Forum from "./pages/Forum";
 import Settings from "./pages/Settings";
 import MapPage from "./pages/MapPage";
 import Messages from "./pages/Messages";
@@ -63,8 +62,7 @@ const AppRoutes = () => {
       <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
       <Route path="/" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
       <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
-      <Route path="/lists" element={<ProtectedRoute><Lists /></ProtectedRoute>} />
-      <Route path="/my-games" element={<ProtectedRoute><MyGames /></ProtectedRoute>} />
+      <Route path="/forum" element={<ProtectedRoute><Forum /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
