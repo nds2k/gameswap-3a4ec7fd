@@ -1,8 +1,9 @@
-import { Compass, Heart, MessageSquare, User } from "lucide-react";
+import { Compass, Heart, MessageSquare, User, Users } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const navItems = [
   { path: "/", icon: Compass, label: "Découvrir" },
+  { path: "/friends", icon: Users, label: "Amis" },
   { path: "/wishlist", icon: Heart, label: "Wishlist" },
   { path: "/forum", icon: MessageSquare, label: "Forum" },
   { path: "/profile", icon: User, label: "Profil" },
