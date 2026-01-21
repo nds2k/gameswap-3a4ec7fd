@@ -1,7 +1,10 @@
-import { Gamepad2, Plus, Edit, Eye, EyeOff } from "lucide-react";
+import { Gamepad2, Plus, Edit, Eye, EyeOff, CreditCard } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { SellGameModal } from "@/components/games/SellGameModal";
+import { useSearchParams } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 interface MyGame {
   id: string;
@@ -49,9 +52,37 @@ const mockMyGames: MyGame[] = [
 
 const MyGames = () => {
   const [games] = useState(mockMyGames);
+  const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<MyGame | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
 
   const activeGames = games.filter(g => g.status === "active");
   const soldGames = games.filter(g => g.status === "sold");
+
+  // Handle sale success/cancel from URL params
+  useEffect(() => {
+    const saleStatus = searchParams.get("sale");
+    if (saleStatus === "success") {
+      toast({
+        title: "Paiement réussi !",
+        description: "Le paiement a été effectué avec succès.",
+      });
+      setSearchParams({});
+    } else if (saleStatus === "cancelled") {
+      toast({
+        title: "Paiement annulé",
+        description: "Le paiement a été annulé.",
+        variant: "destructive",
+      });
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams, toast]);
+
+  const handleSellClick = (game: MyGame) => {
+    setSelectedGame(game);
+    setSellModalOpen(true);
+  };
 
   return (
     <MainLayout showSearch={false}>
@@ -94,7 +125,11 @@ const MyGames = () => {
           <h2 className="font-bold text-lg mb-4">Jeux en ligne</h2>
           <div className="space-y-3 animate-fade-in">
             {activeGames.map((game) => (
-              <GameItem key={game.id} game={game} />
+              <GameItem 
+                key={game.id} 
+                game={game} 
+                onSellClick={() => handleSellClick(game)}
+              />
             ))}
           </div>
         </div>
@@ -111,11 +146,28 @@ const MyGames = () => {
           </div>
         )}
       </div>
+
+      {/* Sell Modal */}
+      <SellGameModal
+        open={sellModalOpen}
+        onOpenChange={setSellModalOpen}
+        game={selectedGame}
+        onSuccess={() => {
+          // Could refresh games list here
+        }}
+      />
     </MainLayout>
   );
 };
 
-const GameItem = ({ game }: { game: MyGame }) => {
+interface GameItemProps {
+  game: MyGame;
+  onSellClick?: () => void;
+}
+
+const GameItem = ({ game, onSellClick }: GameItemProps) => {
+  const canSell = game.type === "sale" && game.status === "active";
+
   return (
     <div className="bg-card rounded-2xl border border-border p-4 flex gap-4 items-center">
       <img
@@ -155,6 +207,15 @@ const GameItem = ({ game }: { game: MyGame }) => {
         </div>
       </div>
       <div className="flex gap-2">
+        {canSell && (
+          <button 
+            onClick={onSellClick}
+            className="w-9 h-9 rounded-full bg-green-500/10 text-green-600 flex items-center justify-center hover:bg-green-500/20 transition-colors"
+            title="Vendre ce jeu"
+          >
+            <CreditCard className="h-4 w-4" />
+          </button>
+        )}
         <button className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors">
           <Edit className="h-4 w-4" />
         </button>
