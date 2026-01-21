@@ -1,8 +1,10 @@
 import { Heart, MapPin, MessageCircle } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useGames, type Game } from "@/hooks/useGames";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface GameGridProps {
   searchQuery: string;
@@ -12,12 +14,22 @@ interface GameGridProps {
 export const GameGrid = ({ searchQuery, filter }: GameGridProps) => {
   const { games, loading } = useGames();
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const filteredGames = games.filter((game) => {
     const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filter === "all" || game.game_type === filter;
     return matchesSearch && matchesFilter;
   });
+
+  const handleGameClick = (gameId: string) => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    setSelectedGameId(gameId);
+  };
 
   if (loading) {
     return (
@@ -55,7 +67,12 @@ export const GameGrid = ({ searchQuery, filter }: GameGridProps) => {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in">
         {filteredGames.map((game) => (
-          <GameCard key={game.id} game={game} onClick={() => setSelectedGameId(game.id)} />
+          <GameCard 
+            key={game.id} 
+            game={game} 
+            onClick={() => handleGameClick(game.id)}
+            isAuthenticated={!!user}
+          />
         ))}
       </div>
 
@@ -68,13 +85,29 @@ export const GameGrid = ({ searchQuery, filter }: GameGridProps) => {
   );
 };
 
-const GameCard = ({ game, onClick }: { game: Game; onClick: () => void }) => {
+interface GameCardProps {
+  game: Game;
+  onClick: () => void;
+  isAuthenticated: boolean;
+}
+
+const GameCard = ({ game, onClick, isAuthenticated }: GameCardProps) => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [isHovered, setIsHovered] = useState(false);
-  const wishlisted = isInWishlist(game.id);
+  const navigate = useNavigate();
+  const wishlisted = isAuthenticated && isInWishlist(game.id);
 
   const ownerName = game.owner?.full_name || "Vendeur";
   const avatarLetter = ownerName.charAt(0).toUpperCase();
+
+  const handleWishlistClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      navigate("/auth");
+      return;
+    }
+    toggleWishlist(game.id);
+  };
 
   return (
     <div
@@ -99,10 +132,7 @@ const GameCard = ({ game, onClick }: { game: Game; onClick: () => void }) => {
 
         {/* Wishlist button */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleWishlist(game.id);
-          }}
+          onClick={handleWishlistClick}
           className="absolute top-3 right-3 w-9 h-9 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
         >
           <Heart
