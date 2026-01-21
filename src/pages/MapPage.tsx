@@ -59,19 +59,20 @@ const MapPage = () => {
 
   const fetchSellers = useCallback(async () => {
     try {
-      // Get profiles with location
+      // Use security definer function to get public profiles with rounded coordinates
       const { data: profiles, error } = await supabase
-        .from("profiles")
-        .select("id, user_id, full_name, avatar_url, location_lat, location_lng")
-        .eq("show_on_map", true)
-        .not("location_lat", "is", null)
-        .not("location_lng", "is", null);
+        .rpc("get_public_profiles");
 
       if (error) throw error;
 
+      // Filter profiles with location that opted in to show on map
+      const profilesWithLocation = (profiles || []).filter(
+        (p) => p.show_on_map && p.location_lat != null && p.location_lng != null
+      );
+
       // Get game counts
       const sellersWithGames = await Promise.all(
-        (profiles || []).map(async (profile) => {
+        profilesWithLocation.map(async (profile) => {
           const { count } = await supabase
             .from("games")
             .select("*", { count: "exact", head: true })
@@ -80,8 +81,8 @@ const MapPage = () => {
 
           return {
             ...profile,
-            location_lat: profile.location_lat!,
-            location_lng: profile.location_lng!,
+            location_lat: Number(profile.location_lat),
+            location_lng: Number(profile.location_lng),
             game_count: count || 0,
           };
         })

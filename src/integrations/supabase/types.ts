@@ -416,44 +416,37 @@ export type Database = {
       }
     }
     Views: {
-      public_profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          full_name: string | null
-          id: string | null
-          location_lat: number | null
-          location_lng: number | null
-          show_on_map: boolean | null
-          user_id: string | null
-          username: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          full_name?: string | null
-          id?: string | null
-          location_lat?: never
-          location_lng?: never
-          show_on_map?: boolean | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          full_name?: string | null
-          id?: string | null
-          location_lat?: never
-          location_lng?: never
-          show_on_map?: boolean | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
+      get_public_profile: {
+        Args: { target_user_id: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          full_name: string
+          id: string
+          location_lat: number
+          location_lng: number
+          show_on_map: boolean
+          user_id: string
+          username: string
+        }[]
+      }
+      get_public_profiles: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          created_at: string
+          full_name: string
+          id: string
+          location_lat: number
+          location_lng: number
+          show_on_map: boolean
+          user_id: string
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
