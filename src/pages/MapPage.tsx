@@ -186,9 +186,12 @@ const MapPage = () => {
                   iconSize: [20, 20],
                   iconAnchor: [10, 10],
                 })}
-              >
-                <Popup>Vous êtes ici</Popup>
-              </Marker>
+              />
+            )}
+            {userLocation && (
+              <Popup position={[userLocation.lat, userLocation.lng]}>
+                <span>Vous êtes ici</span>
+              </Popup>
             )}
 
             {/* Seller markers */}
@@ -200,16 +203,7 @@ const MapPage = () => {
                 eventHandlers={{
                   click: () => setSelectedSeller(seller),
                 }}
-              >
-                <Popup>
-                  <div className="text-center">
-                    <p className="font-bold">{seller.full_name || "Vendeur"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {seller.game_count} jeu{seller.game_count !== 1 ? "x" : ""}
-                    </p>
-                  </div>
-                </Popup>
-              </Marker>
+              />
             ))}
           </MapContainer>
         </div>
