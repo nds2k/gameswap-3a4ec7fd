@@ -10,14 +10,6 @@ const Legal = () => {
     title: "Mentions légales",
     subtitle: "Informations juridiques",
     lastUpdate: "Dernière mise à jour : Janvier 2026",
-    editor: {
-      title: "Éditeur du site",
-      company: "GameSwap SAS",
-      address: "123 Rue des Jeux, 75001 Paris, France",
-      siret: "123 456 789 00012",
-      capital: "10 000 €",
-      director: "Jean Dupont"
-    },
     hosting: {
       title: "Hébergement",
       provider: "Infrastructure Cloud Européenne",
@@ -56,14 +48,6 @@ const Legal = () => {
     title: "Legal Notice",
     subtitle: "Legal information",
     lastUpdate: "Last updated: January 2026",
-    editor: {
-      title: "Site Publisher",
-      company: "GameSwap SAS",
-      address: "123 Rue des Jeux, 75001 Paris, France",
-      siret: "123 456 789 00012",
-      capital: "€10,000",
-      director: "Jean Dupont"
-    },
     hosting: {
       title: "Hosting",
       provider: "European Cloud Infrastructure",
@@ -115,21 +99,6 @@ const Legal = () => {
         </div>
 
         <div className="space-y-8 animate-fade-in">
-          {/* Éditeur */}
-          <section className="bg-card rounded-2xl border border-border p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <FileText className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-bold">{content.editor.title}</h2>
-            </div>
-            <div className="space-y-2 text-muted-foreground">
-              <p><strong className="text-foreground">{language === 'fr' ? 'Raison sociale' : 'Company'} :</strong> {content.editor.company}</p>
-              <p><strong className="text-foreground">{language === 'fr' ? 'Siège social' : 'Headquarters'} :</strong> {content.editor.address}</p>
-              <p><strong className="text-foreground">SIRET :</strong> {content.editor.siret}</p>
-              <p><strong className="text-foreground">{language === 'fr' ? 'Capital social' : 'Share capital'} :</strong> {content.editor.capital}</p>
-              <p><strong className="text-foreground">{language === 'fr' ? 'Directeur de la publication' : 'Publication Director'} :</strong> {content.editor.director}</p>
-            </div>
-          </section>
-
           {/* Hébergement */}
           <section className="bg-card rounded-2xl border border-border p-6">
             <div className="flex items-center gap-2 mb-4">
