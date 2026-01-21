@@ -23,6 +23,9 @@ interface Message {
   message_type: string;
   read_at: string | null;
   created_at: string;
+  reactions?: Record<string, string[]>;
+  reply_to_id?: string | null;
+  image_url?: string | null;
   sender?: {
     full_name: string | null;
     avatar_url: string | null;
@@ -50,7 +53,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t, language } = useLanguage();
-  const { sendMessage, getMessages, markAsRead, subscribeToMessages, unsubscribe } = useMessages();
+  const { sendMessage, getMessages, markAsRead, subscribeToMessages, unsubscribe, addReaction } = useMessages();
   const { typingUsers, onlineUsers, startTyping, stopTyping } = useChatPresence(conversationId);
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -62,6 +65,7 @@ const Chat = () => {
   const [reportingMessage, setReportingMessage] = useState<{ id: string; senderId: string } | null>(null);
   const [isBanned, setIsBanned] = useState(false);
   const [bannedUntil, setBannedUntil] = useState<Date | null>(null);
+  const [replyTo, setReplyTo] = useState<{ id: string; content: string; senderName: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load conversation details
@@ -178,8 +182,8 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = async (content: string) => {
-    if (!content.trim() || !conversationId) return;
+  const handleSend = async (content: string, imageUrl?: string) => {
+    if ((!content.trim() && !imageUrl) || !conversationId) return;
 
     if (isBanned && bannedUntil) {
       toast.error(
@@ -193,13 +197,41 @@ const Chat = () => {
     setSending(true);
     stopTyping();
     
-    const { error } = await sendMessage(conversationId, content);
+    const { error } = await sendMessage(conversationId, content, imageUrl, replyTo?.id);
     
     if (error) {
       toast.error(language === 'fr' ? "Erreur d'envoi" : "Failed to send");
     }
     
+    setReplyTo(null);
     setSending(false);
+  };
+
+  const handleReact = async (messageId: string, emoji: string) => {
+    const { error } = await addReaction(messageId, emoji);
+    if (!error) {
+      // Update local state immediately for better UX
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === messageId) {
+          const reactions = { ...(msg.reactions || {}) };
+          const userReactions = reactions[emoji] || [];
+          if (userReactions.includes(user?.id || '')) {
+            reactions[emoji] = userReactions.filter(id => id !== user?.id);
+            if (reactions[emoji].length === 0) {
+              delete reactions[emoji];
+            }
+          } else {
+            reactions[emoji] = [...userReactions, user?.id || ''];
+          }
+          return { ...msg, reactions };
+        }
+        return msg;
+      }));
+    }
+  };
+
+  const handleReply = (messageId: string, content: string, senderName: string) => {
+    setReplyTo({ id: messageId, content, senderName });
   };
 
   const handleReport = (messageId: string, senderId: string) => {
@@ -379,22 +411,38 @@ const Chat = () => {
               <div key={group.date.toISOString()}>
                 <DateSeparator date={group.date} />
                 <div className="space-y-0.5">
-                  {group.messages.map((msg) => (
-                    <MessageBubble
-                      key={msg.id}
-                      id={msg.id}
-                      content={msg.content}
-                      timestamp={msg.created_at}
-                      isMe={msg.sender_id === user?.id}
-                      isGroup={isGroup}
-                      sender={msg.sender}
-                      readAt={msg.read_at}
-                      showAvatar={msg.showAvatar}
-                      showTimestamp={msg.showTimestamp}
-                      onReport={handleReport}
-                      senderId={msg.sender_id}
-                    />
-                  ))}
+                  {group.messages.map((msg) => {
+                    // Find reply-to message if exists
+                    const replyToMessage = msg.reply_to_id 
+                      ? messages.find(m => m.id === msg.reply_to_id)
+                      : null;
+                    
+                    return (
+                      <MessageBubble
+                        key={msg.id}
+                        id={msg.id}
+                        content={msg.content}
+                        timestamp={msg.created_at}
+                        isMe={msg.sender_id === user?.id}
+                        isGroup={isGroup}
+                        sender={msg.sender}
+                        readAt={msg.read_at}
+                        showAvatar={msg.showAvatar}
+                        showTimestamp={msg.showTimestamp}
+                        onReport={handleReport}
+                        senderId={msg.sender_id}
+                        reactions={msg.reactions || {}}
+                        onReact={handleReact}
+                        replyTo={replyToMessage ? {
+                          content: replyToMessage.content,
+                          senderName: replyToMessage.sender?.full_name || (language === 'fr' ? 'Utilisateur' : 'User'),
+                        } : null}
+                        onReply={handleReply}
+                        imageUrl={msg.image_url}
+                        currentUserId={user?.id}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -413,6 +461,8 @@ const Chat = () => {
         disabled={isBanned}
         disabledMessage={isBanned ? t("messages.suspended") : undefined}
         sending={sending}
+        replyTo={replyTo}
+        onClearReply={() => setReplyTo(null)}
       />
 
       {/* Group Settings Sheet */}
