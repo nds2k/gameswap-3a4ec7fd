@@ -1,16 +1,19 @@
-import { Settings as SettingsIcon, User, Bell, Shield, Palette, HelpCircle, LogOut, ChevronRight, Moon, Sun } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useTheme } from "next-themes";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [showOnMap, setShowOnMap] = useState(true);
+
+  const isDarkMode = theme === "dark";
 
   useEffect(() => {
     if (user) {
@@ -35,6 +38,10 @@ const Settings = () => {
     }
   };
 
+  const handleDarkModeChange = (value: boolean) => {
+    setTheme(value ? "dark" : "light");
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
@@ -52,13 +59,13 @@ const Settings = () => {
     {
       section: "Préférences",
       items: [
-        { icon: isDarkMode ? Moon : Sun, label: "Mode sombre", toggle: true, value: isDarkMode, onChange: setIsDarkMode },
-        { icon: Palette, label: "Apparence", href: "/appearance" },
+        { icon: isDarkMode ? Moon : Sun, label: "Mode sombre", toggle: true, value: isDarkMode, onChange: handleDarkModeChange },
       ],
     },
     {
-      section: "Support",
+      section: "Informations",
       items: [
+        { icon: Scale, label: "Mentions légales", href: "/legal" },
         { icon: HelpCircle, label: "Aide et FAQ", href: "/support" },
       ],
     },
