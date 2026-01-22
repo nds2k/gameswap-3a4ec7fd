@@ -1,10 +1,11 @@
 import { MessageCircle, ArrowLeft, Users, Settings, AlertTriangle } from "lucide-react";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMessages } from "@/hooks/useMessages";
 import { useChatPresence } from "@/hooks/useChatPresence";
+import { useChatSounds } from "@/hooks/useChatSounds";
 import { isSameDay } from "date-fns";
 import { GroupSettingsSheet } from "@/components/messages/GroupSettingsSheet";
 import { ReportMessageModal } from "@/components/messages/ReportMessageModal";
@@ -12,6 +13,7 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { DateSeparator } from "@/components/chat/DateSeparator";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { OnlineStatusDot } from "@/components/chat/OnlineStatusDot";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -55,7 +57,7 @@ const Chat = () => {
   const { t, language } = useLanguage();
   const { sendMessage, getMessages, markAsRead, subscribeToMessages, unsubscribe, addReaction } = useMessages();
   const { typingUsers, onlineUsers, startTyping, stopTyping } = useChatPresence(conversationId);
-
+  const { playSound } = useChatSounds();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
@@ -159,17 +161,28 @@ const Chat = () => {
 
     loadMessages();
 
-    // Subscribe to real-time messages
-    subscribeToMessages(conversationId, (newMsg) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
-      });
-      
-      if (newMsg.sender_id !== user?.id) {
-        markAsRead(conversationId);
+    // Subscribe to real-time messages and updates
+    subscribeToMessages(
+      conversationId, 
+      // On new message
+      (newMsg) => {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+        
+        if (newMsg.sender_id !== user?.id) {
+          playSound("receive");
+          markAsRead(conversationId);
+        }
+      },
+      // On message update (reactions, read status)
+      (updatedMsg) => {
+        setMessages((prev) => 
+          prev.map((m) => m.id === updatedMsg.id ? updatedMsg : m)
+        );
       }
-    });
+    );
 
     return () => {
       unsubscribe();
@@ -201,6 +214,8 @@ const Chat = () => {
     
     if (error) {
       toast.error(language === 'fr' ? "Erreur d'envoi" : "Failed to send");
+    } else {
+      playSound("send");
     }
     
     setReplyTo(null);
@@ -349,7 +364,7 @@ const Chat = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
         
-        {/* Avatar */}
+        {/* Avatar with online indicator */}
         <div className="relative">
           <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center overflow-hidden">
             {displayInfo.image ? (
@@ -360,15 +375,22 @@ const Chat = () => {
               <span className="font-bold text-primary-foreground text-lg">{displayInfo.initials}</span>
             )}
           </div>
+          {!isGroup && (
+            <div className="absolute -bottom-0.5 -right-0.5">
+              <OnlineStatusDot isOnline={displayInfo.isOnline} size="md" />
+            </div>
+          )}
         </div>
         
         {/* Name and status */}
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold truncate text-foreground">{displayInfo.name}</h2>
-          {displayInfo.isOnline && (
-            <p className="text-xs text-green-500 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-              {language === 'fr' ? 'En ligne' : 'Online'}
+          {!isGroup && (
+            <p className={`text-xs flex items-center gap-1 transition-colors ${displayInfo.isOnline ? 'text-green-500' : 'text-muted-foreground'}`}>
+              {displayInfo.isOnline 
+                ? (language === 'fr' ? 'En ligne' : 'Online')
+                : (language === 'fr' ? 'Hors ligne' : 'Offline')
+              }
             </p>
           )}
         </div>
