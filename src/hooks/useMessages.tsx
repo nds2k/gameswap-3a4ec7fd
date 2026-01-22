@@ -150,7 +150,11 @@ export const useMessages = () => {
     fetchConversations();
   }, [fetchConversations]);
 
-  const subscribeToMessages = useCallback((conversationId: string, onNewMessage: (message: Message) => void) => {
+  const subscribeToMessages = useCallback((
+    conversationId: string, 
+    onNewMessage: (message: Message) => void,
+    onMessageUpdate?: (message: Message) => void
+  ) => {
     const channel = supabase
       .channel(`messages:${conversationId}`)
       .on(
@@ -173,8 +177,35 @@ export const useMessages = () => {
           
           onNewMessage({
             ...newMsg,
+            reactions: (newMsg.reactions as Record<string, string[]>) || {},
             sender: profileData || { full_name: null, avatar_url: null },
           });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        async (payload) => {
+          const updatedMsg = payload.new as Message;
+          
+          if (onMessageUpdate) {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("full_name, avatar_url")
+              .eq("user_id", updatedMsg.sender_id)
+              .single();
+            
+            onMessageUpdate({
+              ...updatedMsg,
+              reactions: (updatedMsg.reactions as Record<string, string[]>) || {},
+              sender: profileData || { full_name: null, avatar_url: null },
+            });
+          }
         }
       )
       .subscribe();
