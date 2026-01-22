@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFriends } from "@/hooks/useFriends";
@@ -8,10 +9,11 @@ import { FriendsGames } from "@/components/friends/FriendsGames";
 import { AddFriendModal } from "@/components/friends/AddFriendModal";
 import { MessagesTab } from "@/components/friends/MessagesTab";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Users, Bell, Gamepad2, MessageCircle } from "lucide-react";
+import { UserPlus, Users, Bell, Gamepad2, MessageCircle, Globe } from "lucide-react";
 import { useMessages } from "@/hooks/useMessages";
 
 const Friends = () => {
+  const navigate = useNavigate();
   const { 
     friends, 
     pendingReceived, 
@@ -33,10 +35,20 @@ const Friends = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Amis & Messages</h1>
-          <Button variant="gameswap" onClick={() => setAddModalOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Ajouter
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/global-chat")}
+              className="gap-2"
+            >
+              <Globe className="h-4 w-4" />
+              Chat Global
+            </Button>
+            <Button variant="gameswap" onClick={() => setAddModalOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Ajouter
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="messages" className="w-full">
