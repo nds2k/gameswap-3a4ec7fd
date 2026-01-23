@@ -91,15 +91,14 @@ const Chat = () => {
 
         if (participantsError) throw participantsError;
 
-        // Fetch profiles separately
+        // Fetch profiles using the public RPC function (works with RLS)
         const userIds = participantsData?.map(p => p.user_id) || [];
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, avatar_url")
-          .in("user_id", userIds);
+        const { data: profilesData } = await supabase.rpc("get_public_profiles");
 
         const profilesMap = new Map(
-          (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+          (profilesData || [])
+            .filter((p: any) => userIds.includes(p.user_id))
+            .map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
         );
 
         const participants = (participantsData || []).map((p: any) => ({
