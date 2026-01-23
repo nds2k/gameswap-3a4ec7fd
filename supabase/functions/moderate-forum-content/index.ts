@@ -5,6 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation constants
+const MAX_TITLE_LENGTH = 200;
+const MAX_CONTENT_LENGTH = 10000;
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -12,7 +16,48 @@ serve(async (req) => {
   }
 
   try {
-    const { title, content } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      console.error("Invalid JSON payload");
+      return new Response(
+        JSON.stringify({ approved: false, reason: "Requête invalide" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    const { title, content } = body;
+
+    // Validate input types
+    if (title !== undefined && typeof title !== 'string') {
+      return new Response(
+        JSON.stringify({ approved: false, reason: "Le titre doit être du texte" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    if (content !== undefined && typeof content !== 'string') {
+      return new Response(
+        JSON.stringify({ approved: false, reason: "Le contenu doit être du texte" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    // Validate input lengths
+    if (title && title.length > MAX_TITLE_LENGTH) {
+      return new Response(
+        JSON.stringify({ approved: false, reason: `Le titre ne peut pas dépasser ${MAX_TITLE_LENGTH} caractères` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    if (content && content.length > MAX_CONTENT_LENGTH) {
+      return new Response(
+        JSON.stringify({ approved: false, reason: `Le contenu ne peut pas dépasser ${MAX_CONTENT_LENGTH} caractères` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
 
     const textToModerate = [title, content].filter(Boolean).join("\n\n");
 
