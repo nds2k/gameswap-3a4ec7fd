@@ -120,41 +120,46 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
         {friends.map((friendship) => (
           <div
             key={friendship.id}
-            className="flex items-center justify-between p-4 bg-card rounded-xl border border-border"
+            className="flex items-center justify-between p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all cursor-pointer group"
+            onClick={() => handleMessage(friendship.friend.user_id)}
           >
             <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={friendship.friend.avatar_url || undefined} />
-                <AvatarFallback>
-                  {friendship.friend.full_name?.[0] || friendship.friend.username?.[0] || "?"}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-12 w-12 ring-2 ring-transparent group-hover:ring-primary/30 transition-all">
+                  <AvatarImage src={friendship.friend.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {friendship.friend.full_name?.[0] || friendship.friend.username?.[0] || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                {actionLoading === friendship.friend.user_id && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                )}
+              </div>
               <div>
-                <p className="font-medium">{friendship.friend.full_name || "Utilisateur"}</p>
+                <p className="font-medium group-hover:text-primary transition-colors">
+                  {friendship.friend.full_name || "Utilisateur"}
+                </p>
                 {friendship.friend.username && (
                   <p className="text-sm text-muted-foreground">@{friendship.friend.username}</p>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleMessage(friendship.friend.user_id)}
-                disabled={actionLoading === friendship.friend.user_id}
-              >
-                {actionLoading === friendship.friend.user_id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <MessageSquare className="h-4 w-4" />
-                )}
-              </Button>
+              <div className="flex items-center gap-1 text-muted-foreground group-hover:text-primary transition-colors">
+                <MessageSquare className="h-4 w-4" />
+                <span className="text-xs hidden sm:inline">Discuter</span>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setFriendToRemove(friendship)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFriendToRemove(friendship);
+                }}
                 disabled={actionLoading === friendship.id}
-                className="text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 {actionLoading === friendship.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
