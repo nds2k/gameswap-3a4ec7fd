@@ -527,6 +527,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      are_friends: {
+        Args: { _user1: string; _user2: string }
+        Returns: boolean
+      }
       get_friends_games: {
         Args: { user_uuid: string }
         Returns: {
