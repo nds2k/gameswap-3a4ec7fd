@@ -34,15 +34,16 @@ export const useGames = () => {
 
       if (error) throw error;
 
-      // Fetch owner profiles for all games
+      // Fetch owner profiles for all games using RPC for visibility
       if (gamesData && gamesData.length > 0) {
         const ownerIds = [...new Set(gamesData.map((g) => g.owner_id))];
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, avatar_url")
-          .in("user_id", ownerIds);
+        const { data: profiles } = await supabase.rpc("get_public_profiles");
 
-        const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+        const profileMap = new Map(
+          (profiles || [])
+            .filter((p: any) => ownerIds.includes(p.user_id))
+            .map((p: any) => [p.user_id, { user_id: p.user_id, full_name: p.full_name, avatar_url: p.avatar_url }])
+        );
 
         const gamesWithOwners = gamesData.map((game) => ({
           ...game,

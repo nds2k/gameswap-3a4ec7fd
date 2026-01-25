@@ -128,10 +128,8 @@ const Forum = () => {
 
       if (postsData && postsData.length > 0) {
         const authorIds = [...new Set(postsData.map((p) => p.author_id))];
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, avatar_url")
-          .in("user_id", authorIds);
+        const { data: profiles } = await supabase.rpc("get_public_profiles");
+        const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.user_id));
 
         let userLikes: string[] = [];
         if (user) {
@@ -144,7 +142,7 @@ const Forum = () => {
 
         const postsWithAuthors = postsData.map((post) => ({
           ...post,
-          author: profiles?.find((p) => p.user_id === post.author_id) || null,
+          author: filteredProfiles?.find((p: any) => p.user_id === post.author_id) || null,
           user_has_liked: userLikes.includes(post.id),
         }));
 
@@ -173,14 +171,12 @@ const Forum = () => {
 
       if (repliesData && repliesData.length > 0) {
         const authorIds = [...new Set(repliesData.map((r) => r.author_id))];
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, avatar_url")
-          .in("user_id", authorIds);
+        const { data: profiles } = await supabase.rpc("get_public_profiles");
+        const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.user_id));
 
         const repliesWithAuthors = repliesData.map((reply) => ({
           ...reply,
-          author: profiles?.find((p) => p.user_id === reply.author_id) || null,
+          author: filteredProfiles?.find((p: any) => p.user_id === reply.author_id) || null,
         }));
 
         setReplies(repliesWithAuthors);

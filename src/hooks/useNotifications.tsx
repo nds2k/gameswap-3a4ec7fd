@@ -103,12 +103,9 @@ export const useNotifications = () => {
           },
           async (payload) => {
             if (payload.new && payload.new.sender_id !== user.id) {
-              // Fetch sender info for the notification
-              const { data: senderProfile } = await supabase
-                .from("profiles")
-                .select("full_name")
-                .eq("user_id", payload.new.sender_id)
-                .single();
+              // Fetch sender info for the notification using RPC
+              const { data: allProfiles } = await supabase.rpc("get_public_profiles");
+              const senderProfile = (allProfiles || []).find((p: any) => p.user_id === payload.new.sender_id);
 
               const senderName = senderProfile?.full_name || "Quelqu'un";
               const messageContent = (payload.new as { content?: string }).content || "Nouveau message";
