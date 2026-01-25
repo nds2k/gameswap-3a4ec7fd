@@ -22,7 +22,6 @@ import Friends from "./pages/Friends";
 import MyGames from "./pages/MyGames";
 import Support from "./pages/Support";
 import Chat from "./pages/Chat";
-import GlobalChat from "./pages/GlobalChat";
 
 const queryClient = new QueryClient();
 
@@ -76,7 +75,6 @@ const AppRoutes = () => {
       <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
       <Route path="/messages" element={<Navigate to="/friends" replace />} />
       <Route path="/chat/:conversationId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-      <Route path="/global-chat" element={<ProtectedRoute><GlobalChat /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       <Route path="/join/:conversationId" element={<ProtectedRoute><JoinGroup /></ProtectedRoute>} />
