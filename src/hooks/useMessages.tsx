@@ -82,15 +82,14 @@ export const useMessages = () => {
 
       if (partError) throw partError;
 
-      // Get profiles for all participants
+      // Get profiles for all participants using RPC for visibility
       const participantUserIds = [...new Set((allParticipants || []).map((p) => p.user_id))];
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, avatar_url")
-        .in("user_id", participantUserIds);
+      const { data: profilesData } = await supabase.rpc("get_public_profiles");
 
       const profilesMap = new Map(
-        (profilesData || []).map((p) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+        (profilesData || [])
+          .filter((p: any) => participantUserIds.includes(p.user_id))
+          .map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
       );
 
       // Get last message for each conversation
@@ -168,17 +167,14 @@ export const useMessages = () => {
         async (payload) => {
           const newMsg = payload.new as Message;
           
-          // Fetch sender profile for the new message
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("full_name, avatar_url")
-            .eq("user_id", newMsg.sender_id)
-            .single();
+          // Fetch sender profile for the new message using RPC
+          const { data: allProfiles } = await supabase.rpc("get_public_profiles");
+          const profileData = (allProfiles || []).find((p: any) => p.user_id === newMsg.sender_id);
           
           onNewMessage({
             ...newMsg,
             reactions: (newMsg.reactions as Record<string, string[]>) || {},
-            sender: profileData || { full_name: null, avatar_url: null },
+            sender: profileData ? { full_name: profileData.full_name, avatar_url: profileData.avatar_url } : { full_name: null, avatar_url: null },
           });
         }
       )
@@ -194,16 +190,13 @@ export const useMessages = () => {
           const updatedMsg = payload.new as Message;
           
           if (onMessageUpdate) {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("full_name, avatar_url")
-              .eq("user_id", updatedMsg.sender_id)
-              .single();
+            const { data: allProfiles } = await supabase.rpc("get_public_profiles");
+            const profileData = (allProfiles || []).find((p: any) => p.user_id === updatedMsg.sender_id);
             
             onMessageUpdate({
               ...updatedMsg,
               reactions: (updatedMsg.reactions as Record<string, string[]>) || {},
-              sender: profileData || { full_name: null, avatar_url: null },
+              sender: profileData ? { full_name: profileData.full_name, avatar_url: profileData.avatar_url } : { full_name: null, avatar_url: null },
             });
           }
         }
@@ -291,15 +284,14 @@ export const useMessages = () => {
 
     if (error || !messagesData) return { data: null, error };
 
-    // Get sender profiles
+    // Get sender profiles using RPC for visibility
     const senderIds = [...new Set(messagesData.map((m) => m.sender_id))];
-    const { data: profilesData } = await supabase
-      .from("profiles")
-      .select("user_id, full_name, avatar_url")
-      .in("user_id", senderIds);
+    const { data: profilesData } = await supabase.rpc("get_public_profiles");
 
     const profilesMap = new Map(
-      (profilesData || []).map((p) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+      (profilesData || [])
+        .filter((p: any) => senderIds.includes(p.user_id))
+        .map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
     );
 
     const messagesWithSender = messagesData.map((msg) => ({

@@ -56,15 +56,14 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
         if (gameError) throw gameError;
         setGame(gameData);
 
-        // Fetch owner profile
+        // Fetch owner profile using RPC for visibility
         if (gameData.owner_id) {
-          const { data: ownerData } = await supabase
-            .from("profiles")
-            .select("full_name, avatar_url")
-            .eq("user_id", gameData.owner_id)
-            .single();
-
-          setOwner(ownerData);
+          const { data: allProfiles } = await supabase.rpc("get_public_profiles");
+          const ownerProfile = (allProfiles || []).find((p: any) => p.user_id === gameData.owner_id);
+          
+          if (ownerProfile) {
+            setOwner({ full_name: ownerProfile.full_name, avatar_url: ownerProfile.avatar_url });
+          }
         }
 
         // Increment view count
