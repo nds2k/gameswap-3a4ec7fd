@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
+import { useOnlinePresence } from "@/hooks/useOnlinePresence";
+import { OnlineStatusDot } from "@/components/chat/OnlineStatusDot";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +28,7 @@ interface FriendsListProps {
 export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isOnline } = useOnlinePresence();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [friendToRemove, setFriendToRemove] = useState<FriendWithProfile | null>(null);
 
@@ -141,6 +144,11 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
                     {friendship.friend.full_name?.[0] || friendship.friend.username?.[0] || "?"}
                   </AvatarFallback>
                 </Avatar>
+                <OnlineStatusDot 
+                  isOnline={isOnline(friendship.friend.user_id)} 
+                  size="md"
+                  className="absolute bottom-0 right-0"
+                />
                 {actionLoading === friendship.friend.user_id && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
