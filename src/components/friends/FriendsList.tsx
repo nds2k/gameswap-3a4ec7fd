@@ -34,7 +34,7 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
     
     setActionLoading(friendUserId);
     try {
-      // Check if a conversation already exists
+      // Check if a conversation already exists between these two users
       const { data: existingConvos } = await supabase
         .from("conversation_participants")
         .select("conversation_id")
@@ -49,39 +49,49 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
       const friendConvoIds = friendConvos?.map(c => c.conversation_id) || [];
       
       // Find common non-group conversations
-      for (const convoId of userConvoIds) {
-        if (friendConvoIds.includes(convoId)) {
-          const { data: convo } = await supabase
-            .from("conversations")
-            .select("is_group")
-            .eq("id", convoId)
-            .single();
-          
-          if (convo && !convo.is_group) {
-            navigate(`/chat/${convoId}`);
-            return;
-          }
+      const commonConvoIds = userConvoIds.filter(id => friendConvoIds.includes(id));
+      
+      for (const convoId of commonConvoIds) {
+        const { data: convo } = await supabase
+          .from("conversations")
+          .select("is_group")
+          .eq("id", convoId)
+          .maybeSingle();
+        
+        if (convo && !convo.is_group) {
+          navigate(`/chat/${convoId}`);
+          return;
         }
       }
 
-      // Create new conversation
+      // No existing conversation found, create a new one
       const { data: newConvo, error: convoError } = await supabase
         .from("conversations")
-        .insert({ is_group: false })
+        .insert({ is_group: false, created_by: user.id })
         .select()
         .single();
 
-      if (convoError) throw convoError;
+      if (convoError) {
+        console.error("Error creating conversation:", convoError);
+        return;
+      }
 
-      // Add participants
-      await supabase.from("conversation_participants").insert([
-        { conversation_id: newConvo.id, user_id: user.id },
-        { conversation_id: newConvo.id, user_id: friendUserId },
-      ]);
+      // Add both participants
+      const { error: participantError } = await supabase
+        .from("conversation_participants")
+        .insert([
+          { conversation_id: newConvo.id, user_id: user.id },
+          { conversation_id: newConvo.id, user_id: friendUserId },
+        ]);
+
+      if (participantError) {
+        console.error("Error adding participants:", participantError);
+        return;
+      }
 
       navigate(`/chat/${newConvo.id}`);
     } catch (error) {
-      console.error("Error creating conversation:", error);
+      console.error("Error in handleMessage:", error);
     } finally {
       setActionLoading(null);
     }
