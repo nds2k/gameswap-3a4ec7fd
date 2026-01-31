@@ -64,17 +64,37 @@ export const NotificationsSidebar = ({ open, onOpenChange }: NotificationsSideba
         <div className="flex-1 overflow-y-auto">
           {/* Enable push notifications banner */}
           {"Notification" in window && Notification.permission === "default" && (
-            <div className="p-4 bg-primary/5 border-b border-border">
+            <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 border-b border-border">
               <div className="flex items-start gap-3">
-                <Bell className="h-5 w-5 text-primary mt-0.5" />
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Bell className="h-5 w-5 text-primary" />
+                </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Activer les notifications</p>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Recevez des alertes pour les nouveaux messages
+                  <p className="text-sm font-semibold">Activer les notifications</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Recevez des alertes instantanées pour les nouveaux messages, même quand l'onglet est fermé
                   </p>
-                  <Button size="sm" variant="gameswap" onClick={handleEnableNotifications}>
-                    Activer
+                  <Button size="sm" variant="gameswap" onClick={handleEnableNotifications} className="w-full sm:w-auto">
+                    <Bell className="h-4 w-4 mr-2" />
+                    Activer les notifications
                   </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Push notifications blocked warning */}
+          {"Notification" in window && Notification.permission === "denied" && (
+            <div className="p-4 bg-destructive/10 border-b border-border">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center">
+                  <X className="h-5 w-5 text-destructive" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-destructive">Notifications bloquées</p>
+                  <p className="text-xs text-muted-foreground">
+                    Les notifications sont bloquées. Pour les activer, cliquez sur l'icône 🔒 dans la barre d'adresse et autorisez les notifications.
+                  </p>
                 </div>
               </div>
             </div>
