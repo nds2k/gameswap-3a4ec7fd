@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -12,17 +12,36 @@ export interface AppNotification {
   data?: Record<string, unknown>;
 }
 
+// Profiles cache to avoid repeated fetches
+const profilesCache = new Map<string, { full_name: string; avatar_url: string | null }>();
+
 export const useNotifications = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [pushPermission, setPushPermission] = useState<NotificationPermission>("default");
+  const lastNotificationRef = useRef<string | null>(null);
 
   // Check push permission status
   useEffect(() => {
     if ("Notification" in window) {
       setPushPermission(Notification.permission);
+    }
+  }, []);
+
+  // Fetch all profiles once for caching
+  const fetchProfiles = useCallback(async () => {
+    if (profilesCache.size > 0) return;
+    
+    const { data } = await supabase.rpc("get_public_profiles");
+    if (data) {
+      data.forEach((p: any) => {
+        profilesCache.set(p.user_id, { 
+          full_name: p.full_name || "Utilisateur", 
+          avatar_url: p.avatar_url 
+        });
+      });
     }
   }, []);
 
@@ -66,34 +85,76 @@ export const useNotifications = () => {
     }
   }, [user]);
 
-  // Show browser push notification
-  const showPushNotification = useCallback((title: string, body: string, options?: NotificationOptions) => {
+  // Show browser push notification with enhanced options
+  const showPushNotification = useCallback((title: string, body: string, options?: NotificationOptions & { vibrate?: boolean }) => {
     if ("Notification" in window && Notification.permission === "granted") {
+      // Vibrate on mobile if supported and enabled
+      if (options?.vibrate && "vibrate" in navigator) {
+        navigator.vibrate([200, 100, 200]);
+      }
+
       const notification = new Notification(title, {
         body,
         icon: "/favicon.png",
         badge: "/favicon.png",
-        tag: options?.tag || "default",
+        tag: options?.tag || `msg-${Date.now()}`,
+        requireInteraction: false,
+        silent: false,
         ...options,
       });
 
       notification.onclick = () => {
         window.focus();
         notification.close();
+        // Navigate to conversation if data available
+        if (options?.data && typeof options.data === 'object' && 'conversationId' in options.data) {
+          window.location.href = `/chat/${options.data.conversationId}`;
+        }
       };
+
+      // Auto-close after 5 seconds
+      setTimeout(() => {
+        notification.close();
+      }, 5000);
 
       return notification;
     }
     return null;
   }, []);
 
+  // Play notification sound
+  const playNotificationSound = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Pleasant two-tone notification
+      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+      oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+      
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (e) {
+      // Audio not available
+    }
+  }, []);
+
   useEffect(() => {
     fetchNotifications();
+    fetchProfiles();
 
     // Subscribe to new messages for real-time notifications
     if (user) {
       const channel = supabase
-        .channel("notifications-realtime")
+        .channel("push-notifications-realtime")
         .on(
           "postgres_changes",
           {
@@ -102,25 +163,52 @@ export const useNotifications = () => {
             table: "messages",
           },
           async (payload) => {
-            if (payload.new && payload.new.sender_id !== user.id) {
-              // Fetch sender info for the notification using RPC
-              const { data: allProfiles } = await supabase.rpc("get_public_profiles");
-              const senderProfile = (allProfiles || []).find((p: any) => p.user_id === payload.new.sender_id);
+            const newMessage = payload.new as { 
+              id: string;
+              sender_id: string; 
+              content?: string; 
+              conversation_id: string;
+            };
 
-              const senderName = senderProfile?.full_name || "Quelqu'un";
-              const messageContent = (payload.new as { content?: string }).content || "Nouveau message";
+            // Don't notify for own messages
+            if (newMessage.sender_id === user.id) return;
 
-              // Show browser push notification if page is hidden
-              if (document.hidden && Notification.permission === "granted") {
-                showPushNotification(senderName, messageContent, {
-                  tag: payload.new.conversation_id as string,
-                  data: { conversationId: payload.new.conversation_id },
+            // Prevent duplicate notifications
+            if (lastNotificationRef.current === newMessage.id) return;
+            lastNotificationRef.current = newMessage.id;
+
+            // Get sender info from cache or fetch
+            let senderProfile = profilesCache.get(newMessage.sender_id);
+            if (!senderProfile) {
+              const { data: profiles } = await supabase.rpc("get_public_profiles");
+              if (profiles) {
+                profiles.forEach((p: any) => {
+                  profilesCache.set(p.user_id, { 
+                    full_name: p.full_name || "Utilisateur", 
+                    avatar_url: p.avatar_url 
+                  });
                 });
+                senderProfile = profilesCache.get(newMessage.sender_id);
               }
-
-              // Refresh notifications
-              fetchNotifications();
             }
+
+            const senderName = senderProfile?.full_name || "Quelqu'un";
+            const messageContent = newMessage.content || "📷 Image";
+
+            // Show browser push notification if page is hidden or not focused
+            if (document.hidden || !document.hasFocus()) {
+              showPushNotification(senderName, messageContent, {
+                tag: newMessage.conversation_id,
+                data: { conversationId: newMessage.conversation_id },
+                vibrate: true,
+              });
+
+              // Play sound if tab not focused
+              playNotificationSound();
+            }
+
+            // Refresh notification count
+            fetchNotifications();
           }
         )
         .subscribe();
@@ -129,7 +217,7 @@ export const useNotifications = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [user, fetchNotifications, showPushNotification]);
+  }, [user, fetchNotifications, fetchProfiles, showPushNotification, playNotificationSound]);
 
   const markAsRead = useCallback((notificationId: string) => {
     setNotifications((prev) =>
@@ -147,10 +235,18 @@ export const useNotifications = () => {
     if ("Notification" in window) {
       const permission = await Notification.requestPermission();
       setPushPermission(permission);
+      
+      // Show a test notification if granted
+      if (permission === "granted") {
+        showPushNotification("Notifications activées 🎉", "Vous recevrez des alertes pour les nouveaux messages", {
+          tag: "permission-granted",
+        });
+      }
+      
       return permission === "granted";
     }
     return false;
-  }, []);
+  }, [showPushNotification]);
 
   return {
     notifications,
@@ -162,6 +258,7 @@ export const useNotifications = () => {
     refetch: fetchNotifications,
     pushPermission,
     showPushNotification,
+    playNotificationSound,
   };
 };
 
