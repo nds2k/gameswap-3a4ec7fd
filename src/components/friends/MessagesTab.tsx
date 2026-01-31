@@ -1,13 +1,15 @@
-import { MessageCircle, Users, Plus, UserPlus } from "lucide-react";
+import { MessageCircle, Users, Plus, UserPlus, Check, CheckCheck } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
+import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { CreateGroupModal } from "@/components/messages/CreateGroupModal";
 import { StartConversationModal } from "@/components/friends/StartConversationModal";
+import { OnlineStatusDot } from "@/components/chat/OnlineStatusDot";
 import { FriendWithProfile } from "@/hooks/useFriends";
 
 interface MessagesTabProps {
@@ -18,6 +20,7 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { conversations, loading, refreshConversations } = useMessages();
+  const { isOnline } = useOnlinePresence();
 
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [startConvoOpen, setStartConvoOpen] = useState(false);
@@ -25,19 +28,31 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
   // Get display info for conversation
   const getConversationDisplay = (conversation: typeof conversations[0]) => {
     if (conversation.is_group) {
+      // Check if any group member is online
+      const onlineCount = conversation.participants.filter(p => 
+        p.user_id !== user?.id && isOnline(p.user_id)
+      ).length;
+      
       return {
         name: conversation.name || "Groupe",
         image: conversation.image_url,
         initials: (conversation.name || "G").charAt(0).toUpperCase(),
-        subtitle: `${conversation.participants.length} membres`,
+        subtitle: onlineCount > 0 
+          ? `${onlineCount} en ligne • ${conversation.participants.length} membres`
+          : `${conversation.participants.length} membres`,
+        isOnline: onlineCount > 0,
+        otherUserId: null,
       };
     }
     const other = conversation.participants.find((p) => p.user_id !== user?.id);
+    const otherIsOnline = other ? isOnline(other.user_id) : false;
     return {
       name: other?.profile?.full_name || "Utilisateur",
       image: other?.profile?.avatar_url,
       initials: (other?.profile?.full_name || "?").charAt(0).toUpperCase(),
-      subtitle: "En ligne",
+      subtitle: otherIsOnline ? "En ligne" : "Hors ligne",
+      isOnline: otherIsOnline,
+      otherUserId: other?.user_id || null,
     };
   };
 
@@ -134,6 +149,12 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
                       <span className="font-bold text-primary">{display.initials}</span>
                     )}
                   </div>
+                  {/* Online status dot */}
+                  <OnlineStatusDot 
+                    isOnline={display.isOnline} 
+                    size="md"
+                    className="absolute bottom-0 right-0"
+                  />
                   {conversation.unread_count > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
                       {conversation.unread_count}
@@ -159,9 +180,22 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {conversation.last_message?.content || "Nouvelle conversation"}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    {/* Read receipt for last message I sent */}
+                    {conversation.last_message?.sender_id === user?.id && (
+                      <span className="flex-shrink-0">
+                        {conversation.last_message.read_at ? (
+                          <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </span>
+                    )}
+                    <p className="text-sm text-muted-foreground truncate flex-1">
+                      {conversation.last_message?.sender_id === user?.id && "Vous: "}
+                      {conversation.last_message?.content || "Nouvelle conversation"}
+                    </p>
+                  </div>
                 </div>
               </button>
             );
