@@ -1,30 +1,13 @@
-import { useEffect, useState, useCallback } from "react";
-import { Map as MapIcon, Navigation, X } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Map as MapIcon, Navigation, X, MapPin } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import Map, { Marker, Popup, NavigationControl, GeolocateControl } from "react-map-gl";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import "mapbox-gl/dist/mapbox-gl.css";
 
-// Fix for default marker icons in Leaflet with Vite
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
-
-// Custom marker icon
-const createCustomIcon = (color: string) => {
-  return L.divIcon({
-    className: "custom-marker",
-    html: `<div style="background-color: ${color}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); color: white; font-weight: bold; font-size: 14px;">🎲</div>`,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-  });
-};
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface Seller {
   id: string;
@@ -36,41 +19,30 @@ interface Seller {
   game_count: number;
 }
 
-// Component to recenter map
-const RecenterMap = ({ lat, lng }: { lat: number; lng: number }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([lat, lng], 13);
-  }, [lat, lng, map]);
-  return null;
-};
-
 const MapPage = () => {
   const { user } = useAuth();
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
+  const [popupSeller, setPopupSeller] = useState<Seller | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
-
-  // Default to Paris
-  const defaultCenter = { lat: 48.8566, lng: 2.3522 };
-  const center = userLocation || defaultCenter;
+  const [viewState, setViewState] = useState({
+    longitude: 2.3522,
+    latitude: 48.8566,
+    zoom: 11
+  });
 
   const fetchSellers = useCallback(async () => {
     try {
-      // Use security definer function to get public profiles with rounded coordinates
-      const { data: profiles, error } = await supabase
-        .rpc("get_public_profiles");
+      const { data: profiles, error } = await supabase.rpc("get_public_profiles");
 
       if (error) throw error;
 
-      // Filter profiles with location that opted in to show on map
       const profilesWithLocation = (profiles || []).filter(
         (p) => p.show_on_map && p.location_lat != null && p.location_lng != null
       );
 
-      // Get game counts
       const sellersWithGames = await Promise.all(
         profilesWithLocation.map(async (profile) => {
           const { count } = await supabase
@@ -88,7 +60,6 @@ const MapPage = () => {
         })
       );
 
-      // Filter out sellers with no games
       setSellers(sellersWithGames.filter((s) => s.game_count > 0));
     } catch (error) {
       console.error("Error fetching sellers:", error);
@@ -107,8 +78,13 @@ const MapPage = () => {
             lng: position.coords.longitude,
           };
           setUserLocation(newLocation);
+          setViewState(prev => ({
+            ...prev,
+            latitude: newLocation.lat,
+            longitude: newLocation.lng,
+            zoom: 13
+          }));
 
-          // Update user's location in profile if logged in
           if (user) {
             await supabase
               .from("profiles")
@@ -164,49 +140,110 @@ const MapPage = () => {
 
         {/* Map */}
         <div className="relative bg-card rounded-2xl border border-border overflow-hidden h-[60vh] mb-6">
-          <MapContainer
-            key={`map-${center.lat}-${center.lng}`}
-            center={[center.lat, center.lng]}
-            zoom={13}
-            style={{ height: "100%", width: "100%", borderRadius: "1rem" }}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            {userLocation && <RecenterMap lat={userLocation.lat} lng={userLocation.lng} />}
-
-            {/* User location marker */}
-            {userLocation && (
-              <Marker
-                position={[userLocation.lat, userLocation.lng]}
-                icon={L.divIcon({
-                  className: "custom-marker",
-                  html: `<div style="background-color: #3B82F6; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);"></div>`,
-                  iconSize: [20, 20],
-                  iconAnchor: [10, 10],
-                })}
-              />
-            )}
-            {userLocation && (
-              <Popup position={[userLocation.lat, userLocation.lng]}>
-                <span>Vous êtes ici</span>
-              </Popup>
-            )}
-
-            {/* Seller markers */}
-            {sellers.map((seller) => (
-              <Marker
-                key={seller.id}
-                position={[seller.location_lat, seller.location_lng]}
-                icon={createCustomIcon("hsl(30, 100%, 50%)")}
-                eventHandlers={{
-                  click: () => setSelectedSeller(seller),
+          {MAPBOX_TOKEN ? (
+            <Map
+              {...viewState}
+              onMove={evt => setViewState(evt.viewState)}
+              style={{ width: "100%", height: "100%" }}
+              mapStyle="mapbox://styles/mapbox/streets-v12"
+              mapboxAccessToken={MAPBOX_TOKEN}
+            >
+              <NavigationControl position="top-right" />
+              <GeolocateControl
+                position="top-right"
+                trackUserLocation
+                onGeolocate={(e) => {
+                  setUserLocation({
+                    lat: e.coords.latitude,
+                    lng: e.coords.longitude
+                  });
                 }}
               />
-            ))}
-          </MapContainer>
+
+              {/* Seller markers */}
+              {sellers.map((seller) => (
+                <Marker
+                  key={seller.id}
+                  longitude={seller.location_lng}
+                  latitude={seller.location_lat}
+                  anchor="bottom"
+                  onClick={(e) => {
+                    e.originalEvent.stopPropagation();
+                    setPopupSeller(seller);
+                  }}
+                >
+                  <div 
+                    className="cursor-pointer transform transition-transform hover:scale-110"
+                    onClick={() => setSelectedSeller(seller)}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center border-3 border-white shadow-lg text-primary-foreground font-bold text-sm">
+                      🎲
+                    </div>
+                  </div>
+                </Marker>
+              ))}
+
+              {/* Popup for selected marker */}
+              {popupSeller && (
+                <Popup
+                  longitude={popupSeller.location_lng}
+                  latitude={popupSeller.location_lat}
+                  anchor="bottom"
+                  offset={25}
+                  onClose={() => setPopupSeller(null)}
+                  closeButton={true}
+                  closeOnClick={false}
+                >
+                  <div className="p-2 min-w-[150px]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                        {popupSeller.avatar_url ? (
+                          <img
+                            src={popupSeller.avatar_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-bold text-primary">
+                            {popupSeller.full_name?.[0]?.toUpperCase() || "?"}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{popupSeller.full_name || "Vendeur"}</p>
+                        <p className="text-xs text-primary">{popupSeller.game_count} jeu{popupSeller.game_count !== 1 ? "x" : ""}</p>
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="w-full" 
+                      onClick={() => setSelectedSeller(popupSeller)}
+                    >
+                      Voir profil
+                    </Button>
+                  </div>
+                </Popup>
+              )}
+
+              {/* User location marker */}
+              {userLocation && (
+                <Marker
+                  longitude={userLocation.lng}
+                  latitude={userLocation.lat}
+                  anchor="center"
+                >
+                  <div className="w-5 h-5 rounded-full bg-blue-500 border-3 border-white shadow-lg animate-pulse" />
+                </Marker>
+              )}
+            </Map>
+          ) : (
+            <div className="flex items-center justify-center h-full bg-muted">
+              <div className="text-center">
+                <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Token Mapbox non configuré</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Seller detail sidebar */}
@@ -289,7 +326,15 @@ const MapPage = () => {
                       ? "border-primary shadow-md"
                       : "border-border hover:border-primary/50"
                   }`}
-                  onClick={() => setSelectedSeller(seller)}
+                  onClick={() => {
+                    setSelectedSeller(seller);
+                    setViewState(prev => ({
+                      ...prev,
+                      latitude: seller.location_lat,
+                      longitude: seller.location_lng,
+                      zoom: 14
+                    }));
+                  }}
                 >
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
                     {seller.avatar_url ? (
