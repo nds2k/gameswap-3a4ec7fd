@@ -1,15 +1,17 @@
-import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useProfileSettings } from "@/hooks/useProfileSettings";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -24,112 +26,69 @@ const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const [notifications, setNotifications] = useState(true);
-  const [showOnMap, setShowOnMap] = useState(true);
-  const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
-  const [locationLat, setLocationLat] = useState<number | null>(null);
-  const [locationLng, setLocationLng] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { 
+    settings, 
+    setSettings, 
+    loading, 
+    saving, 
+    updateSetting, 
+    saveAllSettings 
+  } = useProfileSettings();
+  const { 
+    notificationPermission, 
+    requestNotificationPermission,
+    requestGeolocationPermission 
+  } = usePermissions();
 
   const isDarkMode = theme === "dark";
+  const [notificationsEnabled, setNotificationsEnabled] = useState(notificationPermission === "granted");
 
   useEffect(() => {
-    if (user) {
-      supabase
-        .from("profiles")
-        .select("show_on_map, full_name, username, location_lat, location_lng")
-        .eq("user_id", user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) {
-            setShowOnMap(data.show_on_map ?? true);
-            setFullName(data.full_name || "");
-            setUsername(data.username || "");
-            setLocationLat(data.location_lat);
-            setLocationLng(data.location_lng);
-          }
-        });
-    }
-  }, [user]);
-
-  const handleShowOnMapChange = async (value: boolean) => {
-    setShowOnMap(value);
-    if (user) {
-      await supabase
-        .from("profiles")
-        .update({ show_on_map: value })
-        .eq("user_id", user.id);
-    }
-  };
+    setNotificationsEnabled(notificationPermission === "granted");
+  }, [notificationPermission]);
 
   const handleDarkModeChange = (value: boolean) => {
     setTheme(value ? "dark" : "light");
   };
 
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
+  const handleNotificationToggle = async () => {
+    if (notificationPermission === "granted") {
       toast({
-        title: "Erreur",
-        description: "La géolocalisation n'est pas supportée par votre navigateur",
-        variant: "destructive",
+        title: "Info",
+        description: "Pour désactiver les notifications, utilisez les paramètres de votre navigateur",
       });
       return;
     }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocationLat(position.coords.latitude);
-        setLocationLng(position.coords.longitude);
-        toast({
-          title: "Position détectée",
-          description: "Votre position a été mise à jour",
-        });
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible d'obtenir votre position",
-          variant: "destructive",
-        });
-      }
-    );
+    
+    const granted = await requestNotificationPermission();
+    setNotificationsEnabled(granted);
   };
 
-  const handleSaveProfile = async () => {
-    if (!user) return;
-
-    setSaving(true);
-
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: fullName || null,
-          username: username || null,
-          show_on_map: showOnMap,
-          location_lat: locationLat,
-          location_lng: locationLng,
-        })
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Profil sauvegardé",
-        description: "Vos modifications ont été enregistrées",
-      });
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder les modifications",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
+  const handleGetLocation = async () => {
+    const position = await requestGeolocationPermission();
+    if (position) {
+      setSettings((prev) => ({
+        ...prev,
+        locationLat: position.coords.latitude,
+        locationLng: position.coords.longitude,
+      }));
     }
+  };
+
+  const handleAllowFriendRequestsChange = async (value: boolean) => {
+    const success = await updateSetting("allowFriendRequests", value);
+    if (success) {
+      toast({
+        title: value ? "Demandes d'amis activées" : "Demandes d'amis désactivées",
+        description: value 
+          ? "Les autres utilisateurs peuvent vous envoyer des demandes d'amis"
+          : "Personne ne peut vous envoyer de demandes d'amis",
+      });
+    }
+  };
+
+  const handleShowOnMapChange = async (value: boolean) => {
+    await updateSetting("showOnMap", value);
   };
 
   const handleSignOut = async () => {
@@ -139,13 +98,6 @@ const Settings = () => {
 
   const menuItems = [
     {
-      section: t("settings.preferences"),
-      items: [
-        { icon: Bell, label: t("settings.notifications"), toggle: true, value: notifications, onChange: setNotifications },
-        { icon: isDarkMode ? Moon : Sun, label: t("settings.darkMode"), toggle: true, value: isDarkMode, onChange: handleDarkModeChange },
-      ],
-    },
-    {
       section: t("settings.info"),
       items: [
         { icon: Scale, label: t("settings.legal"), href: "/legal" },
@@ -154,6 +106,16 @@ const Settings = () => {
       ],
     },
   ];
+
+  if (loading) {
+    return (
+      <MainLayout showSearch={false}>
+        <div className="container py-6 max-w-2xl mx-auto flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout showSearch={false}>
@@ -181,8 +143,8 @@ const Settings = () => {
                 <Input
                   id="fullName"
                   placeholder="Votre nom"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  value={settings.fullName}
+                  onChange={(e) => setSettings((prev) => ({ ...prev, fullName: e.target.value }))}
                 />
               </div>
 
@@ -191,8 +153,8 @@ const Settings = () => {
                 <Input
                   id="username"
                   placeholder="@username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={settings.username}
+                  onChange={(e) => setSettings((prev) => ({ ...prev, username: e.target.value }))}
                 />
               </div>
 
@@ -209,55 +171,118 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Location Settings */}
+          {/* Privacy Settings */}
           <div>
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
-              Localisation
+              Confidentialité
             </h2>
-            <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
-              <button
-                onClick={() => handleShowOnMapChange(!showOnMap)}
-                className="w-full flex items-center justify-between"
-              >
+            <div className="bg-card rounded-2xl border border-border overflow-hidden">
+              {/* Allow Friend Requests Toggle */}
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <UserX className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <span className="font-medium block">Accepter les demandes d'amis</span>
+                    <span className="text-xs text-muted-foreground">
+                      Permettre aux autres utilisateurs de vous ajouter
+                    </span>
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.allowFriendRequests}
+                  onCheckedChange={handleAllowFriendRequestsChange}
+                />
+              </div>
+
+              {/* Show on Map Toggle */}
+              <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <Shield className="h-5 w-5 text-muted-foreground" />
-                  <div className="text-left">
+                  <div>
                     <span className="font-medium block">Visible sur la carte</span>
                     <span className="text-xs text-muted-foreground">
                       Les autres utilisateurs pourront vous trouver
                     </span>
                   </div>
                 </div>
-                <div
-                  className={`w-12 h-7 rounded-full transition-colors flex items-center p-1 ${
-                    showOnMap ? "bg-primary" : "bg-muted"
-                  }`}
-                >
-                  <div
-                    className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
-                      showOnMap ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </div>
-              </button>
+                <Switch
+                  checked={settings.showOnMap}
+                  onCheckedChange={handleShowOnMapChange}
+                />
+              </div>
+            </div>
+          </div>
 
-              <div className="pt-2 border-t border-border">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleGetLocation}
-                >
-                  <MapPin className="h-4 w-4 mr-2" />
-                  {locationLat && locationLng
-                    ? "Mettre à jour ma position"
-                    : "Détecter ma position"}
-                </Button>
-                
-                {locationLat && locationLng && (
-                  <p className="text-xs text-muted-foreground text-center mt-2">
-                    Position: {locationLat.toFixed(4)}, {locationLng.toFixed(4)}
-                  </p>
-                )}
+          {/* Notifications Settings */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
+              Notifications
+            </h2>
+            <div className="bg-card rounded-2xl border border-border overflow-hidden">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <BellRing className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <span className="font-medium block">Notifications push</span>
+                    <span className="text-xs text-muted-foreground">
+                      {notificationPermission === "granted" 
+                        ? "Les notifications sont activées"
+                        : notificationPermission === "denied"
+                        ? "Bloquées dans les paramètres du navigateur"
+                        : "Recevez des alertes pour les nouveaux messages"
+                      }
+                    </span>
+                  </div>
+                </div>
+                <Switch
+                  checked={notificationsEnabled}
+                  onCheckedChange={handleNotificationToggle}
+                  disabled={notificationPermission === "denied"}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Location Settings */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
+              Localisation
+            </h2>
+            <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleGetLocation}
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                {settings.locationLat && settings.locationLng
+                  ? "Mettre à jour ma position"
+                  : "Détecter ma position"}
+              </Button>
+              
+              {settings.locationLat && settings.locationLng && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Position: {settings.locationLat.toFixed(4)}, {settings.locationLng.toFixed(4)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Theme Toggle */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
+              Apparence
+            </h2>
+            <div className="bg-card rounded-2xl border border-border overflow-hidden">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  {isDarkMode ? <Moon className="h-5 w-5 text-muted-foreground" /> : <Sun className="h-5 w-5 text-muted-foreground" />}
+                  <span className="font-medium">{t("settings.darkMode")}</span>
+                </div>
+                <Switch
+                  checked={isDarkMode}
+                  onCheckedChange={handleDarkModeChange}
+                />
               </div>
             </div>
           </div>
@@ -290,7 +315,7 @@ const Settings = () => {
           <Button
             variant="gameswap"
             className="w-full"
-            onClick={handleSaveProfile}
+            onClick={saveAllSettings}
             disabled={saving}
           >
             {saving ? t("settings.saving") : t("settings.save")}
@@ -306,34 +331,6 @@ const Settings = () => {
                 {section.items.map((item, index) => {
                   const Icon = item.icon;
                   
-                  if (item.toggle) {
-                    return (
-                      <button
-                        key={item.label}
-                        onClick={() => item.onChange?.(!item.value)}
-                        className={`w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors ${
-                          index !== section.items.length - 1 ? "border-b border-border" : ""
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon className="h-5 w-5 text-muted-foreground" />
-                          <span className="font-medium">{item.label}</span>
-                        </div>
-                        <div
-                          className={`w-12 h-7 rounded-full transition-colors flex items-center p-1 ${
-                            item.value ? "bg-primary" : "bg-muted"
-                          }`}
-                        >
-                          <div
-                            className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
-                              item.value ? "translate-x-5" : "translate-x-0"
-                            }`}
-                          />
-                        </div>
-                      </button>
-                    );
-                  }
-
                   return (
                     <Link
                       key={item.label}

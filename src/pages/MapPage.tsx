@@ -1,11 +1,12 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Map as MapIcon, Navigation, X } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Map as MapIcon, Navigation, X, MapPin, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import "leaflet/dist/leaflet.css";
 
 // Fix for default marker icons in Leaflet with bundlers
@@ -58,13 +59,16 @@ const MapController = ({ center, zoom }: { center: [number, number] | null; zoom
 
 const MapPage = () => {
   const { user } = useAuth();
+  const { requestGeolocationPermission } = usePermissions();
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([48.8566, 2.3522]); // Paris default
   const [mapZoom, setMapZoom] = useState(11);
   const [loading, setLoading] = useState(true);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [hasRequestedLocation, setHasRequestedLocation] = useState(false);
 
   const fetchSellers = useCallback(async () => {
     try {
@@ -101,38 +105,43 @@ const MapPage = () => {
     }
   }, []);
 
-  const requestLocation = () => {
-    setLocationError(null);
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const newLocation: [number, number] = [
-            position.coords.latitude,
-            position.coords.longitude,
-          ];
-          setUserLocation(newLocation);
-          setMapCenter(newLocation);
-          setMapZoom(13);
-
-          if (user) {
-            await supabase
-              .from("profiles")
-              .update({
-                location_lat: newLocation[0],
-                location_lng: newLocation[1],
-              })
-              .eq("user_id", user.id);
-          }
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-          setLocationError("Impossible d'obtenir votre position");
-        },
-        { enableHighAccuracy: true }
-      );
-    } else {
-      setLocationError("La géolocalisation n'est pas supportée");
+  // Request location permission on mount
+  useEffect(() => {
+    if (!hasRequestedLocation) {
+      setHasRequestedLocation(true);
+      requestLocation();
     }
+  }, [hasRequestedLocation]);
+
+  const requestLocation = async () => {
+    setLocationError(null);
+    setLocationLoading(true);
+    
+    const position = await requestGeolocationPermission();
+    
+    if (position) {
+      const newLocation: [number, number] = [
+        position.coords.latitude,
+        position.coords.longitude,
+      ];
+      setUserLocation(newLocation);
+      setMapCenter(newLocation);
+      setMapZoom(13);
+
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({
+            location_lat: newLocation[0],
+            location_lng: newLocation[1],
+          })
+          .eq("user_id", user.id);
+      }
+    } else {
+      setLocationError("Position non disponible");
+    }
+    
+    setLocationLoading(false);
   };
 
   useEffect(() => {
@@ -161,8 +170,18 @@ const MapPage = () => {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="rounded-full" onClick={requestLocation}>
-            <Navigation className="h-4 w-4 mr-1" />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="rounded-full" 
+            onClick={requestLocation}
+            disabled={locationLoading}
+          >
+            {locationLoading ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Navigation className="h-4 w-4 mr-1" />
+            )}
             Ma position
           </Button>
         </div>
