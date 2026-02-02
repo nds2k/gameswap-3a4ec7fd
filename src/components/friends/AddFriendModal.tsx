@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, UserPlus, Loader2, Check } from "lucide-react";
+import { Search, UserPlus, Loader2, Check, UserX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { FriendWithProfile } from "@/hooks/useFriends";
@@ -15,6 +15,7 @@ interface Profile {
   full_name: string | null;
   username: string | null;
   avatar_url: string | null;
+  allow_friend_requests?: boolean;
 }
 
 interface AddFriendModalProps {
@@ -38,6 +39,7 @@ export const AddFriendModal = ({
   const [results, setResults] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const [profileSettings, setProfileSettings] = useState<Map<string, boolean>>(new Map());
 
   useEffect(() => {
     if (!search.trim() || search.length < 2) {
@@ -60,6 +62,21 @@ export const AddFriendModal = ({
         }) || [];
         
         setResults(filtered.slice(0, 10));
+
+        // Fetch allow_friend_requests setting for each result
+        if (filtered.length > 0) {
+          const userIds = filtered.map(p => p.user_id);
+          const { data: settingsData } = await supabase
+            .from("profiles")
+            .select("user_id, allow_friend_requests")
+            .in("user_id", userIds);
+          
+          const settingsMap = new Map<string, boolean>();
+          settingsData?.forEach(s => {
+            settingsMap.set(s.user_id, s.allow_friend_requests ?? true);
+          });
+          setProfileSettings(settingsMap);
+        }
       } catch (error) {
         console.error("Error searching users:", error);
       } finally {
@@ -78,7 +95,20 @@ export const AddFriendModal = ({
     return pendingSent.some((f) => f.friend.user_id === userId);
   };
 
+  const allowsFriendRequests = (userId: string) => {
+    return profileSettings.get(userId) ?? true;
+  };
+
   const handleSendRequest = async (profile: Profile) => {
+    if (!allowsFriendRequests(profile.user_id)) {
+      toast({
+        title: "Impossible d'envoyer",
+        description: "Cet utilisateur n'accepte pas les demandes d'amis.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSendingTo(profile.user_id);
     const { error } = await onSendRequest(profile.user_id);
     
@@ -131,6 +161,7 @@ export const AddFriendModal = ({
           {!loading && results.map((profile) => {
             const isFriend = isAlreadyFriend(profile.user_id);
             const isPending = isPendingSent(profile.user_id);
+            const allowsRequests = allowsFriendRequests(profile.user_id);
             
             return (
               <div
@@ -159,6 +190,11 @@ export const AddFriendModal = ({
                   </span>
                 ) : isPending ? (
                   <span className="text-sm text-muted-foreground">En attente</span>
+                ) : !allowsRequests ? (
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <UserX className="h-4 w-4" />
+                    Non disponible
+                  </span>
                 ) : (
                   <Button
                     variant="gameswap"

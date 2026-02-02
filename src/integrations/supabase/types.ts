@@ -405,6 +405,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          allow_friend_requests: boolean
           avatar_url: string | null
           created_at: string
           full_name: string | null
@@ -418,6 +419,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          allow_friend_requests?: boolean
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
@@ -431,6 +433,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          allow_friend_requests?: boolean
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
