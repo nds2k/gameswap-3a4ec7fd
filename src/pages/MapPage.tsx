@@ -3,6 +3,7 @@ import { Map as MapIcon, Navigation, X, MapPin, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -208,48 +209,63 @@ const MapPage = () => {
             
             <MapController center={mapCenter} zoom={mapZoom} />
 
-            {/* Seller markers */}
-            {sellers.map((seller) => (
-              <Marker
-                key={seller.id}
-                position={[seller.location_lat, seller.location_lng]}
-                icon={sellerIcon}
-                eventHandlers={{
-                  click: () => handleSellerClick(seller),
-                }}
-              >
-                <Popup>
-                  <div className="p-1 min-w-[150px]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
-                        {seller.avatar_url ? (
-                          <img
-                            src={seller.avatar_url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-sm font-bold text-primary">
-                            {seller.full_name?.[0]?.toUpperCase() || "?"}
-                          </span>
-                        )}
+            {/* Clustered seller markers */}
+            <MarkerClusterGroup
+              chunkedLoading
+              iconCreateFunction={(cluster) => {
+                const count = cluster.getChildCount();
+                return L.divIcon({
+                  html: `<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center border-2 border-white shadow-lg text-white font-bold text-sm">${count}</div>`,
+                  className: "custom-cluster-marker",
+                  iconSize: L.point(40, 40),
+                });
+              }}
+              maxClusterRadius={60}
+              spiderfyOnMaxZoom
+              showCoverageOnHover={false}
+            >
+              {sellers.map((seller) => (
+                <Marker
+                  key={seller.id}
+                  position={[seller.location_lat, seller.location_lng]}
+                  icon={sellerIcon}
+                  eventHandlers={{
+                    click: () => handleSellerClick(seller),
+                  }}
+                >
+                  <Popup>
+                    <div className="p-1 min-w-[150px]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                          {seller.avatar_url ? (
+                            <img
+                              src={seller.avatar_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-sm font-bold text-primary">
+                              {seller.full_name?.[0]?.toUpperCase() || "?"}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{seller.full_name || "Vendeur"}</p>
+                          <p className="text-xs text-primary">{seller.game_count} jeu{seller.game_count !== 1 ? "x" : ""}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-sm">{seller.full_name || "Vendeur"}</p>
-                        <p className="text-xs text-primary">{seller.game_count} jeu{seller.game_count !== 1 ? "x" : ""}</p>
-                      </div>
+                      <Button 
+                        size="sm" 
+                        className="w-full" 
+                        onClick={() => setSelectedSeller(seller)}
+                      >
+                        Voir profil
+                      </Button>
                     </div>
-                    <Button 
-                      size="sm" 
-                      className="w-full" 
-                      onClick={() => setSelectedSeller(seller)}
-                    >
-                      Voir profil
-                    </Button>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+                  </Popup>
+                </Marker>
+              ))}
+            </MarkerClusterGroup>
 
             {/* User location marker */}
             {userLocation && (
