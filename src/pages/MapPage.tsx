@@ -71,6 +71,29 @@ const MapPage = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [hasRequestedLocation, setHasRequestedLocation] = useState(false);
 
+  // Calculate approximate distance between two coordinates
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Get approximate distance text
+  const getDistanceText = (sellerLat: number, sellerLng: number): string | null => {
+    if (!userLocation) return null;
+    const distance = calculateDistance(userLocation[0], userLocation[1], sellerLat, sellerLng);
+    if (distance < 10) return "Moins de 10 km";
+    if (distance < 20) return "10 à 20 km";
+    if (distance < 50) return "20 à 50 km";
+    if (distance < 100) return "50 à 100 km";
+    return "Plus de 100 km";
+  };
+
   const fetchSellers = useCallback(async () => {
     try {
       const { data: profiles, error } = await supabase.rpc("get_public_profiles");
@@ -114,9 +137,17 @@ const MapPage = () => {
     }
   }, [hasRequestedLocation]);
 
-  const requestLocation = async () => {
+  const requestLocation = async (forceRequest: boolean = false) => {
     setLocationError(null);
     setLocationLoading(true);
+    
+    // Check current permission state - always try if forced or not yet granted
+    if (!forceRequest && userLocation) {
+      setMapCenter(userLocation);
+      setMapZoom(13);
+      setLocationLoading(false);
+      return;
+    }
     
     const position = await requestGeolocationPermission();
     
@@ -128,6 +159,7 @@ const MapPage = () => {
       setUserLocation(newLocation);
       setMapCenter(newLocation);
       setMapZoom(13);
+      setLocationError(null);
 
       if (user) {
         await supabase
@@ -139,7 +171,7 @@ const MapPage = () => {
           .eq("user_id", user.id);
       }
     } else {
-      setLocationError("Position non disponible");
+      setLocationError("Position non disponible. Vérifiez les paramètres de votre navigateur.");
     }
     
     setLocationLoading(false);
@@ -175,7 +207,7 @@ const MapPage = () => {
             variant="outline" 
             size="sm" 
             className="rounded-full" 
-            onClick={requestLocation}
+            onClick={() => requestLocation(true)}
             disabled={locationLoading}
           >
             {locationLoading ? (
@@ -252,6 +284,9 @@ const MapPage = () => {
                         <div>
                           <p className="font-semibold text-sm">{seller.full_name || "Vendeur"}</p>
                           <p className="text-xs text-primary">{seller.game_count} jeu{seller.game_count !== 1 ? "x" : ""}</p>
+                          {getDistanceText(seller.location_lat, seller.location_lng) && (
+                            <p className="text-xs text-muted-foreground">{getDistanceText(seller.location_lat, seller.location_lng)}</p>
+                          )}
                         </div>
                       </div>
                       <Button 
@@ -274,15 +309,30 @@ const MapPage = () => {
               </Marker>
             )}
 
-            {/* Optional: Circle around user location */}
+            {/* Circle showing approximate area around each seller (15km) */}
+            {sellers.map((seller) => (
+              <Circle
+                key={`circle-${seller.id}`}
+                center={[seller.location_lat, seller.location_lng]}
+                radius={15000}
+                pathOptions={{
+                  color: "hsl(var(--primary))",
+                  fillColor: "hsl(var(--primary))",
+                  fillOpacity: 0.08,
+                  weight: 1,
+                }}
+              />
+            ))}
+
+            {/* User location marker and circle */}
             {userLocation && (
               <Circle
                 center={userLocation}
                 radius={1000}
                 pathOptions={{
-                  color: "hsl(var(--primary))",
-                  fillColor: "hsl(var(--primary))",
-                  fillOpacity: 0.1,
+                  color: "hsl(var(--chart-1))",
+                  fillColor: "hsl(var(--chart-1))",
+                  fillOpacity: 0.15,
                 }}
               />
             )}
@@ -324,6 +374,11 @@ const MapPage = () => {
                   <p className="text-primary font-semibold">
                     {selectedSeller.game_count} jeu{selectedSeller.game_count !== 1 ? "x" : ""} disponible{selectedSeller.game_count !== 1 ? "s" : ""}
                   </p>
+                  {getDistanceText(selectedSeller.location_lat, selectedSeller.location_lng) && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      📍 {getDistanceText(selectedSeller.location_lat, selectedSeller.location_lng)} de vous
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -389,6 +444,11 @@ const MapPage = () => {
                     <p className="text-sm text-muted-foreground">
                       {seller.game_count} jeu{seller.game_count !== 1 ? "x" : ""} disponible{seller.game_count !== 1 ? "s" : ""}
                     </p>
+                    {getDistanceText(seller.location_lat, seller.location_lng) && (
+                      <p className="text-xs text-muted-foreground">
+                        📍 {getDistanceText(seller.location_lat, seller.location_lng)}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
