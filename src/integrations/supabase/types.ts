@@ -354,6 +354,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          encrypted_keys: Json | null
           id: string
           image_url: string | null
           message_type: string | null
@@ -366,6 +367,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at?: string
+          encrypted_keys?: Json | null
           id?: string
           image_url?: string | null
           message_type?: string | null
@@ -378,6 +380,7 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          encrypted_keys?: Json | null
           id?: string
           image_url?: string | null
           message_type?: string | null
@@ -413,6 +416,7 @@ export type Database = {
           location_geohash: string | null
           location_lat: number | null
           location_lng: number | null
+          public_key: string | null
           show_on_map: boolean | null
           updated_at: string
           user_id: string
@@ -427,6 +431,7 @@ export type Database = {
           location_geohash?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          public_key?: string | null
           show_on_map?: boolean | null
           updated_at?: string
           user_id: string
@@ -441,6 +446,7 @@ export type Database = {
           location_geohash?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          public_key?: string | null
           show_on_map?: boolean | null
           updated_at?: string
           user_id?: string
@@ -561,6 +567,7 @@ export type Database = {
           id: string
           location_lat: number
           location_lng: number
+          public_key: string
           show_on_map: boolean
           user_id: string
           username: string
@@ -575,6 +582,7 @@ export type Database = {
           id: string
           location_lat: number
           location_lng: number
+          public_key: string
           show_on_map: boolean
           user_id: string
           username: string

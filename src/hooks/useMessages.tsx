@@ -218,17 +218,24 @@ export const useMessages = () => {
     conversationId: string, 
     content: string, 
     imageUrl?: string,
-    replyToId?: string
+    replyToId?: string,
+    encryptedContent?: { iv: number[]; data: number[] },
+    encryptedKeys?: Record<string, string>
   ) => {
     if (!user) return { error: new Error("Not authenticated") };
+
+    // If encrypted content is provided, store encrypted version
+    const messageContent = encryptedContent ? JSON.stringify(encryptedContent) : content;
+    const messageType = encryptedContent ? "encrypted" : (imageUrl ? "image" : "text");
 
     const { error } = await supabase.from("messages").insert({
       conversation_id: conversationId,
       sender_id: user.id,
-      content,
-      message_type: imageUrl ? "image" : "text",
+      content: messageContent,
+      message_type: messageType,
       image_url: imageUrl || null,
       reply_to_id: replyToId || null,
+      encrypted_keys: encryptedKeys || null,
     });
 
     if (!error) {
