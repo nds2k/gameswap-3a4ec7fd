@@ -1,4 +1,4 @@
-import { MessageCircle, ArrowLeft, Users, Settings, AlertTriangle } from "lucide-react";
+import { MessageCircle, ArrowLeft, Users, Settings, AlertTriangle, Lock } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,6 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useMessages } from "@/hooks/useMessages";
 import { useChatPresence } from "@/hooks/useChatPresence";
 import { useChatSounds } from "@/hooks/useChatSounds";
+import { useEncryption } from "@/hooks/useEncryption";
 import { isSameDay } from "date-fns";
 import { GroupSettingsSheet } from "@/components/messages/GroupSettingsSheet";
 import { ReportMessageModal } from "@/components/messages/ReportMessageModal";
@@ -28,6 +29,7 @@ interface Message {
   reactions?: Record<string, string[]>;
   reply_to_id?: string | null;
   image_url?: string | null;
+  encrypted_keys?: Record<string, string> | null;
   sender?: {
     full_name: string | null;
     avatar_url: string | null;
@@ -58,6 +60,8 @@ const Chat = () => {
   const { sendMessage, getMessages, markAsRead, subscribeToMessages, unsubscribe, addReaction } = useMessages();
   const { typingUsers, onlineUsers, startTyping, stopTyping } = useChatPresence(conversationId);
   const { playSound } = useChatSounds();
+  const { isInitialized: encryptionReady, hasEncryption, encryptForRecipients, decryptMessageContent } = useEncryption();
+  const [decryptedMessages, setDecryptedMessages] = useState<Map<string, string>>(new Map());
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
@@ -194,8 +198,31 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Decrypt encrypted messages
+  useEffect(() => {
+    const decryptMessages = async () => {
+      if (!encryptionReady || !hasEncryption) return;
+      
+      for (const msg of messages) {
+        if (msg.message_type === "encrypted" && msg.encrypted_keys && !decryptedMessages.has(msg.id)) {
+          try {
+            const encrypted = JSON.parse(msg.content);
+            const decrypted = await decryptMessageContent(encrypted, msg.encrypted_keys);
+            if (decrypted) {
+              setDecryptedMessages(prev => new Map(prev).set(msg.id, decrypted));
+            }
+          } catch (error) {
+            console.error("Failed to decrypt message:", error);
+          }
+        }
+      }
+    };
+    
+    decryptMessages();
+  }, [messages, encryptionReady, hasEncryption, decryptMessageContent, decryptedMessages]);
+
   const handleSend = async (content: string, imageUrl?: string) => {
-    if ((!content.trim() && !imageUrl) || !conversationId) return;
+    if ((!content.trim() && !imageUrl) || !conversationId || !conversation) return;
 
     if (isBanned && bannedUntil) {
       toast.error(
@@ -209,7 +236,29 @@ const Chat = () => {
     setSending(true);
     stopTyping();
     
-    const { error } = await sendMessage(conversationId, content, imageUrl, replyTo?.id);
+    // Get all participant IDs for encryption
+    const recipientIds = conversation.participants.map(p => p.user_id);
+    
+    // Try to encrypt the message
+    let encryptedContent: { iv: number[]; data: number[] } | undefined;
+    let encryptedKeys: Record<string, string> | undefined;
+    
+    if (hasEncryption && !imageUrl) {
+      const encrypted = await encryptForRecipients(content, recipientIds);
+      if (encrypted) {
+        encryptedContent = encrypted.encrypted;
+        encryptedKeys = encrypted.encryptedKeys;
+      }
+    }
+    
+    const { error } = await sendMessage(
+      conversationId, 
+      content, 
+      imageUrl, 
+      replyTo?.id,
+      encryptedContent,
+      encryptedKeys
+    );
     
     if (error) {
       toast.error(language === 'fr' ? "Erreur d'envoi" : "Failed to send");
@@ -404,6 +453,16 @@ const Chat = () => {
         )}
       </header>
 
+      {/* E2E Encryption indicator */}
+      {hasEncryption && (
+        <div className="mx-4 mt-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
+          <Lock className="h-3.5 w-3.5 text-green-500" />
+          <span className="text-xs text-green-600 dark:text-green-400">
+            {language === 'fr' ? 'Chiffrement de bout en bout activé' : 'End-to-end encryption enabled'}
+          </span>
+        </div>
+      )}
+
       {/* Ban warning */}
       {isBanned && bannedUntil && (
         <div className="mx-4 mt-3 p-3 bg-destructive/10 border border-destructive/30 rounded-xl flex items-center gap-3">
@@ -438,11 +497,20 @@ const Chat = () => {
                       ? messages.find(m => m.id === msg.reply_to_id)
                       : null;
                     
+                    // Get decrypted content if available
+                    const displayContent = msg.message_type === "encrypted" 
+                      ? (decryptedMessages.get(msg.id) || (language === 'fr' ? '🔒 Message chiffré' : '🔒 Encrypted message'))
+                      : msg.content;
+                    
+                    const replyContent = replyToMessage?.message_type === "encrypted"
+                      ? (decryptedMessages.get(replyToMessage.id) || (language === 'fr' ? '🔒 Message chiffré' : '🔒 Encrypted'))
+                      : replyToMessage?.content;
+                    
                     return (
                       <MessageBubble
                         key={msg.id}
                         id={msg.id}
-                        content={msg.content}
+                        content={displayContent}
                         timestamp={msg.created_at}
                         isMe={msg.sender_id === user?.id}
                         isGroup={isGroup}
@@ -455,12 +523,13 @@ const Chat = () => {
                         reactions={msg.reactions || {}}
                         onReact={handleReact}
                         replyTo={replyToMessage ? {
-                          content: replyToMessage.content,
+                          content: replyContent || '',
                           senderName: replyToMessage.sender?.full_name || (language === 'fr' ? 'Utilisateur' : 'User'),
                         } : null}
                         onReply={handleReply}
                         imageUrl={msg.image_url}
                         currentUserId={user?.id}
+                        isEncrypted={msg.message_type === "encrypted"}
                       />
                     );
                   })}

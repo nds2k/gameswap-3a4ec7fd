@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Check, CheckCheck, Reply } from "lucide-react";
+import { Check, CheckCheck, Reply, Lock } from "lucide-react";
 import { MessageReactions } from "./MessageReactions";
 import { useState, useRef } from "react";
 
@@ -29,6 +29,7 @@ interface MessageBubbleProps {
   onReply?: (messageId: string, content: string, senderName: string) => void;
   imageUrl?: string | null;
   currentUserId?: string;
+  isEncrypted?: boolean;
 }
 
 export const MessageBubble = ({
@@ -49,6 +50,7 @@ export const MessageBubble = ({
   onReply,
   imageUrl,
   currentUserId,
+  isEncrypted = false,
 }: MessageBubbleProps) => {
   const { language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
@@ -179,7 +181,10 @@ export const MessageBubble = ({
               </div>
             )}
             
-            <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{content}</p>
+            <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed flex items-center gap-1">
+              {isEncrypted && <Lock className="h-3 w-3 opacity-60 flex-shrink-0" />}
+              {content}
+            </p>
             
             {/* Inline read receipt for sent messages */}
             {isMe && (
