@@ -133,12 +133,14 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
         {friends.map((friendship) => (
           <div
             key={friendship.id}
-            className="flex items-center justify-between p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all cursor-pointer group"
-            onClick={() => handleMessage(friendship.friend.user_id)}
+            className="flex items-center justify-between p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <Avatar className="h-12 w-12 ring-2 ring-transparent group-hover:ring-primary/30 transition-all">
+              <div 
+                className="relative cursor-pointer"
+                onClick={() => navigate(`/user/${friendship.friend.user_id}`)}
+              >
+                <Avatar className="h-12 w-12 ring-2 ring-transparent hover:ring-primary/30 transition-all">
                   <AvatarImage src={friendship.friend.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {friendship.friend.full_name?.[0] || friendship.friend.username?.[0] || "?"}
@@ -155,8 +157,11 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
                   </div>
                 )}
               </div>
-              <div>
-                <p className="font-medium group-hover:text-primary transition-colors">
+              <div
+                className="cursor-pointer"
+                onClick={() => navigate(`/user/${friendship.friend.user_id}`)}
+              >
+                <p className="font-medium hover:text-primary transition-colors">
                   {friendship.friend.full_name || "Utilisateur"}
                 </p>
                 {friendship.friend.username && (
@@ -165,10 +170,15 @@ export const FriendsList = ({ friends, loading, onRemove }: FriendsListProps) =>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-muted-foreground group-hover:text-primary transition-colors">
-                <MessageSquare className="h-4 w-4" />
-                <span className="text-xs hidden sm:inline">Discuter</span>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleMessage(friendship.friend.user_id)}
+                disabled={actionLoading === friendship.friend.user_id}
+                className="text-primary hover:text-primary hover:bg-primary/10"
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

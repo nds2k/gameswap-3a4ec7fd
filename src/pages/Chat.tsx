@@ -308,7 +308,7 @@ const Chat = () => {
 
   // Get display info for the conversation header
   const displayInfo = useMemo(() => {
-    if (!conversation) return { name: "", image: null, initials: "?", isOnline: false };
+    if (!conversation) return { name: "", image: null, initials: "?", isOnline: false, otherUserId: null };
 
     if (conversation.is_group) {
       return {
@@ -316,6 +316,7 @@ const Chat = () => {
         image: conversation.image_url,
         initials: (conversation.name || "G").charAt(0).toUpperCase(),
         isOnline: false,
+        otherUserId: null,
       };
     }
 
@@ -327,6 +328,7 @@ const Chat = () => {
       image: other?.profile?.avatar_url,
       initials: (other?.profile?.full_name || "?").charAt(0).toUpperCase(),
       isOnline,
+      otherUserId: other?.user_id || null,
     };
   }, [conversation, user?.id, onlineUsers, language]);
 
@@ -412,8 +414,15 @@ const Chat = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
         
-        {/* Avatar with online indicator */}
-        <div className="relative">
+        {/* Avatar with online indicator - clickable for 1-on-1 */}
+        <div 
+          className={`relative ${!isGroup && displayInfo.otherUserId ? 'cursor-pointer' : ''}`}
+          onClick={() => {
+            if (!isGroup && displayInfo.otherUserId) {
+              navigate(`/user/${displayInfo.otherUserId}`);
+            }
+          }}
+        >
           <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center overflow-hidden">
             {displayInfo.image ? (
               <img src={displayInfo.image} alt="" className="w-full h-full object-cover" />
@@ -430,8 +439,15 @@ const Chat = () => {
           )}
         </div>
         
-        {/* Name and status */}
-        <div className="flex-1 min-w-0">
+        {/* Name and status - clickable for 1-on-1 */}
+        <div 
+          className={`flex-1 min-w-0 ${!isGroup && displayInfo.otherUserId ? 'cursor-pointer' : ''}`}
+          onClick={() => {
+            if (!isGroup && displayInfo.otherUserId) {
+              navigate(`/user/${displayInfo.otherUserId}`);
+            }
+          }}
+        >
           <h2 className="font-semibold truncate text-foreground">{displayInfo.name}</h2>
           {!isGroup && (
             <p className={`text-xs flex items-center gap-1 transition-colors ${displayInfo.isOnline ? 'text-green-500' : 'text-muted-foreground'}`}>

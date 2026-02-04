@@ -225,7 +225,13 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
 
               {/* Owner */}
               <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl">
-                <div className="flex items-center gap-3">
+                <div 
+                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate(`/user/${game.owner_id}`);
+                  }}
+                >
                   {owner?.avatar_url ? (
                     <img
                       src={owner.avatar_url}
@@ -234,12 +240,14 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <User className="h-6 w-6 text-primary" />
+                      <span className="text-xl font-semibold text-primary">
+                        {owner?.full_name?.[0]?.toUpperCase() || "?"}
+                      </span>
                     </div>
                   )}
                   <div>
                     <p className="font-semibold">{owner?.full_name || "Vendeur"}</p>
-                    <p className="text-sm text-muted-foreground">Vendeur vérifié</p>
+                    <p className="text-sm text-muted-foreground">Voir le profil</p>
                   </div>
                 </div>
                 {game.owner_id !== user?.id && (
