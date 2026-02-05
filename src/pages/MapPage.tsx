@@ -171,7 +171,7 @@ const MapPage = () => {
           .eq("user_id", user.id);
       }
     } else {
-      setLocationError("Position non disponible. Vérifiez les paramètres de votre navigateur.");
+      setLocationError("denied");
     }
     
     setLocationLoading(false);
@@ -216,12 +216,32 @@ const MapPage = () => {
               <Navigation className="h-4 w-4 mr-1" />
             )}
             Ma position
-          </Button>
+        </Button>
         </div>
 
-        {locationError && (
-          <div className="bg-destructive/10 text-destructive rounded-xl p-3 mb-4 text-sm">
-            {locationError}
+        {/* Location permission banner */}
+        {locationError === "denied" && (
+          <div className="bg-card border border-primary/30 rounded-2xl p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground mb-1">📍 Localisation désactivée</h3>
+              <p className="text-sm text-muted-foreground">
+                Activez votre localisation pour voir les vendeurs proches de vous (position approximative à 15km).
+              </p>
+            </div>
+            <Button 
+              variant="gameswap" 
+              size="sm"
+              onClick={() => requestLocation(true)}
+              disabled={locationLoading}
+              className="flex-shrink-0"
+            >
+              {locationLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Navigation className="h-4 w-4 mr-2" />
+              )}
+              Activer ma position
+            </Button>
           </div>
         )}
 
