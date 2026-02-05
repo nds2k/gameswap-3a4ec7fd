@@ -56,13 +56,18 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
     };
   };
 
-  const handleConversationClick = (conversationId: string) => {
-    navigate(`/chat/${conversationId}`);
+  const handleConversationClick = (conversationId: string, isGroup: boolean) => {
+    // Use private chat for 1-on-1, group chat for groups
+    if (isGroup) {
+      navigate(`/group/${conversationId}`);
+    } else {
+      navigate(`/chat/${conversationId}`);
+    }
   };
 
   const handleGroupCreated = (conversationId: string) => {
     refreshConversations();
-    navigate(`/chat/${conversationId}`);
+    navigate(`/group/${conversationId}`);
   };
 
   return (
@@ -218,7 +223,7 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
 
                 {/* Message bubble button - opens the chat */}
                 <button
-                  onClick={() => handleConversationClick(conversation.id)}
+                  onClick={() => handleConversationClick(conversation.id, conversation.is_group)}
                   className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors flex-shrink-0"
                   title="Ouvrir la conversation"
                 >
