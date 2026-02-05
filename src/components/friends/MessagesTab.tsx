@@ -1,4 +1,4 @@
-import { MessageCircle, Users, Plus, UserPlus, Check, CheckCheck } from "lucide-react";
+import { MessageCircle, Users, Plus, UserPlus, Check, CheckCheck, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -130,12 +130,20 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
             const display = getConversationDisplay(conversation);
 
             return (
-              <button
+              <div
                 key={conversation.id}
-                onClick={() => handleConversationClick(conversation.id)}
-                className="w-full bg-card rounded-2xl border border-border p-4 flex items-center gap-4 hover:border-primary/50 transition-all text-left"
+                className="w-full bg-card rounded-2xl border border-border p-4 flex items-center gap-4 hover:border-primary/50 transition-all"
               >
-                <div className="relative">
+                {/* Avatar - clickable to profile for 1-on-1 */}
+                <div 
+                  className={`relative ${!conversation.is_group && display.otherUserId ? 'cursor-pointer' : ''}`}
+                  onClick={(e) => {
+                    if (!conversation.is_group && display.otherUserId) {
+                      e.stopPropagation();
+                      navigate(`/user/${display.otherUserId}`);
+                    }
+                  }}
+                >
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
                     {display.image ? (
                       <img
@@ -161,10 +169,20 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
                     </span>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
+
+                {/* Name section - clickable to profile for 1-on-1 */}
+                <div 
+                  className={`flex-1 min-w-0 ${!conversation.is_group && display.otherUserId ? 'cursor-pointer' : ''}`}
+                  onClick={(e) => {
+                    if (!conversation.is_group && display.otherUserId) {
+                      e.stopPropagation();
+                      navigate(`/user/${display.otherUserId}`);
+                    }
+                  }}
+                >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{display.name}</h3>
+                      <h3 className="font-semibold hover:underline">{display.name}</h3>
                       {conversation.is_group && (
                         <span className="px-1.5 py-0.5 text-xs bg-primary/10 text-primary rounded">
                           Groupe
@@ -197,7 +215,16 @@ export const MessagesTab = ({ friends = [] }: MessagesTabProps) => {
                     </p>
                   </div>
                 </div>
-              </button>
+
+                {/* Message bubble button - opens the chat */}
+                <button
+                  onClick={() => handleConversationClick(conversation.id)}
+                  className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors flex-shrink-0"
+                  title="Ouvrir la conversation"
+                >
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                </button>
+              </div>
             );
           })}
         </div>
