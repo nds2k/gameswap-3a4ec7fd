@@ -125,21 +125,32 @@ const UserProfile = () => {
       }
 
       // No existing conversation found, create a new one
-      const { data: newConvo, error: convoError } = await supabase
+      // We need to generate an ID client-side since RLS prevents reading back immediately
+      const newConvoId = crypto.randomUUID();
+      
+      const { error: convoError } = await supabase
         .from("conversations")
-        .insert({ is_group: false, created_by: user.id })
-        .select()
-        .single();
+        .insert({ id: newConvoId, is_group: false });
 
       if (convoError) throw convoError;
 
-      // Add both participants
-      await supabase.from("conversation_participants").insert([
-        { conversation_id: newConvo.id, user_id: user.id },
-        { conversation_id: newConvo.id, user_id: userId },
-      ]);
+      // Add current user first (RLS requires this order)
+      const { error: selfPartError } = await supabase.from("conversation_participants").insert({
+        conversation_id: newConvoId,
+        user_id: user.id,
+      });
 
-      navigate(`/chat/${newConvo.id}`);
+      if (selfPartError) throw selfPartError;
+
+      // Then add the other user
+      const { error: otherPartError } = await supabase.from("conversation_participants").insert({
+        conversation_id: newConvoId,
+        user_id: userId,
+      });
+
+      if (otherPartError) throw otherPartError;
+
+      navigate(`/chat/${newConvoId}`);
     } catch (error) {
       console.error("Error starting chat:", error);
     } finally {
