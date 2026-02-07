@@ -24,6 +24,7 @@ import Support from "./pages/Support";
 import Chat from "./pages/Chat";
 import PrivateChat from "./pages/PrivateChat";
 import UserProfile from "./pages/UserProfile";
+import AiChat from "./pages/AiChat";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const AppRoutes = () => {
       <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
       <Route path="/my-games" element={<ProtectedRoute><MyGames /></ProtectedRoute>} />
       <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+      <Route path="/ai-chat" element={<ProtectedRoute><AiChat /></ProtectedRoute>} />
       <Route path="/legal" element={<Legal />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="*" element={<NotFound />} />

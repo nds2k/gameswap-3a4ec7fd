@@ -1,1 +1,10 @@
 project_id = "qjeuvqmvvjuvingoipjd"
+
+[functions.create-game-sale]
+verify_jwt = false
+
+[functions.moderate-forum-content]
+verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false
