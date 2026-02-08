@@ -69,7 +69,7 @@ const MapPage = () => {
   const [loading, setLoading] = useState(true);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [hasRequestedLocation, setHasRequestedLocation] = useState(false);
+  
 
   // Calculate approximate distance between two coordinates
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
@@ -129,13 +129,10 @@ const MapPage = () => {
     }
   }, []);
 
-  // Request location permission on mount
+  // Request location permission on every mount (re-prompts if not granted)
   useEffect(() => {
-    if (!hasRequestedLocation) {
-      setHasRequestedLocation(true);
-      requestLocation();
-    }
-  }, [hasRequestedLocation]);
+    requestLocation();
+  }, []);
 
   const requestLocation = async (forceRequest: boolean = false) => {
     setLocationError(null);

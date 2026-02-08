@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 
 interface NotificationsSidebarProps {
   open: boolean;
@@ -24,14 +25,42 @@ const getNotificationIcon = (type: AppNotification["type"]) => {
   }
 };
 
+const getNotificationRoute = (notification: AppNotification): string | null => {
+  switch (notification.type) {
+    case "message":
+      return "/friends";
+    case "wishlist":
+      return "/wishlist";
+    case "sale":
+      return "/my-games";
+    case "system":
+    default:
+      return null;
+  }
+};
+
 export const NotificationsSidebar = ({ open, onOpenChange }: NotificationsSidebarProps) => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, requestPermission, loading } = useNotifications();
+  const navigate = useNavigate();
 
   const handleEnableNotifications = async () => {
     const granted = await requestPermission();
     if (granted) {
       // Show success message
     }
+  };
+
+  const handleNotificationClick = (notification: AppNotification) => {
+    markAsRead(notification.id);
+    const route = getNotificationRoute(notification);
+    if (route) {
+      onOpenChange(false);
+      navigate(route);
+    }
+  };
+
+  const handleMarkAllAsRead = () => {
+    markAllAsRead();
   };
 
   return (
@@ -53,7 +82,7 @@ export const NotificationsSidebar = ({ open, onOpenChange }: NotificationsSideba
               </div>
             </div>
             {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+              <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead}>
                 <Check className="h-4 w-4 mr-1" />
                 Tout lire
               </Button>
@@ -127,7 +156,7 @@ export const NotificationsSidebar = ({ open, onOpenChange }: NotificationsSideba
               {notifications.map((notification) => (
                 <button
                   key={notification.id}
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => handleNotificationClick(notification)}
                   className={`w-full p-4 flex gap-3 text-left hover:bg-muted/50 transition-colors ${
                     !notification.read ? "bg-primary/5" : ""
                   }`}
