@@ -43,9 +43,21 @@ const Settings = () => {
   const isDarkMode = theme === "dark";
   const [notificationsEnabled, setNotificationsEnabled] = useState(notificationPermission === "granted");
 
+  // Re-check notification permission every time Settings page is opened/focused
   useEffect(() => {
     setNotificationsEnabled(notificationPermission === "granted");
   }, [notificationPermission]);
+
+  // Re-check permission on page visibility change (user comes back to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && "Notification" in window) {
+        setNotificationsEnabled(Notification.permission === "granted");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
 
   const handleDarkModeChange = (value: boolean) => {
     setTheme(value ? "dark" : "light");
