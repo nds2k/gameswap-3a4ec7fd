@@ -206,9 +206,25 @@ const UserProfile = () => {
             />
           </div>
 
-          <h1 className="text-2xl font-bold mt-4">
-            {profile.full_name || "Utilisateur"}
-          </h1>
+          <div className="flex items-center gap-2 mt-4">
+            <h1 className="text-2xl font-bold">
+              {profile.full_name || "Utilisateur"}
+            </h1>
+            {!isOwnProfile && (
+              <button
+                onClick={handleStartChat}
+                disabled={startingChat}
+                className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                aria-label="Envoyer un message"
+              >
+                {startingChat ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <MessageCircle className="h-5 w-5" />
+                )}
+              </button>
+            )}
+          </div>
           {profile.username && (
             <p className="text-sm text-muted-foreground">@{profile.username}</p>
           )}
