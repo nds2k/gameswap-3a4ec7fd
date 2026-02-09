@@ -70,19 +70,16 @@ const MyGames = () => {
   useEffect(() => {
     const saleStatus = searchParams.get("sale");
     if (saleStatus === "success") {
-      const gameId = searchParams.get("game");
+      const transactionId = searchParams.get("transaction");
       toast({
         title: "Paiement réussi !",
-        description: "Le paiement a été effectué avec succès.",
+        description: "La transaction a été enregistrée avec succès.",
       });
-      // Mark game as sold
-      if (gameId) {
-        supabase
-          .from("games")
-          .update({ status: "sold" })
-          .eq("id", gameId)
-          .eq("owner_id", user?.id)
-          .then(() => fetchGames());
+      // Complete the transaction via edge function
+      if (transactionId) {
+        supabase.functions.invoke("complete-transaction", {
+          body: { transactionId },
+        }).then(() => fetchGames());
       }
       setSearchParams({});
     } else if (saleStatus === "cancelled") {

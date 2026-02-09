@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Heart, MapPin, MessageCircle, User, Users, Clock, Calendar, Loader2 } from "lucide-react";
+import { X, Heart, MapPin, MessageCircle, User, Users, Clock, Calendar, Loader2, CreditCard } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import { useWishlist } from "@/hooks/useWishlist";
 import { useNavigate } from "react-router-dom";
 import { useMessages } from "@/hooks/useMessages";
 import { useToast } from "@/hooks/use-toast";
+import { SellGameModal } from "@/components/games/SellGameModal";
 
 interface Game {
   id: string;
@@ -20,6 +21,7 @@ interface Game {
   owner_id: string;
   created_at: string;
   view_count: number | null;
+  status: string | null;
 }
 
 interface GameDetailModalProps {
@@ -39,7 +41,7 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
   const [owner, setOwner] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
-
+  const [sellModalOpen, setSellModalOpen] = useState(false);
   useEffect(() => {
     if (!gameId || !open) return;
 
@@ -264,6 +266,19 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                 )}
               </div>
 
+              {/* Sell button for owner */}
+              {game.owner_id === user?.id && game.game_type === "sale" && game.status !== "sold" && (
+                <Button 
+                  variant="gameswap" 
+                  size="lg"
+                  className="w-full mt-3"
+                  onClick={() => setSellModalOpen(true)}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Vendre ce jeu
+                </Button>
+              )}
+
               {/* View count */}
               <p className="text-sm text-muted-foreground text-center">
                 {game.view_count || 0} vue{(game.view_count || 0) > 1 ? "s" : ""}
@@ -276,6 +291,22 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
           </div>
         )}
       </DialogContent>
+
+      {/* Sell Modal */}
+      <SellGameModal
+        open={sellModalOpen}
+        onOpenChange={setSellModalOpen}
+        game={game ? {
+          id: game.id,
+          title: game.title,
+          price: game.price || 0,
+          image: game.image_url || "/placeholder.svg",
+        } : null}
+        onSuccess={() => {
+          // Refresh game data
+          onOpenChange(false);
+        }}
+      />
     </Dialog>
   );
 };
