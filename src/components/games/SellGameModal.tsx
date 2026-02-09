@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, CreditCard, Loader2, User, Mail, Euro, Smartphone } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { 
+  CreditCard, Loader2, Banknote, Smartphone, ArrowLeft, 
+  QrCode, AlertTriangle, CheckCircle, Copy, Share2 
+} from "lucide-react";
 
 interface SellGameModalProps {
   open: boolean;
@@ -20,143 +20,47 @@ interface SellGameModalProps {
   onSuccess?: () => void;
 }
 
-interface BuyerProfile {
-  id: string;
-  full_name: string | null;
-  email: string;
-  avatar_url: string | null;
-}
+type Step = "choose-method" | "cash-confirm" | "card-payment" | "payment-link";
 
 export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameModalProps) => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const [step, setStep] = useState<Step>("choose-method");
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<BuyerProfile[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selectedBuyer, setSelectedBuyer] = useState<BuyerProfile | null>(null);
-  const [customEmail, setCustomEmail] = useState("");
-  const [customName, setCustomName] = useState("");
-  const [salePrice, setSalePrice] = useState("");
-  const [useCustomBuyer, setUseCustomBuyer] = useState(false);
+  const [paymentLink, setPaymentLink] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (game) {
-      setSalePrice(game.price?.toString() || "");
-    }
-  }, [game]);
-
-  useEffect(() => {
-    if (open) {
-      setSelectedBuyer(null);
-      setCustomEmail("");
-      setCustomName("");
-      setSearchQuery("");
-      setSearchResults([]);
-      setUseCustomBuyer(false);
-    }
-  }, [open]);
-
-  const searchBuyers = async (query: string) => {
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    setSearching(true);
-    try {
-      // Use security definer function for public profile access
-      const { data, error } = await supabase.rpc("get_public_profiles");
-
-      if (error) throw error;
-
-      // Filter by search query and exclude current user
-      const queryLower = query.toLowerCase();
-      const filtered = (data || []).filter(
-        (profile) =>
-          profile.full_name?.toLowerCase().includes(queryLower) &&
-          profile.user_id !== user?.id
-      ).slice(0, 5);
-
-      // Map to buyer profile format
-      const results: BuyerProfile[] = filtered.map(profile => ({
-        id: profile.id,
-        full_name: profile.full_name,
-        email: "", // Email not available for privacy
-        avatar_url: profile.avatar_url,
-      }));
-
-      setSearchResults(results);
-    } catch (error) {
-      console.error("Error searching buyers:", error);
-    } finally {
-      setSearching(false);
-    }
+  const resetState = () => {
+    setStep("choose-method");
+    setLoading(false);
+    setPaymentLink(null);
   };
 
-  useEffect(() => {
-    const debounce = setTimeout(() => {
-      if (searchQuery) {
-        searchBuyers(searchQuery);
-      }
-    }, 300);
-    return () => clearTimeout(debounce);
-  }, [searchQuery]);
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) resetState();
+    onOpenChange(isOpen);
+  };
 
-  const handleSell = async () => {
+  const handleCashPayment = async () => {
     if (!game) return;
-
-    const price = parseFloat(salePrice);
-    if (isNaN(price) || price <= 0) {
-      toast({
-        title: "Prix invalide",
-        description: "Veuillez entrer un prix valide.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const buyerEmail = useCustomBuyer ? customEmail : selectedBuyer?.email;
-    const buyerName = useCustomBuyer ? customName : selectedBuyer?.full_name;
-
-    if (!buyerEmail) {
-      toast({
-        title: "Acheteur requis",
-        description: "Veuillez sélectionner un acheteur ou entrer un email.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-game-sale", {
-        body: {
-          gameId: game.id,
-          gameTitle: game.title,
-          price,
-          buyerEmail,
-          buyerName,
-        },
+        body: { gameId: game.id, method: "cash" },
       });
 
       if (error) throw error;
-
       if (data?.url) {
-        // Open Stripe checkout in new tab
         window.open(data.url, "_blank");
         toast({
-          title: "Lien de paiement créé",
-          description: "Le lien de paiement a été ouvert dans un nouvel onglet.",
+          title: "Paiement des frais de service",
+          description: "Payez les 5€ de frais pour enregistrer la vente.",
         });
-        onOpenChange(false);
+        handleOpenChange(false);
         onSuccess?.();
       }
     } catch (error: any) {
-      console.error("Error creating sale:", error);
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de créer la vente.",
+        description: error.message || "Impossible de créer la transaction.",
         variant: "destructive",
       });
     } finally {
@@ -164,244 +68,248 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
     }
   };
 
+  const handleCardPayment = async () => {
+    if (!game) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-game-sale", {
+        body: { gameId: game.id, method: "card" },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        setPaymentLink(data.url);
+        setStep("payment-link");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de créer le lien de paiement.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyLink = async () => {
+    if (paymentLink) {
+      await navigator.clipboard.writeText(paymentLink);
+      toast({ title: "Lien copié !", description: "Envoyez-le à l'acheteur." });
+    }
+  };
+
+  const shareLink = async () => {
+    if (paymentLink && navigator.share) {
+      await navigator.share({
+        title: `Paiement pour ${game?.title}`,
+        text: `Payez ${game?.price}€ pour "${game?.title}" sur GameSwap`,
+        url: paymentLink,
+      });
+    } else {
+      copyLink();
+    }
+  };
+
   if (!game) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            Vendre "{game.title}"
-          </DialogTitle>
-        </DialogHeader>
+        {/* Step: Choose Method */}
+        {step === "choose-method" && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Vendre "{game.title}"
+              </DialogTitle>
+            </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Game Preview */}
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
-            <img
-              src={game.image}
-              alt={game.title}
-              className="w-16 h-16 rounded-lg object-cover"
-            />
-            <div>
-              <h3 className="font-semibold">{game.title}</h3>
-              <p className="text-sm text-muted-foreground">Prix suggéré: {game.price}€</p>
-            </div>
-          </div>
-
-          {/* Sale Price */}
-          <div className="space-y-2">
-            <Label htmlFor="price" className="flex items-center gap-2">
-              <Euro className="h-4 w-4" />
-              Prix de vente
-            </Label>
-            <div className="relative">
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0.50"
-                value={salePrice}
-                onChange={(e) => setSalePrice(e.target.value)}
-                className="pr-8"
-                placeholder="0.00"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
-            </div>
-          </div>
-
-          {/* Buyer Selection */}
-          <div className="space-y-3">
-            <Label className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Acheteur
-            </Label>
-
-            {/* Toggle between search and manual entry */}
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={!useCustomBuyer ? "default" : "outline"}
-                size="sm"
-                onClick={() => setUseCustomBuyer(false)}
-                className="flex-1"
-              >
-                <Search className="h-4 w-4 mr-1" />
-                Rechercher
-              </Button>
-              <Button
-                type="button"
-                variant={useCustomBuyer ? "default" : "outline"}
-                size="sm"
-                onClick={() => setUseCustomBuyer(true)}
-                className="flex-1"
-              >
-                <Mail className="h-4 w-4 mr-1" />
-                Email manuel
-              </Button>
-            </div>
-
-            {!useCustomBuyer ? (
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher un utilisateur..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                  {searching && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
-                  )}
-                </div>
-
-                {/* Search Results */}
-                {searchResults.length > 0 && (
-                  <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
-                    {searchResults.map((buyer) => (
-                      <button
-                        key={buyer.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedBuyer(buyer);
-                          setSearchQuery("");
-                          setSearchResults([]);
-                        }}
-                        className="w-full p-3 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
-                      >
-                        {buyer.avatar_url ? (
-                          <img
-                            src={buyer.avatar_url}
-                            alt=""
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                            <span className="text-xs font-semibold text-primary">
-                              {(buyer.full_name || "?").charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium">{buyer.full_name || "Utilisateur"}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Selected Buyer */}
-                {selectedBuyer && (
-                  <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
-                    {selectedBuyer.avatar_url ? (
-                      <img
-                        src={selectedBuyer.avatar_url}
-                        alt=""
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                        <span className="text-sm font-semibold text-primary">
-                          {(selectedBuyer.full_name || "?").charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium">{selectedBuyer.full_name}</p>
-                      <p className="text-xs text-muted-foreground">Acheteur sélectionné</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedBuyer(null)}
-                    >
-                      Changer
-                    </Button>
-                  </div>
-                )}
-
-                {/* Note about email requirement */}
-                {selectedBuyer && (
-                  <div className="space-y-2">
-                    <Label htmlFor="buyerEmail" className="text-sm text-muted-foreground">
-                      Email de l'acheteur (pour le paiement)
-                    </Label>
-                    <Input
-                      id="buyerEmail"
-                      type="email"
-                      value={selectedBuyer.email}
-                      onChange={(e) => setSelectedBuyer({ ...selectedBuyer, email: e.target.value })}
-                      placeholder="email@exemple.com"
-                      required
-                    />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="customName">Nom de l'acheteur</Label>
-                  <Input
-                    id="customName"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="Jean Dupont"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customEmail">Email de l'acheteur *</Label>
-                  <Input
-                    id="customEmail"
-                    type="email"
-                    value={customEmail}
-                    onChange={(e) => setCustomEmail(e.target.value)}
-                    placeholder="email@exemple.com"
-                    required
-                  />
+            <div className="space-y-4 py-4">
+              {/* Game Preview */}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
+                <img src={game.image} alt={game.title} className="w-16 h-16 rounded-lg object-cover" />
+                <div>
+                  <h3 className="font-semibold">{game.title}</h3>
+                  <p className="text-2xl font-bold text-primary">{game.price}€</p>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Payment Methods Info */}
-          <div className="flex items-center justify-center gap-4 py-3 bg-muted/30 rounded-lg">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <CreditCard className="h-4 w-4" />
-              <span>Carte</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Smartphone className="h-4 w-4" />
-              <span>Apple Pay</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Smartphone className="h-4 w-4" />
-              <span>Google Pay</span>
-            </div>
-          </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Comment l'acheteur va-t-il payer ?
+              </p>
 
-          {/* Submit Button */}
-          <Button
-            onClick={handleSell}
-            disabled={loading || (!selectedBuyer?.email && !customEmail)}
-            className="w-full"
-            variant="gameswap"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Création du paiement...
-              </>
-            ) : (
-              <>
+              {/* Cash Option */}
+              <button
+                onClick={() => setStep("cash-confirm")}
+                className="w-full p-4 bg-card rounded-2xl border border-border hover:border-primary/50 transition-all flex items-center gap-4 text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
+                  <Banknote className="h-6 w-6 text-accent" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold">Espèces</p>
+                  <p className="text-sm text-muted-foreground">En main propre · Frais de 5€</p>
+                </div>
+              </button>
+
+              {/* Card Option */}
+              <button
+                onClick={handleCardPayment}
+                disabled={loading}
+                className="w-full p-4 bg-card rounded-2xl border border-border hover:border-primary/50 transition-all flex items-center gap-4 text-left disabled:opacity-50"
+              >
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold">Carte / Apple Pay / Google Pay</p>
+                  <p className="text-sm text-muted-foreground">Lien de paiement · Commission 7%</p>
+                </div>
+                {loading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+              </button>
+
+              {/* Payment methods icons */}
+              <div className="flex items-center justify-center gap-4 py-2">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <span>Visa/MC</span>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Smartphone className="h-3.5 w-3.5" />
+                  <span>Apple Pay</span>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Smartphone className="h-3.5 w-3.5" />
+                  <span>Google Pay</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Step: Cash Confirm */}
+        {step === "cash-confirm" && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Banknote className="h-5 w-5 text-accent" />
+                Vente en espèces
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <button
+                onClick={() => setStep("choose-method")}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Retour
+              </button>
+
+              {/* Game info */}
+              <div className="text-center p-6 bg-muted/50 rounded-2xl">
+                <p className="text-sm text-muted-foreground mb-1">Vente de</p>
+                <h3 className="font-bold text-lg">{game.title}</h3>
+                <p className="text-3xl font-bold text-primary mt-2">{game.price}€</p>
+              </div>
+
+              {/* Warning */}
+              <div className="flex items-start gap-3 p-4 bg-destructive/10 rounded-xl border border-destructive/20">
+                <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm">Frais de service : 5€</p>
+                  <p className="text-sm text-muted-foreground">
+                    Pour valider et enregistrer cette vente en espèces, des frais de service de 5€ s'appliquent. 
+                    Ce montant sera prélevé par carte.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleCashPayment}
+                disabled={loading}
+                variant="gameswap"
+                className="w-full"
+                size="lg"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Création du paiement...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Payer 5€ et enregistrer la vente
+                  </>
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Step: Payment Link Generated */}
+        {step === "payment-link" && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <QrCode className="h-5 w-5 text-primary" />
+                Lien de paiement prêt
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Game + Price display */}
+              <div className="text-center p-6 bg-primary/5 rounded-2xl border border-primary/20">
+                <p className="text-sm text-muted-foreground mb-1">{game.title}</p>
+                <p className="text-5xl font-bold text-primary">{game.price}€</p>
+                <p className="text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Montant non modifiable
+                </p>
+              </div>
+
+              <p className="text-sm text-muted-foreground text-center">
+                Partagez ce lien avec l'acheteur pour qu'il effectue le paiement.
+              </p>
+
+              {/* Link actions */}
+              <div className="flex gap-2">
+                <Button onClick={copyLink} variant="outline" className="flex-1">
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copier le lien
+                </Button>
+                <Button onClick={shareLink} variant="gameswap" className="flex-1">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Partager
+                </Button>
+              </div>
+
+              {/* Open link directly */}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  if (paymentLink) window.open(paymentLink, "_blank");
+                }}
+              >
                 <CreditCard className="h-4 w-4 mr-2" />
-                Créer le lien de paiement ({salePrice}€)
-              </>
-            )}
-          </Button>
-        </div>
+                Ouvrir le lien de paiement
+              </Button>
+
+              {/* Info */}
+              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-xl text-xs text-muted-foreground">
+                <Smartphone className="h-4 w-4 mt-0.5 shrink-0" />
+                <p>
+                  L'acheteur peut payer par carte, Apple Pay ou Google Pay. 
+                  Le lien expire dans 15 minutes.
+                </p>
+              </div>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

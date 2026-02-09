@@ -454,6 +454,71 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          amount: number
+          buyer_email: string | null
+          buyer_id: string | null
+          completed_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          method: string
+          payment_link_url: string | null
+          platform_fee: number
+          post_id: string
+          seller_id: string
+          status: string
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          buyer_email?: string | null
+          buyer_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          method: string
+          payment_link_url?: string | null
+          platform_fee?: number
+          post_id: string
+          seller_id: string
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          buyer_email?: string | null
+          buyer_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          method?: string
+          payment_link_url?: string | null
+          platform_fee?: number
+          post_id?: string
+          seller_id?: string
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_bans: {
         Row: {
           banned_until: string
