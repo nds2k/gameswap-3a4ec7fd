@@ -199,7 +199,8 @@ const PrivateChat = () => {
     
     if (hasEncryption && !imageUrl) {
       const encrypted = await encryptForRecipients(content, recipientIds);
-      if (encrypted) {
+      // Only use encryption if keys were generated for ALL recipients
+      if (encrypted && Object.keys(encrypted.encryptedKeys).length === recipientIds.length) {
         encryptedContent = encrypted.encrypted;
         encryptedKeys = encrypted.encryptedKeys;
       }
@@ -218,6 +219,17 @@ const PrivateChat = () => {
       toast.error(language === 'fr' ? "Erreur d'envoi" : "Failed to send");
     } else {
       playSound("send");
+      // If we sent an encrypted message, cache the plain text so sender sees it immediately
+      if (encryptedContent) {
+        // Find the latest message we just sent and cache its decrypted content
+        setMessages(prev => {
+          const lastMsg = [...prev].reverse().find(m => m.sender_id === user?.id && m.message_type === "encrypted");
+          if (lastMsg && !decryptedMessages.has(lastMsg.id)) {
+            setDecryptedMessages(p => new Map(p).set(lastMsg.id, content));
+          }
+          return prev;
+        });
+      }
     }
     
     setReplyTo(null);
