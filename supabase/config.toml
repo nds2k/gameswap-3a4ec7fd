@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.ai-chat]
 verify_jwt = false
+
+[functions.send-payment-request]
+verify_jwt = false
+
+[functions.pay-payment-request]
+verify_jwt = false

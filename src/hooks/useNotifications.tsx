@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+export type NotificationType = "message" | "wishlist" | "sale" | "system" | "payment_request";
+
 export interface AppNotification {
   id: string;
-  type: "message" | "wishlist" | "sale" | "system";
+  type: NotificationType;
   title: string;
   body: string;
   read: boolean;
@@ -73,6 +75,27 @@ export const useNotifications = () => {
           body: `Vous avez ${messagesCount} message${messagesCount > 1 ? "s" : ""} non lu${messagesCount > 1 ? "s" : ""}`,
           read: false,
           created_at: new Date().toISOString(),
+        });
+      }
+
+      // Check for pending payment requests (as buyer)
+      const { count: paymentCount } = await supabase
+        .from("transactions")
+        .select("*", { count: "exact", head: true })
+        .eq("buyer_id", user.id)
+        .eq("method", "remote")
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString());
+
+      if (paymentCount && paymentCount > 0) {
+        mockNotifications.push({
+          id: "payment-pending",
+          type: "payment_request",
+          title: "Demande de paiement",
+          body: `Vous avez ${paymentCount} demande${paymentCount > 1 ? "s" : ""} de paiement en attente`,
+          read: false,
+          created_at: new Date().toISOString(),
+          data: { route: "/payment-requests" },
         });
       }
 

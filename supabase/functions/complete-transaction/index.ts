@@ -50,7 +50,10 @@ serve(async (req) => {
       .single();
 
     if (txError || !transaction) throw new Error("Transaction not found");
-    if (transaction.seller_id !== user.id) throw new Error("Only the seller can complete this transaction");
+    // Allow both seller and buyer to complete
+    if (transaction.seller_id !== user.id && transaction.buyer_id !== user.id) {
+      throw new Error("Only the seller or buyer can complete this transaction");
+    }
     if (transaction.status !== "pending") throw new Error("Transaction is not pending");
 
     // Check expiry
