@@ -19,6 +19,8 @@ const getNotificationIcon = (type: AppNotification["type"]) => {
       return <Heart className="h-5 w-5 text-destructive" />;
     case "sale":
       return <CreditCard className="h-5 w-5 text-green-500" />;
+    case "payment_request":
+      return <CreditCard className="h-5 w-5 text-yellow-500" />;
     case "system":
     default:
       return <Info className="h-5 w-5 text-primary" />;
@@ -26,6 +28,10 @@ const getNotificationIcon = (type: AppNotification["type"]) => {
 };
 
 const getNotificationRoute = (notification: AppNotification): string | null => {
+  // Check for custom route in data
+  if (notification.data?.route && typeof notification.data.route === "string") {
+    return notification.data.route;
+  }
   switch (notification.type) {
     case "message":
       return "/friends";
@@ -33,6 +39,8 @@ const getNotificationRoute = (notification: AppNotification): string | null => {
       return "/wishlist";
     case "sale":
       return "/my-games";
+    case "payment_request":
+      return "/payment-requests";
     case "system":
     default:
       return null;
