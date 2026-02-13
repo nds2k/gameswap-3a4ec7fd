@@ -449,6 +449,7 @@ const PrivateChat = () => {
         sending={sending}
         replyTo={replyTo}
         onClearReply={() => setReplyTo(null)}
+        otherUserId={displayInfo.otherUserId}
       />
     </div>
   );

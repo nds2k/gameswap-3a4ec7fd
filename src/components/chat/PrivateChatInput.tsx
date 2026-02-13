@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
-import { Send, Smile, Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { Send, Smile, Image as ImageIcon, X, Loader2, CreditCard } from "lucide-react";
 import { EmojiPicker } from "./EmojiPicker";
 import { ReplyPreview } from "./ReplyPreview";
 import { ImagePreview } from "./ImagePreview";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SendPaymentRequestModal } from "@/components/payments/SendPaymentRequestModal";
 
 interface PrivateChatInputProps {
   onSend: (message: string, imageUrl?: string) => void;
@@ -17,6 +18,7 @@ interface PrivateChatInputProps {
     senderName: string;
   } | null;
   onClearReply?: () => void;
+  otherUserId?: string | null;
 }
 
 export const PrivateChatInput = ({
@@ -25,11 +27,13 @@ export const PrivateChatInput = ({
   sending = false,
   replyTo,
   onClearReply,
+  otherUserId,
 }: PrivateChatInputProps) => {
   const { language } = useLanguage();
   const [message, setMessage] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -149,6 +153,19 @@ export const PrivateChatInput = ({
           className="hidden"
         />
 
+        {/* Payment request button */}
+        {otherUserId && (
+          <button
+            type="button"
+            onClick={() => setPaymentModalOpen(true)}
+            disabled={isLoading}
+            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground hover:text-primary disabled:opacity-50"
+            title={language === 'fr' ? 'Demander un paiement' : 'Request payment'}
+          >
+            <CreditCard className="h-5 w-5" />
+          </button>
+        )}
+
         {/* Input - clean and immersive */}
         <div className="flex-1 relative">
           <input
@@ -183,6 +200,13 @@ export const PrivateChatInput = ({
           )}
         </button>
       </div>
+
+      {/* Payment Request Modal */}
+      <SendPaymentRequestModal
+        open={paymentModalOpen}
+        onOpenChange={setPaymentModalOpen}
+        preselectedBuyerId={otherUserId || undefined}
+      />
     </div>
   );
 };
