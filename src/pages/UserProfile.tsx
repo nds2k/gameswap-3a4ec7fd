@@ -5,10 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, User, MessageCircle } from "lucide-react";
+import { Loader2, User, MessageCircle, UserPlus, UserCheck, Clock } from "lucide-react";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 import { OnlineStatusDot } from "@/components/chat/OnlineStatusDot";
+import { toast } from "sonner";
 
 interface PublicProfile {
   user_id: string;
@@ -37,12 +38,15 @@ const UserProfile = () => {
   const [loading, setLoading] = useState(true);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [startingChat, setStartingChat] = useState(false);
+  const [friendshipStatus, setFriendshipStatus] = useState<"none" | "pending_sent" | "pending_received" | "accepted">("none");
+  const [sendingRequest, setSendingRequest] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
     fetchPublicProfile();
     fetchUserGames();
-  }, [userId]);
+    fetchFriendshipStatus();
+  }, [userId, user]);
 
   const fetchPublicProfile = async () => {
     if (!userId) return;
@@ -81,6 +85,47 @@ const UserProfile = () => {
       setGames(data || []);
     } catch (error) {
       console.error("Error fetching user games:", error);
+    }
+  };
+
+  const fetchFriendshipStatus = async () => {
+    if (!userId || !user || userId === user.id) return;
+    try {
+      const { data } = await supabase
+        .from("friendships")
+        .select("requester_id, addressee_id, status")
+        .or(`and(requester_id.eq.${user.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${user.id})`)
+        .maybeSingle();
+
+      if (!data) {
+        setFriendshipStatus("none");
+      } else if (data.status === "accepted") {
+        setFriendshipStatus("accepted");
+      } else if (data.status === "pending") {
+        setFriendshipStatus(data.requester_id === user.id ? "pending_sent" : "pending_received");
+      } else {
+        setFriendshipStatus("none");
+      }
+    } catch (error) {
+      console.error("Error checking friendship:", error);
+    }
+  };
+
+  const handleSendFriendRequest = async () => {
+    if (!user || !userId) return;
+    setSendingRequest(true);
+    try {
+      const { error } = await supabase.from("friendships").insert({
+        requester_id: user.id,
+        addressee_id: userId,
+      });
+      if (error) throw error;
+      setFriendshipStatus("pending_sent");
+      toast.success("Demande d'ami envoyée !");
+    } catch (error: any) {
+      toast.error(error.message || "Impossible d'envoyer la demande");
+    } finally {
+      setSendingRequest(false);
     }
   };
 
@@ -211,18 +256,45 @@ const UserProfile = () => {
               {profile.full_name || "Utilisateur"}
             </h1>
             {!isOwnProfile && (
-              <button
-                onClick={handleStartChat}
-                disabled={startingChat}
-                className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                aria-label="Envoyer un message"
-              >
-                {startingChat ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <MessageCircle className="h-5 w-5" />
+              <>
+                {/* Add friend button */}
+                {friendshipStatus === "none" && (
+                  <button
+                    onClick={handleSendFriendRequest}
+                    disabled={sendingRequest}
+                    className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                    aria-label="Ajouter en ami"
+                  >
+                    {sendingRequest ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-5 w-5" />
+                    )}
+                  </button>
                 )}
-              </button>
+                {friendshipStatus === "pending_sent" && (
+                  <span className="p-1.5 rounded-full text-muted-foreground" title="Demande envoyée">
+                    <Clock className="h-5 w-5" />
+                  </span>
+                )}
+                {friendshipStatus === "accepted" && (
+                  <span className="p-1.5 rounded-full text-green-500" title="Ami">
+                    <UserCheck className="h-5 w-5" />
+                  </span>
+                )}
+                <button
+                  onClick={handleStartChat}
+                  disabled={startingChat}
+                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                  aria-label="Envoyer un message"
+                >
+                  {startingChat ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <MessageCircle className="h-5 w-5" />
+                  )}
+                </button>
+              </>
             )}
           </div>
           {profile.username && (
