@@ -234,6 +234,101 @@ export const useNotifications = () => {
             fetchNotifications();
           }
         )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "transactions",
+          },
+          async (payload) => {
+            const tx = payload.new as {
+              id: string;
+              seller_id: string;
+              buyer_id: string | null;
+              method: string;
+              status: string;
+              amount: number;
+              post_id: string;
+            };
+
+            // Notify buyer of new payment request
+            if (tx.buyer_id === user.id && tx.method === "remote" && tx.status === "pending") {
+              let sellerProfile = profilesCache.get(tx.seller_id);
+              if (!sellerProfile) {
+                await fetchProfiles();
+                sellerProfile = profilesCache.get(tx.seller_id);
+              }
+              const sellerName = sellerProfile?.full_name || "Un vendeur";
+
+              showPushNotification(
+                "💳 Demande de paiement reçue",
+                `${sellerName} vous demande ${tx.amount}€`,
+                {
+                  tag: `payment-request-${tx.id}`,
+                  data: { route: "/payment-requests" },
+                  vibrate: true,
+                }
+              );
+              playNotificationSound();
+              fetchNotifications();
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "transactions",
+          },
+          async (payload) => {
+            const tx = payload.new as {
+              id: string;
+              seller_id: string;
+              buyer_id: string | null;
+              method: string;
+              status: string;
+              amount: number;
+            };
+
+            // Notify on completed payment
+            if (tx.status === "completed") {
+              const isRelevant = tx.seller_id === user.id || tx.buyer_id === user.id;
+              if (isRelevant) {
+                const isSeller = tx.seller_id === user.id;
+                showPushNotification(
+                  "✅ Paiement réussi",
+                  isSeller
+                    ? `Vous avez reçu ${tx.amount}€`
+                    : `Paiement de ${tx.amount}€ confirmé`,
+                  {
+                    tag: `payment-completed-${tx.id}`,
+                    data: { route: "/payment-requests" },
+                    vibrate: true,
+                  }
+                );
+                playNotificationSound();
+                fetchNotifications();
+              }
+            }
+
+            // Notify on expired payment request
+            if (tx.status === "expired") {
+              if (tx.seller_id === user.id) {
+                showPushNotification(
+                  "⏰ Demande expirée",
+                  `Votre demande de paiement de ${tx.amount}€ a expiré`,
+                  {
+                    tag: `payment-expired-${tx.id}`,
+                    data: { route: "/payment-requests" },
+                  }
+                );
+                fetchNotifications();
+              }
+            }
+          }
+        )
         .subscribe();
 
       return () => {

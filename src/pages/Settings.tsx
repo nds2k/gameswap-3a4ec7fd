@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing, CreditCard } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -109,6 +109,12 @@ const Settings = () => {
   };
 
   const menuItems = [
+    {
+      section: "Paiements",
+      items: [
+        { icon: CreditCard, label: "Paiements & Transactions", href: "/payment-requests" },
+      ],
+    },
     {
       section: t("settings.info"),
       items: [
