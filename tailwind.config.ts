@@ -51,11 +51,12 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         gameswap: {
-          orange: "hsl(var(--gameswap-orange))",
-          "orange-hover": "hsl(var(--gameswap-orange-hover))",
+          primary: "hsl(var(--gameswap-primary))",
+          "primary-hover": "hsl(var(--gameswap-primary-hover))",
           cream: "hsl(var(--gameswap-cream))",
           "cream-dark": "hsl(var(--gameswap-cream-dark))",
           blob: "hsl(var(--gameswap-blob))",
+          accent: "hsl(var(--gameswap-accent))",
         },
         nav: {
           background: "hsl(var(--nav-background))",

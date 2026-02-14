@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
-import { SettingsFab } from "./SettingsFab";
 import { DecorativeBlobs } from "./DecorativeBlobs";
 
 interface MainLayoutProps {
@@ -18,7 +17,6 @@ export const MainLayout = ({ children, showSearch = true, onSearch }: MainLayout
       <main className="page-container">
         {children}
       </main>
-      <SettingsFab />
       <BottomNav />
     </div>
   );
