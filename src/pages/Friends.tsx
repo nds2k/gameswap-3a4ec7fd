@@ -5,11 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFriends } from "@/hooks/useFriends";
 import { FriendsList } from "@/components/friends/FriendsList";
 import { FriendRequests } from "@/components/friends/FriendRequests";
-import { FriendsGames } from "@/components/friends/FriendsGames";
 import { AddFriendModal } from "@/components/friends/AddFriendModal";
 import { MessagesTab } from "@/components/friends/MessagesTab";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Users, Bell, Gamepad2, MessageCircle } from "lucide-react";
+import { UserPlus, Users, Bell, MessageCircle } from "lucide-react";
 import { useMessages } from "@/hooks/useMessages";
 
 const Friends = () => {
@@ -18,7 +17,6 @@ const Friends = () => {
     friends, 
     pendingReceived, 
     pendingSent, 
-    friendsGames, 
     loading,
     sendFriendRequest,
     respondToRequest,
@@ -42,7 +40,7 @@ const Friends = () => {
         </div>
 
         <Tabs defaultValue="messages" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="messages" className="flex items-center gap-2 relative">
               <MessageCircle className="h-4 w-4" />
               Messages
@@ -51,10 +49,6 @@ const Friends = () => {
                   {unreadMessages}
                 </span>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="games" className="flex items-center gap-2">
-              <Gamepad2 className="h-4 w-4" />
-              Jeux
             </TabsTrigger>
             <TabsTrigger value="friends" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -73,10 +67,6 @@ const Friends = () => {
 
           <TabsContent value="messages">
             <MessagesTab friends={friends} />
-          </TabsContent>
-
-          <TabsContent value="games">
-            <FriendsGames games={friendsGames} loading={loading} />
           </TabsContent>
 
           <TabsContent value="friends">

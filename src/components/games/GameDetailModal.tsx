@@ -42,13 +42,13 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
   const [sellModalOpen, setSellModalOpen] = useState(false);
+
   useEffect(() => {
     if (!gameId || !open) return;
 
     const fetchGame = async () => {
       setLoading(true);
       try {
-        // Fetch game details
         const { data: gameData, error: gameError } = await supabase
           .from("games")
           .select("*")
@@ -58,7 +58,6 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
         if (gameError) throw gameError;
         setGame(gameData);
 
-        // Fetch owner profile using RPC for visibility
         if (gameData.owner_id) {
           const { data: allProfiles } = await supabase.rpc("get_public_profiles");
           const ownerProfile = (allProfiles || []).find((p: any) => p.user_id === gameData.owner_id);
@@ -68,7 +67,6 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
           }
         }
 
-        // Increment view count
         await supabase
           .from("games")
           .update({ view_count: (gameData.view_count || 0) + 1 })
@@ -88,9 +86,7 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
       toast({ title: "Connexion requise", description: "Connectez-vous pour contacter le vendeur", variant: "destructive" });
       return;
     }
-
     if (!game || game.owner_id === user.id) return;
-
     setChatLoading(true);
     try {
       const conversationId = await createConversation(game.owner_id);
@@ -108,13 +104,11 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
 
   const parseDescription = (desc: string | null) => {
     if (!desc) return { main: "", players: "", playtime: "", age: "" };
-
     const lines = desc.split("\n");
     const main = lines.filter((l) => !l.startsWith("Joueurs:") && !l.startsWith("Durée:") && !l.startsWith("Âge:")).join("\n");
     const players = lines.find((l) => l.startsWith("Joueurs:"))?.replace("Joueurs: ", "") || "";
     const playtime = lines.find((l) => l.startsWith("Durée:"))?.replace("Durée: ", "") || "";
     const age = lines.find((l) => l.startsWith("Âge:"))?.replace("Âge: ", "") || "";
-
     return { main, players, playtime, age };
   };
 
@@ -132,19 +126,15 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
             {/* Image */}
             <div className="relative aspect-video overflow-hidden">
               {game.image_url ? (
-                <img
-                  src={game.image_url}
-                  alt={game.title}
-                  className="w-full h-full object-cover"
-                />
+                <img src={game.image_url} alt={game.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-muted flex items-center justify-center">
                   <span className="text-4xl">🎲</span>
                 </div>
               )}
 
-              {/* Type badge */}
-              <div className="absolute top-4 left-4">
+              {/* Type badge - positioned lower to avoid overlap with close button */}
+              <div className="absolute top-14 left-4">
                 <span
                   className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
                     game.game_type === "sale"
@@ -158,10 +148,10 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                 </span>
               </div>
 
-              {/* Wishlist button */}
+              {/* Wishlist button - positioned lower to avoid overlap with close button */}
               <button
                 onClick={() => toggleWishlist(game.id)}
-                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                className="absolute top-14 right-4 w-10 h-10 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
               >
                 <Heart
                   className={`h-5 w-5 transition-colors ${
@@ -173,24 +163,19 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
 
             {/* Content */}
             <div className="p-6 space-y-6">
-              {/* Header */}
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-2xl font-bold">{game.title}</h2>
-                  {game.condition && (
-                    <p className="text-muted-foreground mt-1">{game.condition}</p>
-                  )}
+                  {game.condition && <p className="text-muted-foreground mt-1">{game.condition}</p>}
                 </div>
                 {game.game_type === "sale" && game.price != null && (
                   <span className="text-2xl font-bold text-primary">{game.price}€</span>
                 )}
               </div>
 
-              {/* Game info chips */}
               {(() => {
                 const { players, playtime, age } = parseDescription(game.description);
                 if (!players && !playtime && !age) return null;
-
                 return (
                   <div className="flex flex-wrap gap-2">
                     {players && (
@@ -215,36 +200,23 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                 );
               })()}
 
-              {/* Description */}
               {parseDescription(game.description).main && (
                 <div>
                   <h3 className="font-semibold mb-2">Description</h3>
-                  <p className="text-muted-foreground whitespace-pre-wrap">
-                    {parseDescription(game.description).main}
-                  </p>
+                  <p className="text-muted-foreground whitespace-pre-wrap">{parseDescription(game.description).main}</p>
                 </div>
               )}
 
-              {/* Owner */}
               <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl">
                 <div 
                   className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate(`/user/${game.owner_id}`);
-                  }}
+                  onClick={() => { onOpenChange(false); navigate(`/user/${game.owner_id}`); }}
                 >
                   {owner?.avatar_url ? (
-                    <img
-                      src={owner.avatar_url}
-                      alt=""
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
+                    <img src={owner.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover" />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <span className="text-xl font-semibold text-primary">
-                        {owner?.full_name?.[0]?.toUpperCase() || "?"}
-                      </span>
+                      <span className="text-xl font-semibold text-primary">{owner?.full_name?.[0]?.toUpperCase() || "?"}</span>
                     </div>
                   )}
                   <div>
@@ -254,32 +226,20 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                 </div>
                 {game.owner_id !== user?.id && (
                   <Button variant="gameswap" onClick={handleStartChat} disabled={chatLoading}>
-                    {chatLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Contacter
-                      </>
+                    {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                      <><MessageCircle className="h-4 w-4 mr-2" />Contacter</>
                     )}
                   </Button>
                 )}
               </div>
 
-              {/* Sell button for owner */}
               {game.owner_id === user?.id && game.game_type === "sale" && game.status !== "sold" && (
-                <Button 
-                  variant="gameswap" 
-                  size="lg"
-                  className="w-full mt-3"
-                  onClick={() => setSellModalOpen(true)}
-                >
+                <Button variant="gameswap" size="lg" className="w-full mt-3" onClick={() => setSellModalOpen(true)}>
                   <CreditCard className="h-4 w-4 mr-2" />
                   Vendre ce jeu
                 </Button>
               )}
 
-              {/* View count */}
               <p className="text-sm text-muted-foreground text-center">
                 {game.view_count || 0} vue{(game.view_count || 0) > 1 ? "s" : ""}
               </p>
@@ -292,20 +252,11 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
         )}
       </DialogContent>
 
-      {/* Sell Modal */}
       <SellGameModal
         open={sellModalOpen}
         onOpenChange={setSellModalOpen}
-        game={game ? {
-          id: game.id,
-          title: game.title,
-          price: game.price || 0,
-          image: game.image_url || "/placeholder.svg",
-        } : null}
-        onSuccess={() => {
-          // Refresh game data
-          onOpenChange(false);
-        }}
+        game={game ? { id: game.id, title: game.title, price: game.price || 0, image: game.image_url || "/placeholder.svg" } : null}
+        onSuccess={() => { onOpenChange(false); }}
       />
     </Dialog>
   );

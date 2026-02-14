@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn } from "lucide-react";
+import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { PostGameModal } from "@/components/games/PostGameModal";
+import { NotificationsSidebar } from "@/components/notifications/NotificationsSidebar";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -25,6 +27,8 @@ export const Header = ({ onSearch }: HeaderProps) => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
   const [postModalOpen, setPostModalOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     if (user) {
@@ -79,7 +83,28 @@ export const Header = ({ onSearch }: HeaderProps) => {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Map button */}
+            <Link
+              to="/map"
+              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <Map className="h-5 w-5" />
+            </Link>
+
+            {/* Notifications button */}
+            <button
+              onClick={() => setNotificationsOpen(true)}
+              className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+
             <Button 
               variant="gameswap" 
               size="sm" 
@@ -98,7 +123,7 @@ export const Header = ({ onSearch }: HeaderProps) => {
               <Plus className="h-4 w-4" />
             </Button>
 
-            {/* User Menu - Show login button if not authenticated */}
+            {/* User Menu */}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -168,10 +193,10 @@ export const Header = ({ onSearch }: HeaderProps) => {
       <PostGameModal 
         open={postModalOpen} 
         onOpenChange={setPostModalOpen}
-        onSuccess={() => {
-          // Optionally refresh the game list
-        }}
+        onSuccess={() => {}}
       />
+
+      <NotificationsSidebar open={notificationsOpen} onOpenChange={setNotificationsOpen} />
     </>
   );
 };

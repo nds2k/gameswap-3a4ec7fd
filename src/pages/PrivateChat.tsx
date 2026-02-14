@@ -71,29 +71,19 @@ const PrivateChat = () => {
   useEffect(() => {
     const loadConversation = async () => {
       if (!conversationId || !user) return;
-
       try {
         const { data: convoData, error: convoError } = await supabase
-          .from("conversations")
-          .select("id, name, is_group, image_url")
-          .eq("id", conversationId)
-          .single();
-
+          .from("conversations").select("id, name, is_group, image_url").eq("id", conversationId).single();
         if (convoError) throw convoError;
 
         const { data: participantsData, error: participantsError } = await supabase
-          .from("conversation_participants")
-          .select("user_id")
-          .eq("conversation_id", conversationId);
-
+          .from("conversation_participants").select("user_id").eq("conversation_id", conversationId);
         if (participantsError) throw participantsError;
 
         const userIds = participantsData?.map(p => p.user_id) || [];
         const { data: profilesData } = await supabase.rpc("get_public_profiles");
-
         const profilesMap = new Map(
-          (profilesData || [])
-            .filter((p: any) => userIds.includes(p.user_id))
+          (profilesData || []).filter((p: any) => userIds.includes(p.user_id))
             .map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
         );
 
@@ -102,10 +92,7 @@ const PrivateChat = () => {
           profile: profilesMap.get(p.user_id) || { full_name: null, avatar_url: null },
         }));
 
-        setConversation({
-          ...convoData,
-          participants,
-        });
+        setConversation({ ...convoData, participants });
       } catch (error) {
         console.error("Error loading conversation:", error);
         toast.error(language === 'fr' ? "Conversation introuvable" : "Conversation not found");
@@ -114,22 +101,17 @@ const PrivateChat = () => {
         setLoading(false);
       }
     };
-
     loadConversation();
   }, [conversationId, user, navigate, language]);
 
-  // Load messages and subscribe to updates
+  // Load messages and subscribe
   useEffect(() => {
     if (!conversationId) return;
-
     const loadMessages = async () => {
       const { data } = await getMessages(conversationId);
-      if (data) {
-        setMessages(data);
-      }
+      if (data) setMessages(data);
       markAsRead(conversationId);
     };
-
     loadMessages();
 
     subscribeToMessages(
@@ -139,26 +121,19 @@ const PrivateChat = () => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
         });
-        
         if (newMsg.sender_id !== user?.id) {
           playSound("receive");
           markAsRead(conversationId);
         }
       },
       (updatedMsg) => {
-        setMessages((prev) => 
-          prev.map((m) => m.id === updatedMsg.id ? updatedMsg : m)
-        );
+        setMessages((prev) => prev.map((m) => m.id === updatedMsg.id ? updatedMsg : m));
       }
     );
 
-    return () => {
-      unsubscribe();
-      stopTyping();
-    };
+    return () => { unsubscribe(); stopTyping(); };
   }, [conversationId, user?.id]);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -167,61 +142,42 @@ const PrivateChat = () => {
   useEffect(() => {
     const decryptMessages = async () => {
       if (!encryptionReady || !hasEncryption) return;
-      
       for (const msg of messages) {
         if (msg.message_type === "encrypted" && msg.encrypted_keys && !decryptedMessages.has(msg.id)) {
           try {
             const encrypted = JSON.parse(msg.content);
             const decrypted = await decryptMessageContent(encrypted, msg.encrypted_keys);
-            if (decrypted) {
-              setDecryptedMessages(prev => new Map(prev).set(msg.id, decrypted));
-            }
-          } catch (error) {
-            console.error("Failed to decrypt message:", error);
-          }
+            if (decrypted) setDecryptedMessages(prev => new Map(prev).set(msg.id, decrypted));
+          } catch (error) { console.error("Failed to decrypt message:", error); }
         }
       }
     };
-    
     decryptMessages();
   }, [messages, encryptionReady, hasEncryption, decryptMessageContent, decryptedMessages]);
 
   const handleSend = async (content: string, imageUrl?: string) => {
     if ((!content.trim() && !imageUrl) || !conversationId || !conversation) return;
-
     setSending(true);
     stopTyping();
     
     const recipientIds = conversation.participants.map(p => p.user_id);
-    
     let encryptedContent: { iv: number[]; data: number[] } | undefined;
     let encryptedKeys: Record<string, string> | undefined;
     
     if (hasEncryption && !imageUrl) {
       const encrypted = await encryptForRecipients(content, recipientIds);
-      // Only use encryption if keys were generated for ALL recipients
       if (encrypted && Object.keys(encrypted.encryptedKeys).length === recipientIds.length) {
         encryptedContent = encrypted.encrypted;
         encryptedKeys = encrypted.encryptedKeys;
       }
     }
     
-    const { error } = await sendMessage(
-      conversationId, 
-      content, 
-      imageUrl, 
-      replyTo?.id,
-      encryptedContent,
-      encryptedKeys
-    );
-    
+    const { error } = await sendMessage(conversationId, content, imageUrl, replyTo?.id, encryptedContent, encryptedKeys);
     if (error) {
       toast.error(language === 'fr' ? "Erreur d'envoi" : "Failed to send");
     } else {
       playSound("send");
-      // If we sent an encrypted message, cache the plain text so sender sees it immediately
       if (encryptedContent) {
-        // Find the latest message we just sent and cache its decrypted content
         setMessages(prev => {
           const lastMsg = [...prev].reverse().find(m => m.sender_id === user?.id && m.message_type === "encrypted");
           if (lastMsg && !decryptedMessages.has(lastMsg.id)) {
@@ -231,7 +187,6 @@ const PrivateChat = () => {
         });
       }
     }
-    
     setReplyTo(null);
     setSending(false);
   };
@@ -245,9 +200,7 @@ const PrivateChat = () => {
           const userReactions = reactions[emoji] || [];
           if (userReactions.includes(user?.id || '')) {
             reactions[emoji] = userReactions.filter(id => id !== user?.id);
-            if (reactions[emoji].length === 0) {
-              delete reactions[emoji];
-            }
+            if (reactions[emoji].length === 0) delete reactions[emoji];
           } else {
             reactions[emoji] = [...userReactions, user?.id || ''];
           }
@@ -262,13 +215,38 @@ const PrivateChat = () => {
     setReplyTo({ id: messageId, content, senderName });
   };
 
-  // Get display info for the conversation header
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    const { error } = await supabase
+      .from("messages")
+      .update({ content: newContent })
+      .eq("id", messageId);
+    
+    if (error) {
+      toast.error(language === 'fr' ? "Erreur de modification" : "Edit failed");
+    } else {
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, content: newContent } : m));
+      toast.success(language === 'fr' ? "Message modifié" : "Message edited");
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    const { error } = await supabase
+      .from("messages")
+      .delete()
+      .eq("id", messageId);
+    
+    if (error) {
+      toast.error(language === 'fr' ? "Erreur de suppression" : "Delete failed");
+    } else {
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      toast.success(language === 'fr' ? "Message retiré" : "Message unsent");
+    }
+  };
+
   const displayInfo = useMemo(() => {
     if (!conversation) return { name: "", image: null, initials: "?", isOnline: false, otherUserId: null };
-
     const other = conversation.participants.find((p) => p.user_id !== user?.id);
     const isOnline = other ? onlineUsers.includes(other.user_id) : false;
-    
     return {
       name: other?.profile?.full_name || (language === 'fr' ? "Utilisateur" : "User"),
       image: other?.profile?.avatar_url,
@@ -278,7 +256,6 @@ const PrivateChat = () => {
     };
   }, [conversation, user?.id, onlineUsers, language]);
 
-  // Group messages by date
   const groupedMessages = useMemo(() => {
     const groups: { date: Date; messages: (Message & { showAvatar: boolean; showTimestamp: boolean })[] }[] = [];
     let currentDate: Date | null = null;
@@ -290,34 +267,18 @@ const PrivateChat = () => {
       const prevMsg = messages[index - 1];
 
       if (!currentDate || !isSameDay(currentDate, msgDate)) {
-        if (currentGroup.length > 0) {
-          groups.push({ date: currentDate!, messages: currentGroup });
-        }
+        if (currentGroup.length > 0) groups.push({ date: currentDate!, messages: currentGroup });
         currentDate = msgDate;
         currentGroup = [];
       }
 
-      const isLastInGroup =
-        !nextMsg ||
-        nextMsg.sender_id !== msg.sender_id ||
-        new Date(nextMsg.created_at).getTime() - msgDate.getTime() > 60000;
+      const isLastInGroup = !nextMsg || nextMsg.sender_id !== msg.sender_id || new Date(nextMsg.created_at).getTime() - msgDate.getTime() > 60000;
+      const isFirstInGroup = !prevMsg || prevMsg.sender_id !== msg.sender_id || msgDate.getTime() - new Date(prevMsg.created_at).getTime() > 60000;
 
-      const isFirstInGroup =
-        !prevMsg ||
-        prevMsg.sender_id !== msg.sender_id ||
-        msgDate.getTime() - new Date(prevMsg.created_at).getTime() > 60000;
-
-      currentGroup.push({
-        ...msg,
-        showAvatar: isFirstInGroup,
-        showTimestamp: isLastInGroup,
-      });
+      currentGroup.push({ ...msg, showAvatar: isFirstInGroup, showTimestamp: isLastInGroup });
     });
 
-    if (currentGroup.length > 0 && currentDate) {
-      groups.push({ date: currentDate, messages: currentGroup });
-    }
-
+    if (currentGroup.length > 0 && currentDate) groups.push({ date: currentDate, messages: currentGroup });
     return groups;
   }, [messages]);
 
@@ -326,9 +287,7 @@ const PrivateChat = () => {
       <div className="h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">
-            {language === 'fr' ? 'Chargement...' : 'Loading...'}
-          </p>
+          <p className="text-sm text-muted-foreground">{language === 'fr' ? 'Chargement...' : 'Loading...'}</p>
         </div>
       </div>
     );
@@ -337,13 +296,8 @@ const PrivateChat = () => {
   if (!conversation) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background">
-        <p className="text-muted-foreground">
-          {language === 'fr' ? 'Conversation introuvable' : 'Conversation not found'}
-        </p>
-        <button
-          onClick={() => navigate("/friends")}
-          className="mt-4 text-primary hover:underline"
-        >
+        <p className="text-muted-foreground">{language === 'fr' ? 'Conversation introuvable' : 'Conversation not found'}</p>
+        <button onClick={() => navigate("/friends")} className="mt-4 text-primary hover:underline">
           {language === 'fr' ? 'Retour' : 'Back'}
         </button>
       </div>
@@ -352,21 +306,15 @@ const PrivateChat = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Minimal Header - Avatar + Name only */}
       <PrivateChatHeader
         name={displayInfo.name}
         avatarUrl={displayInfo.image}
         initials={displayInfo.initials}
         isOnline={displayInfo.isOnline}
         onBack={() => navigate("/friends")}
-        onProfileClick={() => {
-          if (displayInfo.otherUserId) {
-            navigate(`/user/${displayInfo.otherUserId}`);
-          }
-        }}
+        onProfileClick={() => { if (displayInfo.otherUserId) navigate(`/user/${displayInfo.otherUserId}`); }}
       />
 
-      {/* E2E Encryption indicator - subtle */}
       {hasEncryption && (
         <div className="flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground">
           <Lock className="h-3 w-3" />
@@ -374,7 +322,6 @@ const PrivateChat = () => {
         </div>
       )}
 
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -386,9 +333,7 @@ const PrivateChat = () => {
               )}
             </div>
             <p className="text-lg font-semibold text-foreground mb-1">{displayInfo.name}</p>
-            <p className="text-sm text-muted-foreground">
-              {language === 'fr' ? 'Démarrez la conversation' : 'Start the conversation'}
-            </p>
+            <p className="text-sm text-muted-foreground">{language === 'fr' ? 'Démarrez la conversation' : 'Start the conversation'}</p>
           </div>
         ) : (
           <div>
@@ -397,14 +342,10 @@ const PrivateChat = () => {
                 <DateSeparator date={group.date} />
                 <div className="space-y-0.5">
                   {group.messages.map((msg) => {
-                    const replyToMessage = msg.reply_to_id 
-                      ? messages.find(m => m.id === msg.reply_to_id)
-                      : null;
-                    
+                    const replyToMessage = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
                     const displayContent = msg.message_type === "encrypted" 
                       ? (decryptedMessages.get(msg.id) || (language === 'fr' ? '🔒 Chiffré' : '🔒 Encrypted'))
                       : msg.content;
-                    
                     const replyContent = replyToMessage?.message_type === "encrypted"
                       ? (decryptedMessages.get(replyToMessage.id) || '🔒')
                       : replyToMessage?.content;
@@ -428,6 +369,8 @@ const PrivateChat = () => {
                         onReply={handleReply}
                         imageUrl={msg.image_url}
                         currentUserId={user?.id}
+                        onEdit={msg.sender_id === user?.id && msg.message_type !== "encrypted" ? handleEditMessage : undefined}
+                        onDelete={msg.sender_id === user?.id ? handleDeleteMessage : undefined}
                       />
                     );
                   })}
@@ -439,10 +382,8 @@ const PrivateChat = () => {
         )}
       </div>
 
-      {/* Typing indicator */}
       <TypingIndicator users={typingUsers} />
 
-      {/* Fixed Input at Bottom */}
       <PrivateChatInput
         onSend={handleSend}
         onTyping={startTyping}
