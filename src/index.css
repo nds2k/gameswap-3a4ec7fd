@@ -128,11 +128,13 @@
   }
 
   body {
-    @apply bg-background text-foreground font-nunito antialiased;
+    @apply text-foreground font-nunito antialiased;
+    background: transparent;
   }
 
   html {
     scroll-behavior: smooth;
+    background: hsl(var(--background));
   }
 }
 
