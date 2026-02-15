@@ -3,24 +3,24 @@ import logo from "@/assets/gameswap-logo.png";
 export const DecorativeBlobs = () => {
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-      {/* Gradient: purple → rose → orange, bottom to top */}
+      {/* Light mode gradient */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 dark:hidden"
         style={{
           background: `linear-gradient(to top, #f97316 0%, #e11d48 30%, #7c3aed 70%, transparent 100%)`,
-          opacity: 0.07,
+          opacity: 0.08,
         }}
       />
-      {/* Dark mode: stronger gradient */}
+      {/* Dark mode gradient - stronger */}
       <div
         className="absolute inset-0 hidden dark:block"
         style={{
           background: `linear-gradient(to top, #f97316 0%, #e11d48 30%, #7c3aed 70%, transparent 100%)`,
-          opacity: 0.12,
+          opacity: 0.15,
         }}
       />
-      {/* Light mode white overlay for subtlety */}
-      <div className="absolute inset-0 bg-background/60 dark:bg-background/40" />
+      {/* Light overlay / Dark overlay for readability */}
+      <div className="absolute inset-0 bg-white/70 dark:bg-black/50" />
 
       {/* Soft blobs */}
       <div className="absolute rounded-full w-32 h-32 -top-8 -left-8 opacity-20 dark:opacity-10 blur-sm" style={{ background: 'hsl(270 50% 80%)' }} />
