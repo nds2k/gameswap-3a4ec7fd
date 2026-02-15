@@ -6,53 +6,53 @@
 
 @layer base {
   :root {
-    /* GameSwap Teal & Indigo Theme */
-    --background: 210 30% 97%;
-    --foreground: 220 20% 10%;
+    /* GameSwap Violet & Rose Theme */
+    --background: 270 20% 97%;
+    --foreground: 260 20% 10%;
 
-    --card: 210 25% 98%;
-    --card-foreground: 220 20% 10%;
+    --card: 270 15% 98%;
+    --card-foreground: 260 20% 10%;
 
-    --popover: 210 25% 98%;
-    --popover-foreground: 220 20% 10%;
+    --popover: 270 15% 98%;
+    --popover-foreground: 260 20% 10%;
 
-    /* Primary Teal */
-    --primary: 174 72% 40%;
+    /* Primary Violet */
+    --primary: 270 60% 55%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary */
-    --secondary: 210 20% 94%;
-    --secondary-foreground: 220 15% 15%;
+    --secondary: 270 15% 94%;
+    --secondary-foreground: 260 15% 15%;
 
-    --muted: 210 15% 92%;
-    --muted-foreground: 220 10% 40%;
+    --muted: 270 10% 92%;
+    --muted-foreground: 260 10% 40%;
 
-    --accent: 174 72% 40%;
+    --accent: 330 65% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 88%;
-    --input: 210 20% 92%;
-    --ring: 174 72% 40%;
+    --border: 270 15% 88%;
+    --input: 270 15% 92%;
+    --ring: 270 60% 55%;
 
     --radius: 1rem;
 
     /* Custom GameSwap tokens */
-    --gameswap-primary: 174 72% 40%;
-    --gameswap-primary-hover: 174 72% 35%;
-    --gameswap-cream: 210 30% 97%;
-    --gameswap-cream-dark: 210 20% 92%;
-    --gameswap-blob: 174 40% 90%;
-    --gameswap-text-dark: 220 20% 10%;
-    --gameswap-text-muted: 220 10% 50%;
-    --gameswap-accent: 262 60% 55%;
+    --gameswap-primary: 270 60% 55%;
+    --gameswap-primary-hover: 270 60% 48%;
+    --gameswap-cream: 270 20% 97%;
+    --gameswap-cream-dark: 270 15% 92%;
+    --gameswap-blob: 280 30% 90%;
+    --gameswap-text-dark: 260 20% 10%;
+    --gameswap-text-muted: 260 10% 50%;
+    --gameswap-accent: 330 65% 55%;
 
     /* Bottom nav */
     --nav-background: 0 0% 100%;
-    --nav-inactive: 220 10% 50%;
-    --nav-active: 174 72% 40%;
+    --nav-inactive: 260 10% 50%;
+    --nav-active: 270 60% 55%;
 
     /* Shadows */
     --shadow-soft: 0 4px 20px -4px hsl(210 30% 20% / 0.08);
@@ -70,46 +70,46 @@
   }
 
   .dark {
-    --background: 220 15% 8%;
-    --foreground: 210 20% 95%;
+    --background: 270 15% 8%;
+    --foreground: 270 15% 95%;
 
-    --card: 220 15% 12%;
-    --card-foreground: 210 20% 95%;
+    --card: 270 15% 12%;
+    --card-foreground: 270 15% 95%;
 
-    --popover: 220 15% 12%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 270 15% 12%;
+    --popover-foreground: 270 15% 95%;
 
-    --primary: 174 72% 45%;
-    --primary-foreground: 220 15% 5%;
+    --primary: 270 60% 60%;
+    --primary-foreground: 270 15% 5%;
 
-    --secondary: 220 12% 16%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary: 270 12% 16%;
+    --secondary-foreground: 270 15% 90%;
 
-    --muted: 220 12% 18%;
-    --muted-foreground: 210 10% 60%;
+    --muted: 270 12% 18%;
+    --muted-foreground: 270 10% 60%;
 
-    --accent: 174 72% 45%;
-    --accent-foreground: 220 15% 5%;
+    --accent: 330 55% 60%;
+    --accent-foreground: 270 15% 5%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 12% 20%;
-    --input: 220 12% 18%;
-    --ring: 174 72% 45%;
+    --border: 270 12% 20%;
+    --input: 270 12% 18%;
+    --ring: 270 60% 60%;
 
-    --gameswap-primary: 174 72% 45%;
-    --gameswap-primary-hover: 174 72% 50%;
-    --gameswap-cream: 220 15% 8%;
-    --gameswap-cream-dark: 220 15% 12%;
-    --gameswap-blob: 174 30% 15%;
-    --gameswap-text-dark: 210 20% 95%;
-    --gameswap-text-muted: 210 10% 60%;
-    --gameswap-accent: 262 50% 60%;
+    --gameswap-primary: 270 60% 60%;
+    --gameswap-primary-hover: 270 60% 65%;
+    --gameswap-cream: 270 15% 8%;
+    --gameswap-cream-dark: 270 15% 12%;
+    --gameswap-blob: 280 25% 15%;
+    --gameswap-text-dark: 270 15% 95%;
+    --gameswap-text-muted: 270 10% 60%;
+    --gameswap-accent: 330 50% 60%;
 
-    --nav-background: 220 15% 10%;
-    --nav-inactive: 220 10% 50%;
-    --nav-active: 174 72% 45%;
+    --nav-background: 270 15% 10%;
+    --nav-inactive: 270 10% 50%;
+    --nav-active: 270 60% 60%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;

@@ -55,6 +55,7 @@ export const PrivateMessageBubble = ({
   const { language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
   const [showActions, setShowActions] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(content);
   const touchStartX = useRef(0);
@@ -107,7 +108,7 @@ export const PrivateMessageBubble = ({
     <div 
       className={`flex ${isMe ? "justify-end" : "justify-start"} mb-1.5 group`}
       onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      onMouseLeave={() => { if (!menuOpen) setShowActions(false); }}
     >
       <div 
         className={`flex items-end gap-2 max-w-[80%] ${isMe ? "flex-row-reverse" : ""}`}
@@ -127,7 +128,7 @@ export const PrivateMessageBubble = ({
 
         {/* Actions menu for own messages */}
         {isMe && showActions && !editing && (onEdit || onDelete) && (
-          <DropdownMenu>
+          <DropdownMenu open={menuOpen} onOpenChange={(open) => { setMenuOpen(open); if (!open) setShowActions(false); }}>
             <DropdownMenuTrigger asChild>
               <button className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-all opacity-0 group-hover:opacity-100 mb-3">
                 <MoreVertical className="h-3.5 w-3.5" />
