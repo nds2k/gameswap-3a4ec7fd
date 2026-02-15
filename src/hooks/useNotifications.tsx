@@ -194,7 +194,16 @@ export const useNotifications = () => {
   const markAllAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
-  }, []);
+    // Also mark messages as read in DB
+    if (user) {
+      supabase
+        .from("messages")
+        .update({ read_at: new Date().toISOString() })
+        .is("read_at", null)
+        .neq("sender_id", user.id)
+        .then(() => {});
+    }
+  }, [user]);
 
   const requestPermission = useCallback(async () => {
     if ("Notification" in window) {

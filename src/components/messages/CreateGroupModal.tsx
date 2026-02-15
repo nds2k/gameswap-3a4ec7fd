@@ -166,20 +166,26 @@ export const CreateGroupModal = ({ open, onOpenChange, onSuccess }: CreateGroupM
 
       if (convError) throw convError;
 
-      // Add all participants (including current user)
-      const participants = [
-        { conversation_id: conversation.id, user_id: user.id },
-        ...selectedUsers.map((u) => ({
+      // Add creator first (so RLS sees them as a member for adding others)
+      const { error: selfError } = await supabase
+        .from("conversation_participants")
+        .insert({ conversation_id: conversation.id, user_id: user.id });
+
+      if (selfError) throw selfError;
+
+      // Then add other participants
+      if (selectedUsers.length > 0) {
+        const otherParticipants = selectedUsers.map((u) => ({
           conversation_id: conversation.id,
           user_id: u.user_id,
-        })),
-      ];
+        }));
 
-      const { error: partError } = await supabase
-        .from("conversation_participants")
-        .insert(participants);
+        const { error: partError } = await supabase
+          .from("conversation_participants")
+          .insert(otherParticipants);
 
-      if (partError) throw partError;
+        if (partError) throw partError;
+      }
 
       toast({
         title: "Groupe créé",
