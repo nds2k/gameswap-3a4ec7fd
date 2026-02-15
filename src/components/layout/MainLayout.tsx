@@ -11,7 +11,7 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children, showSearch = true, onSearch }: MainLayoutProps) => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <DecorativeBlobs />
       <Header onSearch={showSearch ? onSearch : undefined} />
       <main className="page-container">
