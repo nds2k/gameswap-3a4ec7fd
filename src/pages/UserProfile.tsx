@@ -9,6 +9,7 @@ import { Loader2, User, MessageCircle, UserPlus, UserCheck, Clock } from "lucide
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 import { OnlineStatusDot } from "@/components/chat/OnlineStatusDot";
+import { UserReputation } from "@/components/trades/UserReputation";
 import { toast } from "sonner";
 
 interface PublicProfile {
@@ -316,6 +317,13 @@ const UserProfile = () => {
               )}
               Envoyer un message
             </Button>
+          )}
+
+          {/* Reputation */}
+          {userId && (
+            <div className="mt-4 w-full max-w-sm">
+              <UserReputation userId={userId} />
+            </div>
           )}
         </div>
 

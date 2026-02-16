@@ -112,6 +112,70 @@ export type Database = {
         }
         Relationships: []
       }
+      favorite_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string
+          message: string
+          read: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id: string
+          message: string
+          read?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string
+          message?: string
+          read?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorite_notifications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      favorites: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_likes: {
         Row: {
           created_at: string
@@ -256,6 +320,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      game_images: {
+        Row: {
+          created_at: string
+          display_order: number
+          game_id: string
+          id: string
+          image_url: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          game_id: string
+          id?: string
+          image_url: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          game_id?: string
+          id?: string
+          image_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_images_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       games: {
         Row: {
@@ -453,6 +549,88 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      ratings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rated_user_id: string
+          rater_id: string
+          rating: number
+          trade_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rated_user_id: string
+          rater_id: string
+          rating: number
+          trade_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rated_user_id?: string
+          rater_id?: string
+          rating?: number
+          trade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trades: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          listing_id: string
+          status: string
+          user1_confirmed: boolean
+          user1_id: string
+          user2_confirmed: boolean
+          user2_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          listing_id: string
+          status?: string
+          user1_confirmed?: boolean
+          user1_id: string
+          user2_confirmed?: boolean
+          user2_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string
+          status?: string
+          user1_confirmed?: boolean
+          user1_id?: string
+          user2_confirmed?: boolean
+          user2_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trades_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {

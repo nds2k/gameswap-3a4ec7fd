@@ -29,21 +29,21 @@ interface GameFormData {
 }
 
 const GAME_CATEGORIES = [
-  { value: "strategy", labelFr: "Stratégie", labelEn: "Strategy" },
-  { value: "adventure", labelFr: "Aventure", labelEn: "Adventure" },
-  { value: "family", labelFr: "Famille", labelEn: "Family" },
-  { value: "party", labelFr: "Ambiance", labelEn: "Party" },
-  { value: "cooperative", labelFr: "Coopératif", labelEn: "Cooperative" },
-  { value: "horror", labelFr: "Horreur", labelEn: "Horror" },
-  { value: "fantasy", labelFr: "Fantastique", labelEn: "Fantasy" },
-  { value: "scifi", labelFr: "Science-fiction", labelEn: "Sci-Fi" },
-  { value: "war", labelFr: "Guerre", labelEn: "War" },
-  { value: "cards", labelFr: "Cartes", labelEn: "Cards" },
-  { value: "dice", labelFr: "Dés", labelEn: "Dice" },
-  { value: "puzzle", labelFr: "Puzzle", labelEn: "Puzzle" },
-  { value: "trivia", labelFr: "Culture générale", labelEn: "Trivia" },
-  { value: "rpg", labelFr: "Jeu de rôle", labelEn: "Role-playing" },
-  { value: "other", labelFr: "Autre", labelEn: "Other" },
+  { value: "strategy", labelFr: "Stratégie" },
+  { value: "adventure", labelFr: "Aventure" },
+  { value: "family", labelFr: "Famille" },
+  { value: "party", labelFr: "Ambiance" },
+  { value: "cooperative", labelFr: "Coopératif" },
+  { value: "horror", labelFr: "Horreur" },
+  { value: "fantasy", labelFr: "Fantastique" },
+  { value: "scifi", labelFr: "Science-fiction" },
+  { value: "war", labelFr: "Guerre" },
+  { value: "cards", labelFr: "Cartes" },
+  { value: "dice", labelFr: "Dés" },
+  { value: "puzzle", labelFr: "Puzzle" },
+  { value: "trivia", labelFr: "Culture générale" },
+  { value: "rpg", labelFr: "Jeu de rôle" },
+  { value: "other", labelFr: "Autre" },
 ];
 
 export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalProps) => {
@@ -102,22 +102,19 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
     setLoading(true);
 
     try {
-      // Upload images first
-      let imageUrl = null;
-      if (images.length > 0) {
-        const file = images[0].file;
-        const fileExt = file.name.split(".").pop();
-        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+      // Upload all images
+      const uploadedUrls: string[] = [];
+      for (const img of images) {
+        const fileExt = img.file.name.split(".").pop();
+        const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("avatars") // Using avatars bucket for now, should create games bucket
-          .upload(filePath, file);
+          .from("avatars")
+          .upload(filePath, img.file);
 
         if (!uploadError) {
-          const { data: urlData } = supabase.storage
-            .from("avatars")
-            .getPublicUrl(filePath);
-          imageUrl = urlData.publicUrl;
+          const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
+          uploadedUrls.push(urlData.publicUrl);
         }
       }
 
@@ -131,8 +128,8 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         .filter(Boolean)
         .join("\n");
 
-      // Insert game
-      const { error } = await supabase.from("games").insert({
+      // Insert game with first image as main
+      const { data: gameData, error } = await supabase.from("games").insert({
         owner_id: user.id,
         title: formData.title.trim(),
         description: fullDescription,
@@ -140,11 +137,21 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         game_type: formData.gameType,
         condition: formData.condition || null,
         category: formData.category || null,
-        image_url: imageUrl,
+        image_url: uploadedUrls[0] || null,
         status: "available",
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Insert additional images into game_images
+      if (gameData && uploadedUrls.length > 0) {
+        const imageRecords = uploadedUrls.map((url, i) => ({
+          game_id: gameData.id,
+          image_url: url,
+          display_order: i,
+        }));
+        await supabase.from("game_images").insert(imageRecords);
+      }
 
       toast({ title: "Succès", description: "Votre jeu a été publié" });
       onSuccess?.();
@@ -152,15 +159,8 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
 
       // Reset form
       setFormData({
-        title: "",
-        description: "",
-        price: "",
-        gameType: "sale",
-        condition: "",
-        category: "",
-        players: "",
-        playtime: "",
-        age: "",
+        title: "", description: "", price: "", gameType: "sale",
+        condition: "", category: "", players: "", playtime: "", age: "",
       });
       setImages([]);
     } catch (error) {
@@ -198,18 +198,10 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
               {images.length < 5 && (
                 <div className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2">
                   <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
-                    >
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors">
                       <Image className="h-5 w-5 text-muted-foreground" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
-                    >
+                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors">
                       <Camera className="h-5 w-5 text-muted-foreground" />
                     </button>
                   </div>
@@ -217,50 +209,24 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
                 </div>
               )}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageSelect}
-              className="hidden"
-            />
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleImageSelect}
-              className="hidden"
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageSelect} className="hidden" />
           </div>
 
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Nom du jeu *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData((f) => ({ ...f, title: e.target.value }))}
-              placeholder="Ex: Catan, Ticket to Ride..."
-            />
+            <Input id="title" value={formData.title} onChange={(e) => setFormData((f) => ({ ...f, title: e.target.value }))} placeholder="Ex: Catan, Ticket to Ride..." />
           </div>
 
           {/* Category */}
           <div className="space-y-2">
             <Label>Catégorie *</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(v) => setFormData((f) => ({ ...f, category: v }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner une catégorie" />
-              </SelectTrigger>
+            <Select value={formData.category} onValueChange={(v) => setFormData((f) => ({ ...f, category: v }))}>
+              <SelectTrigger><SelectValue placeholder="Sélectionner une catégorie" /></SelectTrigger>
               <SelectContent>
                 {GAME_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.labelFr}
-                  </SelectItem>
+                  <SelectItem key={cat.value} value={cat.value}>{cat.labelFr}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -270,13 +236,8 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Type d'annonce</Label>
-              <Select
-                value={formData.gameType}
-                onValueChange={(v) => setFormData((f) => ({ ...f, gameType: v as GameFormData["gameType"] }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={formData.gameType} onValueChange={(v) => setFormData((f) => ({ ...f, gameType: v as GameFormData["gameType"] }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="sale">Vente</SelectItem>
                   <SelectItem value="trade">Échange</SelectItem>
@@ -287,14 +248,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
             {formData.gameType === "sale" && (
               <div className="space-y-2">
                 <Label htmlFor="price">Prix (€)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) => setFormData((f) => ({ ...f, price: e.target.value }))}
-                  placeholder="25"
-                />
+                <Input id="price" type="number" min="0" value={formData.price} onChange={(e) => setFormData((f) => ({ ...f, price: e.target.value }))} placeholder="25" />
               </div>
             )}
           </div>
@@ -303,45 +257,23 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="players">Joueurs</Label>
-              <Input
-                id="players"
-                value={formData.players}
-                onChange={(e) => setFormData((f) => ({ ...f, players: e.target.value }))}
-                placeholder="2-4"
-              />
+              <Input id="players" value={formData.players} onChange={(e) => setFormData((f) => ({ ...f, players: e.target.value }))} placeholder="2-4" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="playtime">Durée (min)</Label>
-              <Input
-                id="playtime"
-                value={formData.playtime}
-                onChange={(e) => setFormData((f) => ({ ...f, playtime: e.target.value }))}
-                placeholder="60-90"
-              />
+              <Input id="playtime" value={formData.playtime} onChange={(e) => setFormData((f) => ({ ...f, playtime: e.target.value }))} placeholder="60-90" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="age">Âge min</Label>
-              <Input
-                id="age"
-                type="number"
-                min="0"
-                value={formData.age}
-                onChange={(e) => setFormData((f) => ({ ...f, age: e.target.value }))}
-                placeholder="10"
-              />
+              <Input id="age" type="number" min="0" value={formData.age} onChange={(e) => setFormData((f) => ({ ...f, age: e.target.value }))} placeholder="10" />
             </div>
           </div>
 
           {/* Condition */}
           <div className="space-y-2">
             <Label>État</Label>
-            <Select
-              value={formData.condition}
-              onValueChange={(v) => setFormData((f) => ({ ...f, condition: v }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner l'état" />
-              </SelectTrigger>
+            <Select value={formData.condition} onValueChange={(v) => setFormData((f) => ({ ...f, condition: v }))}>
+              <SelectTrigger><SelectValue placeholder="Sélectionner l'état" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Comme neuf">Comme neuf</SelectItem>
                 <SelectItem value="Excellent">Excellent</SelectItem>
@@ -355,29 +287,14 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
           {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData((f) => ({ ...f, description: e.target.value }))}
-              placeholder="Décrivez votre jeu, son état, si des pièces manquent..."
-              rows={4}
-            />
+            <Textarea id="description" value={formData.description} onChange={(e) => setFormData((f) => ({ ...f, description: e.target.value }))} placeholder="Décrivez votre jeu, son état, si des pièces manquent..." rows={4} />
           </div>
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-              Annuler
-            </Button>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Annuler</Button>
             <Button type="submit" variant="gameswap" className="flex-1" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Publication...
-                </>
-              ) : (
-                "Publier"
-              )}
+              {loading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Publication...</>) : "Publier"}
             </Button>
           </div>
         </form>
