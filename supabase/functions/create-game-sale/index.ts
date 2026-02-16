@@ -13,7 +13,7 @@ const logStep = (step: string, details?: any) => {
 };
 
 const PLATFORM_COMMISSION_RATE = 0.07; // 7% commission on card payments
-const CASH_SERVICE_FEE = 5.00; // 5€ fixed fee for cash transactions
+const CASH_SERVICE_FEE = 0.99; // 0.99€ fixed fee for cash in person transactions
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

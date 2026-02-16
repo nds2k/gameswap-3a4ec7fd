@@ -150,7 +150,7 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold">Espèces</p>
-                  <p className="text-sm text-muted-foreground">En main propre · Frais de 5€</p>
+                  <p className="text-sm text-muted-foreground">En main propre · Frais de 0,99€</p>
                 </div>
               </button>
 
@@ -219,9 +219,9 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
               <div className="flex items-start gap-3 p-4 bg-destructive/10 rounded-xl border border-destructive/20">
                 <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
                 <div>
-                  <p className="font-semibold text-sm">Frais de service : 5€</p>
+                  <p className="font-semibold text-sm">Frais de service : 0,99€</p>
                   <p className="text-sm text-muted-foreground">
-                    Pour valider et enregistrer cette vente en espèces, des frais de service de 5€ s'appliquent. 
+                    Pour valider et enregistrer cette vente en espèces, des frais de service de 0,99€ s'appliquent. 
                     Ce montant sera prélevé par carte.
                   </p>
                 </div>
@@ -242,7 +242,7 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Payer 5€ et enregistrer la vente
+                    Payer 0,99€ et enregistrer la vente
                   </>
                 )}
               </Button>

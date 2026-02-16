@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type NotificationType = "message" | "wishlist" | "sale" | "system" | "payment_request";
+export type NotificationType = "message" | "wishlist" | "sale" | "system" | "payment_request" | "favorite_update";
 
 export interface AppNotification {
   id: string;
@@ -69,6 +69,27 @@ export const useNotifications = () => {
           body: `Vous avez ${paymentCount} demande${paymentCount > 1 ? "s" : ""} de paiement en attente`,
           read: false, created_at: new Date().toISOString(),
           data: { route: "/payment-requests" },
+        });
+      }
+
+      // Favorite update notifications
+      const { data: favNotifs } = await supabase
+        .from("favorite_notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("read", false)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (favNotifs && favNotifs.length > 0) {
+        favNotifs.forEach((n: any) => {
+          mockNotifications.push({
+            id: `fav-${n.id}`, type: "favorite_update",
+            title: "Annonce mise à jour",
+            body: n.message,
+            read: false, created_at: n.created_at,
+            data: { listingId: n.listing_id },
+          });
         });
       }
 

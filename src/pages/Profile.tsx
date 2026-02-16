@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Camera, Loader2, User, Plus, Settings, Trash2 } from "lucide-react";
 import { PostGameModal } from "@/components/games/PostGameModal";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
+import { UserReputation } from "@/components/trades/UserReputation";
 import { Link } from "react-router-dom";
 import {
   AlertDialog,
@@ -265,6 +266,13 @@ const Profile = () => {
               Paramètres
             </Button>
           </Link>
+
+          {/* Reputation */}
+          {user && (
+            <div className="mt-4 w-full max-w-sm">
+              <UserReputation userId={user.id} />
+            </div>
+          )}
         </div>
 
         {/* User Posts */}

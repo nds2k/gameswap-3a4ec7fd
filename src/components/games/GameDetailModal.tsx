@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
-import { X, Heart, MapPin, MessageCircle, User, Users, Clock, Calendar, Loader2, CreditCard } from "lucide-react";
+import { X, Heart, MapPin, MessageCircle, User, Users, Clock, Calendar, Loader2, CreditCard, Star, Edit2, Bookmark } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useFavorites } from "@/hooks/useFavorites";
 import { useNavigate } from "react-router-dom";
 import { useMessages } from "@/hooks/useMessages";
 import { useToast } from "@/hooks/use-toast";
 import { SellGameModal } from "@/components/games/SellGameModal";
+import { ImageGallery } from "@/components/games/ImageGallery";
+import { UserReputation } from "@/components/trades/UserReputation";
+import { useTrades } from "@/hooks/useTrades";
 
 interface Game {
   id: string;
@@ -35,13 +39,21 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const { createConversation } = useMessages();
+  const { createTrade } = useTrades();
 
   const [game, setGame] = useState<Game | null>(null);
   const [owner, setOwner] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
   const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [gameImages, setGameImages] = useState<string[]>([]);
+  const [tradeLoading, setTradeLoading] = useState(false);
+
+  const canEdit = game && user?.id === game.owner_id && 
+    (new Date().getTime() - new Date(game.created_at).getTime()) <= 30 * 24 * 60 * 60 * 1000;
+  const editExpired = game && user?.id === game.owner_id && !canEdit;
 
   useEffect(() => {
     if (!gameId || !open) return;
@@ -58,10 +70,21 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
         if (gameError) throw gameError;
         setGame(gameData);
 
+        // Fetch additional images
+        const { data: imagesData } = await supabase
+          .from("game_images")
+          .select("image_url")
+          .eq("game_id", gameId)
+          .order("display_order");
+
+        const allImages: string[] = [];
+        if (gameData.image_url) allImages.push(gameData.image_url);
+        if (imagesData) allImages.push(...imagesData.map((i: any) => i.image_url));
+        setGameImages(allImages);
+
         if (gameData.owner_id) {
           const { data: allProfiles } = await supabase.rpc("get_public_profiles");
           const ownerProfile = (allProfiles || []).find((p: any) => p.user_id === gameData.owner_id);
-          
           if (ownerProfile) {
             setOwner({ full_name: ownerProfile.full_name, avatar_url: ownerProfile.avatar_url });
           }
@@ -102,6 +125,13 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
     }
   };
 
+  const handleStartTrade = async () => {
+    if (!user || !game) return;
+    setTradeLoading(true);
+    await createTrade(game.id, game.owner_id);
+    setTradeLoading(false);
+  };
+
   const parseDescription = (desc: string | null) => {
     if (!desc) return { main: "", players: "", playtime: "", age: "" };
     const lines = desc.split("\n");
@@ -123,18 +153,12 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
           </div>
         ) : game ? (
           <>
-            {/* Image */}
+            {/* Image Gallery */}
             <div className="relative aspect-video overflow-hidden">
-              {game.image_url ? (
-                <img src={game.image_url} alt={game.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-muted flex items-center justify-center">
-                  <span className="text-4xl">🎲</span>
-                </div>
-              )}
+              <ImageGallery images={gameImages} alt={game.title} />
 
-              {/* Type badge - positioned lower to avoid overlap with close button */}
-              <div className="absolute top-14 left-4">
+              {/* Type badge */}
+              <div className="absolute top-14 left-4 z-10">
                 <span
                   className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
                     game.game_type === "sale"
@@ -148,17 +172,29 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                 </span>
               </div>
 
-              {/* Wishlist button - positioned lower to avoid overlap with close button */}
-              <button
-                onClick={() => toggleWishlist(game.id)}
-                className="absolute top-14 right-4 w-10 h-10 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
-              >
-                <Heart
-                  className={`h-5 w-5 transition-colors ${
-                    isInWishlist(game.id) ? "fill-destructive text-destructive" : "text-muted-foreground"
-                  }`}
-                />
-              </button>
+              {/* Actions overlay */}
+              <div className="absolute top-14 right-4 flex gap-2 z-10">
+                <button
+                  onClick={() => toggleWishlist(game.id)}
+                  className="w-10 h-10 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                >
+                  <Heart
+                    className={`h-5 w-5 transition-colors ${
+                      isInWishlist(game.id) ? "fill-destructive text-destructive" : "text-muted-foreground"
+                    }`}
+                  />
+                </button>
+                <button
+                  onClick={() => toggleFavorite(game.id)}
+                  className="w-10 h-10 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                >
+                  <Bookmark
+                    className={`h-5 w-5 transition-colors ${
+                      isFavorite(game.id) ? "fill-primary text-primary" : "text-muted-foreground"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
             {/* Content */}
@@ -207,37 +243,59 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                 </div>
               )}
 
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl">
-                <div 
-                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => { onOpenChange(false); navigate(`/user/${game.owner_id}`); }}
-                >
-                  {owner?.avatar_url ? (
-                    <img src={owner.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <span className="text-xl font-semibold text-primary">{owner?.full_name?.[0]?.toUpperCase() || "?"}</span>
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-semibold">{owner?.full_name || "Vendeur"}</p>
-                    <p className="text-sm text-muted-foreground">Voir le profil</p>
-                  </div>
-                </div>
-                {game.owner_id !== user?.id && (
-                  <Button variant="gameswap" onClick={handleStartChat} disabled={chatLoading}>
-                    {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                      <><MessageCircle className="h-4 w-4 mr-2" />Contacter</>
+              {/* Owner section with reputation */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl">
+                  <div 
+                    className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => { onOpenChange(false); navigate(`/user/${game.owner_id}`); }}
+                  >
+                    {owner?.avatar_url ? (
+                      <img src={owner.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span className="text-xl font-semibold text-primary">{owner?.full_name?.[0]?.toUpperCase() || "?"}</span>
+                      </div>
                     )}
-                  </Button>
-                )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{owner?.full_name || "Vendeur"}</p>
+                        <UserReputation userId={game.owner_id} compact />
+                      </div>
+                      <p className="text-sm text-muted-foreground">Voir le profil</p>
+                    </div>
+                  </div>
+                  {game.owner_id !== user?.id && (
+                    <Button variant="gameswap" onClick={handleStartChat} disabled={chatLoading}>
+                      {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                        <><MessageCircle className="h-4 w-4 mr-2" />Contacter</>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
 
+              {/* Trade button for trade-type listings */}
+              {game.game_type === "trade" && game.owner_id !== user?.id && user && (
+                <Button variant="gameswap" size="lg" className="w-full" onClick={handleStartTrade} disabled={tradeLoading}>
+                  {tradeLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Star className="h-4 w-4 mr-2" />}
+                  Proposer un échange
+                </Button>
+              )}
+
+              {/* Sell button */}
               {game.owner_id === user?.id && game.game_type === "sale" && game.status !== "sold" && (
                 <Button variant="gameswap" size="lg" className="w-full mt-3" onClick={() => setSellModalOpen(true)}>
                   <CreditCard className="h-4 w-4 mr-2" />
                   Vendre ce jeu
                 </Button>
+              )}
+
+              {/* Edit expired message */}
+              {editExpired && (
+                <p className="text-sm text-muted-foreground text-center bg-muted/50 rounded-xl p-3">
+                  ⏰ Période de modification expirée (30 jours après publication).
+                </p>
               )}
 
               <p className="text-sm text-muted-foreground text-center">
