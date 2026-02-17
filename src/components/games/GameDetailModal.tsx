@@ -79,7 +79,14 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
 
         const allImages: string[] = [];
         if (gameData.image_url) allImages.push(gameData.image_url);
-        if (imagesData) allImages.push(...imagesData.map((i: any) => i.image_url));
+        if (imagesData) {
+          imagesData.forEach((i: any) => {
+            // Deduplicate: don't add the cover image again
+            if (i.image_url !== gameData.image_url) {
+              allImages.push(i.image_url);
+            }
+          });
+        }
         setGameImages(allImages);
 
         if (gameData.owner_id) {

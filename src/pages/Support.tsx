@@ -1,4 +1,4 @@
-import { HelpCircle, CreditCard, MessageCircle, Shield, Mail } from "lucide-react";
+import { HelpCircle, CreditCard, MessageCircle, Shield, Mail, Users, AlertTriangle, Banknote } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import {
   Accordion,
@@ -10,14 +10,29 @@ import {
 const Support = () => {
   const faqItems = [
     {
+      icon: Users,
+      question: "Qui sommes-nous ?",
+      answer: "GameSwap est une plateforme communautaire dédiée aux passionnés de jeux de société. Notre mission : faciliter l'échange, la vente et la découverte de jeux entre joueurs, en toute confiance. Nous croyons que chaque jeu mérite une seconde vie et que la communauté est au cœur de l'expérience ludique."
+    },
+    {
       icon: CreditCard,
       question: "Frais de plateforme",
-      answer: "Pour chaque transaction réalisée sur GameSwap, une petite commission de service est appliquée. Ces frais nous permettent de couvrir les coûts d'infrastructure, le traitement des paiements et les améliorations continues de la plateforme."
+      answer: "Pour les paiements par carte, GameSwap prélève une commission de 7% sur le montant de la transaction. Cette commission couvre les frais de traitement des paiements, l'infrastructure et les améliorations continues de la plateforme. Pour les ventes en espèces en main propre, un frais fixe de 0,99€ est appliqué au vendeur pour l'enregistrement de la transaction."
+    },
+    {
+      icon: Banknote,
+      question: "Paiement en espèces en main propre",
+      answer: "Vous pouvez enregistrer une vente en espèces en main propre moyennant un frais de service de 0,99€. Cela vous permet de garder une trace de la transaction sur la plateforme."
+    },
+    {
+      icon: AlertTriangle,
+      question: "Avertissement – Transactions en personne",
+      answer: "GameSwap n'est pas responsable des transactions effectuées en personne. Les utilisateurs échangent et vendent à leurs propres risques. Nous vous recommandons de vous rencontrer dans un lieu public et de vérifier l'état des jeux avant de finaliser l'échange."
     },
     {
       icon: MessageCircle,
       question: "Comment contacter un vendeur ?",
-      answer: "Vous pouvez contacter un vendeur en cliquant sur le bouton 'Message' visible sur la fiche d'un jeu. Cela ouvrira une conversation privée avec le propriétaire du jeu."
+      answer: "Vous pouvez contacter un vendeur en cliquant sur le bouton 'Contacter' visible sur la fiche d'un jeu. Cela ouvrira une conversation privée avec le propriétaire du jeu."
     },
     {
       icon: Shield,
@@ -27,7 +42,12 @@ const Support = () => {
     {
       icon: HelpCircle,
       question: "Comment fonctionne l'échange de jeux ?",
-      answer: "Publiez vos jeux disponibles à l'échange, parcourez les annonces des autres utilisateurs, et contactez-les pour proposer un échange. Vous pouvez aussi utiliser la carte pour trouver des joueurs près de chez vous."
+      answer: "Publiez vos jeux disponibles à l'échange, parcourez les annonces des autres utilisateurs, et contactez-les pour proposer un échange. Une fois d'accord, les deux participants confirment la complétion de l'échange. Vous pouvez ensuite évaluer votre partenaire d'échange."
+    },
+    {
+      icon: HelpCircle,
+      question: "Comment fonctionne la réputation ?",
+      answer: "Votre réputation est basée sur vos échanges réussis et les évaluations de vos partenaires. Progressez de Bronze à Diamant en accumulant des échanges positifs. Les vendeurs vérifiés (3+ échanges, note ≥ 4.0) obtiennent un badge de confiance."
     },
   ];
 

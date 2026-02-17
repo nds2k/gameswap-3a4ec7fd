@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      community_polls: {
+        Row: {
+          author_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          options: Json
+          question: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          options?: Json
+          question: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          options?: Json
+          question?: string
+        }
+        Relationships: []
+      }
       content_reports: {
         Row: {
           content_id: string
@@ -364,6 +391,7 @@ export type Database = {
           image_url: string | null
           location_lat: number | null
           location_lng: number | null
+          looking_for_tags: string[] | null
           owner_id: string
           price: number | null
           status: string | null
@@ -381,6 +409,7 @@ export type Database = {
           image_url?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          looking_for_tags?: string[] | null
           owner_id: string
           price?: number | null
           status?: string | null
@@ -398,6 +427,7 @@ export type Database = {
           image_url?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          looking_for_tags?: string[] | null
           owner_id?: string
           price?: number | null
           status?: string | null
@@ -502,6 +532,38 @@ export type Database = {
           },
         ]
       }
+      poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_index: number
+          poll_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_index: number
+          poll_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_index?: number
+          poll_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "community_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           allow_friend_requests: boolean
@@ -581,6 +643,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ratings_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trade_stories: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          likes_count: number | null
+          title: string
+          trade_id: string | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          likes_count?: number | null
+          title: string
+          trade_id?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          likes_count?: number | null
+          title?: string
+          trade_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_stories_trade_id_fkey"
             columns: ["trade_id"]
             isOneToOne: false
             referencedRelation: "trades"
