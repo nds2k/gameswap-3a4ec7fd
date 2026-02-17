@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing, CreditCard } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing, CreditCard, Download, Trash2, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -12,6 +12,17 @@ import { useToast } from "@/hooks/use-toast";
 import { useProfileSettings } from "@/hooks/useProfileSettings";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -42,6 +53,8 @@ const Settings = () => {
 
   const isDarkMode = theme === "dark";
   const [notificationsEnabled, setNotificationsEnabled] = useState(notificationPermission === "granted");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [accountActionLoading, setAccountActionLoading] = useState(false);
 
   // Re-check notification permission every time Settings page is opened/focused
   useEffect(() => {
@@ -370,6 +383,59 @@ const Settings = () => {
           ))}
         </div>
 
+        {/* Account Management */}
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
+            Compte
+          </h2>
+          <div className="bg-card rounded-2xl border border-border overflow-hidden">
+            <button
+              onClick={async () => {
+                setAccountActionLoading(true);
+                try {
+                  const { data, error } = await supabase.functions.invoke("delete-account", {
+                    body: { action: "export" },
+                  });
+                  if (error) throw error;
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `gameswap-data-${new Date().toISOString().split("T")[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast({ title: "Données exportées", description: "Votre fichier a été téléchargé." });
+                } catch (e: any) {
+                  toast({ title: "Erreur", description: e.message, variant: "destructive" });
+                } finally {
+                  setAccountActionLoading(false);
+                }
+              }}
+              disabled={accountActionLoading}
+              className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors border-b border-border"
+            >
+              <div className="flex items-center gap-3">
+                <Download className="h-5 w-5 text-muted-foreground" />
+                <div className="text-left">
+                  <span className="font-medium block">Télécharger mes données</span>
+                  <span className="text-xs text-muted-foreground">Export RGPD de toutes vos données</span>
+                </div>
+              </div>
+              {accountActionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            </button>
+            <button
+              onClick={() => setDeleteDialogOpen(true)}
+              className="w-full flex items-center gap-3 p-4 hover:bg-destructive/5 transition-colors text-destructive"
+            >
+              <Trash2 className="h-5 w-5" />
+              <div className="text-left">
+                <span className="font-medium block">Supprimer mon compte</span>
+                <span className="text-xs opacity-70">Action irréversible</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
         {/* Sign Out */}
         <div className="mt-8">
           <button 
@@ -394,6 +460,44 @@ const Settings = () => {
           GameSwap v1.0.0
         </p>
       </div>
+
+      {/* Delete Account Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer votre compte ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est définitive et irréversible. Toutes vos données, annonces, messages et évaluations seront supprimées. Nous vous recommandons de télécharger vos données avant de continuer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={accountActionLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={accountActionLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                setAccountActionLoading(true);
+                try {
+                  const { error } = await supabase.functions.invoke("delete-account", {
+                    body: { action: "delete" },
+                  });
+                  if (error) throw error;
+                  toast({ title: "Compte supprimé", description: "Votre compte a été définitivement supprimé." });
+                  await signOut();
+                  navigate("/auth");
+                } catch (e: any) {
+                  toast({ title: "Erreur", description: e.message, variant: "destructive" });
+                } finally {
+                  setAccountActionLoading(false);
+                  setDeleteDialogOpen(false);
+                }
+              }}
+            >
+              {accountActionLoading ? "Suppression..." : "Supprimer définitivement"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
