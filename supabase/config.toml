@@ -1,5 +1,11 @@
 project_id = "qjeuvqmvvjuvingoipjd"
 
+[functions.ban-user]
+verify_jwt = false
+
+[functions.admin-manage-role]
+verify_jwt = false
+
 [functions.create-game-sale]
 verify_jwt = false
 
