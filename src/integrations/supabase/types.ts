@@ -418,6 +418,8 @@ export type Database = {
       }
       games: {
         Row: {
+          boost_expires_at: string | null
+          boost_type: string | null
           category: string | null
           condition: string | null
           created_at: string
@@ -425,6 +427,7 @@ export type Database = {
           game_type: string
           id: string
           image_url: string | null
+          is_boosted: boolean
           location_lat: number | null
           location_lng: number | null
           looking_for_tags: string[] | null
@@ -436,6 +439,8 @@ export type Database = {
           view_count: number | null
         }
         Insert: {
+          boost_expires_at?: string | null
+          boost_type?: string | null
           category?: string | null
           condition?: string | null
           created_at?: string
@@ -443,6 +448,7 @@ export type Database = {
           game_type: string
           id?: string
           image_url?: string | null
+          is_boosted?: boolean
           location_lat?: number | null
           location_lng?: number | null
           looking_for_tags?: string[] | null
@@ -454,6 +460,8 @@ export type Database = {
           view_count?: number | null
         }
         Update: {
+          boost_expires_at?: string | null
+          boost_type?: string | null
           category?: string | null
           condition?: string | null
           created_at?: string
@@ -461,6 +469,7 @@ export type Database = {
           game_type?: string
           id?: string
           image_url?: string | null
+          is_boosted?: boolean
           location_lat?: number | null
           location_lng?: number | null
           looking_for_tags?: string[] | null
@@ -607,6 +616,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          last_login_streak: string | null
           location_geohash: string | null
           location_lat: number | null
           location_lng: number | null
@@ -615,6 +625,7 @@ export type Database = {
           updated_at: string
           user_id: string
           username: string | null
+          xp: number
         }
         Insert: {
           allow_friend_requests?: boolean
@@ -622,6 +633,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          last_login_streak?: string | null
           location_geohash?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -630,6 +642,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           username?: string | null
+          xp?: number
         }
         Update: {
           allow_friend_requests?: boolean
@@ -637,6 +650,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          last_login_streak?: string | null
           location_geohash?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -645,6 +659,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+          xp?: number
         }
         Relationships: []
       }
@@ -913,6 +928,30 @@ export type Database = {
           },
         ]
       }
+      xp_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -922,6 +961,7 @@ export type Database = {
         Args: { _user1: string; _user2: string }
         Returns: boolean
       }
+      clear_expired_boosts: { Args: never; Returns: undefined }
       get_friends_games: {
         Args: { user_uuid: string }
         Returns: {

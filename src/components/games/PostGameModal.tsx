@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { X, Camera, Image, Plus, Trash2, Loader2 } from "lucide-react";
+import { Camera, Image, Trash2, Loader2, Rocket } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { BoostModal } from "@/components/games/BoostModal";
+import { useXP } from "@/hooks/useXP";
 
 interface PostGameModalProps {
   open: boolean;
@@ -49,11 +51,14 @@ const GAME_CATEGORIES = [
 export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { awardXP } = useXP();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
+  const [boostModalOpen, setBoostModalOpen] = useState(false);
+  const [publishedGameId, setPublishedGameId] = useState<string | null>(null);
   const [formData, setFormData] = useState<GameFormData>({
     title: "",
     description: "",
@@ -153,9 +158,16 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         await supabase.from("game_images").insert(imageRecords);
       }
 
+
       toast({ title: "Succès", description: "Votre jeu a été publié" });
+
+      // Award XP for posting a listing
+      await awardXP(10, "Annonce publiée");
+
+      // Store game id for optional boost
+      if (gameData?.id) setPublishedGameId(gameData.id);
+
       onSuccess?.();
-      onOpenChange(false);
 
       // Reset form
       setFormData({
@@ -163,6 +175,9 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         condition: "", category: "", players: "", playtime: "", age: "",
       });
       setImages([]);
+
+      // Keep modal open briefly to offer boost — close if user doesn't boost
+      onOpenChange(false);
     } catch (error) {
       console.error("Error posting game:", error);
       toast({ title: "Erreur", description: "Impossible de publier le jeu", variant: "destructive" });
@@ -172,6 +187,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -290,6 +306,25 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
             <Textarea id="description" value={formData.description} onChange={(e) => setFormData((f) => ({ ...f, description: e.target.value }))} placeholder="Décrivez votre jeu, son état, si des pièces manquent..." rows={4} />
           </div>
 
+          {/* Boost CTA */}
+          <div className="flex items-center gap-3 p-4 rounded-2xl border border-primary/20 bg-primary/5">
+            <Rocket className="h-5 w-5 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Booster la visibilité</p>
+              <p className="text-xs text-muted-foreground">Apparaissez en tête des résultats de recherche</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setBoostModalOpen(true)}
+            >
+              <Rocket className="h-3.5 w-3.5 mr-1" />
+              Booster
+            </Button>
+          </div>
+
           {/* Actions */}
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Annuler</Button>
@@ -300,5 +335,15 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         </form>
       </DialogContent>
     </Dialog>
+
+    {publishedGameId && (
+      <BoostModal
+        open={boostModalOpen}
+        onOpenChange={setBoostModalOpen}
+        gameId={publishedGameId}
+        gameTitle={formData.title || "votre annonce"}
+      />
+    )}
+    </>
   );
 };
