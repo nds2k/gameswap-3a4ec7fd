@@ -33,7 +33,7 @@ const getNotificationRoute = (notification: AppNotification): string | null => {
 };
 
 export const NotificationsSidebar = ({ open, onOpenChange }: NotificationsSidebarProps) => {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, requestPermission, loading, refetch } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, requestPermission, loading } = useNotifications();
   const navigate = useNavigate();
 
   const handleEnableNotifications = async () => {
@@ -42,8 +42,6 @@ export const NotificationsSidebar = ({ open, onOpenChange }: NotificationsSideba
 
   const handleNotificationClick = (notification: AppNotification) => {
     markAsRead(notification.id);
-    // Also trigger a refetch to update counts
-    refetch();
     const route = getNotificationRoute(notification);
     if (route) {
       onOpenChange(false);
