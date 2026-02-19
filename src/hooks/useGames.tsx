@@ -13,6 +13,9 @@ export interface Game {
   created_at: string;
   status: string | null;
   view_count: number | null;
+  is_boosted: boolean | null;
+  boost_expires_at: string | null;
+  boost_type: string | null;
   owner?: {
     full_name: string | null;
     avatar_url: string | null;

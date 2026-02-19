@@ -163,8 +163,8 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
             <div className="relative aspect-video overflow-hidden">
               <ImageGallery images={gameImages} alt={game.title} />
 
-              {/* Type badge — top-right, left of the dialog close button */}
-              <div className="absolute top-3 right-12 z-10 flex items-center gap-2">
+              {/* Type badge — top-left */}
+              <div className="absolute top-3 left-4 z-10">
                 <span
                   className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
                     game.game_type === "sale"
@@ -176,6 +176,10 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                 >
                   {game.game_type === "sale" ? "Vente" : game.game_type === "trade" ? "Échange" : "Présentation"}
                 </span>
+              </div>
+
+              {/* Wishlist heart — top-right, left of close button */}
+              <div className="absolute top-3 right-12 z-10">
                 <button
                   onClick={() => toggleWishlist(game.id)}
                   className="w-9 h-9 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"

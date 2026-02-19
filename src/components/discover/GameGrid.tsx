@@ -1,10 +1,11 @@
-import { Heart, MapPin, MessageCircle } from "lucide-react";
+import { Heart, MapPin, MessageCircle, Zap } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useGames, type Game } from "@/hooks/useGames";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { getUserRank } from "@/lib/xpSystem";
 
 interface GameGridProps {
   searchQuery: string;
@@ -111,7 +112,9 @@ const GameCard = ({ game, onClick, isAuthenticated }: GameCardProps) => {
 
   return (
     <div
-      className="game-card group cursor-pointer relative"
+      className={`game-card group cursor-pointer relative transition-all ${
+        game.is_boosted ? "ring-2 ring-primary shadow-[0_0_18px_hsl(var(--primary)/0.35)]" : ""
+      }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
@@ -127,6 +130,14 @@ const GameCard = ({ game, onClick, isAuthenticated }: GameCardProps) => {
         ) : (
           <div className="w-full h-full bg-muted flex items-center justify-center">
             <span className="text-4xl">🎲</span>
+          </div>
+        )}
+
+        {/* Boosted badge */}
+        {game.is_boosted && (
+          <div className="absolute top-3 left-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-bold shadow">
+            <Zap className="h-3 w-3" />
+            Boosté
           </div>
         )}
 

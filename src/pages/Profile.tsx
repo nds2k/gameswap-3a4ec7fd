@@ -10,6 +10,7 @@ import { Camera, Loader2, User, Plus, Settings, Trash2 } from "lucide-react";
 import { PostGameModal } from "@/components/games/PostGameModal";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 import { UserReputation } from "@/components/trades/UserReputation";
+import { XPProgressCard } from "@/components/profile/XPProgressCard";
 import { Link } from "react-router-dom";
 import {
   AlertDialog,
@@ -269,8 +270,9 @@ const Profile = () => {
 
           {/* Reputation */}
           {user && (
-            <div className="mt-4 w-full max-w-sm">
+            <div className="mt-4 w-full max-w-sm space-y-3">
               <UserReputation userId={user.id} />
+              <XPProgressCard userId={user.id} />
             </div>
           )}
         </div>
