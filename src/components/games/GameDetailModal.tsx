@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { X, Heart, MapPin, MessageCircle, User, Users, Clock, Calendar, Loader2, CreditCard, Star, Edit2, Bookmark } from "lucide-react";
+import { X, Heart, MapPin, MessageCircle, User, Users, Clock, Calendar, Loader2, CreditCard, Star, Edit2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useWishlist } from "@/hooks/useWishlist";
-import { useFavorites } from "@/hooks/useFavorites";
 import { useNavigate } from "react-router-dom";
 import { useMessages } from "@/hooks/useMessages";
 import { useToast } from "@/hooks/use-toast";
@@ -39,7 +38,7 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  
   const { createConversation } = useMessages();
   const { createTrade } = useTrades();
 
@@ -164,8 +163,8 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
             <div className="relative aspect-video overflow-hidden">
               <ImageGallery images={gameImages} alt={game.title} />
 
-              {/* Type badge */}
-              <div className="absolute top-14 left-4 z-10">
+              {/* Type badge — top-right, left of the dialog close button */}
+              <div className="absolute top-3 right-12 z-10 flex items-center gap-2">
                 <span
                   className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
                     game.game_type === "sale"
@@ -177,27 +176,13 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                 >
                   {game.game_type === "sale" ? "Vente" : game.game_type === "trade" ? "Échange" : "Présentation"}
                 </span>
-              </div>
-
-              {/* Actions overlay */}
-              <div className="absolute top-14 right-4 flex gap-2 z-10">
                 <button
                   onClick={() => toggleWishlist(game.id)}
-                  className="w-10 h-10 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                  className="w-9 h-9 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
                 >
                   <Heart
-                    className={`h-5 w-5 transition-colors ${
+                    className={`h-4 w-4 transition-colors ${
                       isInWishlist(game.id) ? "fill-destructive text-destructive" : "text-muted-foreground"
-                    }`}
-                  />
-                </button>
-                <button
-                  onClick={() => toggleFavorite(game.id)}
-                  className="w-10 h-10 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
-                >
-                  <Bookmark
-                    className={`h-5 w-5 transition-colors ${
-                      isFavorite(game.id) ? "fill-primary text-primary" : "text-muted-foreground"
                     }`}
                   />
                 </button>
