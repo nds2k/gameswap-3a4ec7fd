@@ -16,6 +16,10 @@ export interface AppNotification {
 
 const profilesCache = new Map<string, { full_name: string; avatar_url: string | null }>();
 
+// Tracks when the user last cleared notifications, persisted in sessionStorage
+// so it survives navigation within the same tab session
+const CLEARED_AT_KEY = "notifications_cleared_at";
+
 export const useNotifications = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -23,6 +27,8 @@ export const useNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [pushPermission, setPushPermission] = useState<NotificationPermission>("default");
   const lastNotificationRef = useRef<string | null>(null);
+  // Ref to hold the cleared-at timestamp so fetchNotifications always uses latest value
+  const clearedAtRef = useRef<string | null>(sessionStorage.getItem(CLEARED_AT_KEY));
 
   useEffect(() => {
     if ("Notification" in window) setPushPermission(Notification.permission);
@@ -42,9 +48,19 @@ export const useNotifications = () => {
     if (!user) { setNotifications([]); setUnreadCount(0); setLoading(false); return; }
 
     try {
-      const { count: messagesCount } = await supabase
+      const clearedAt = clearedAtRef.current;
+
+      // Count unread messages not sent by the current user
+      // If user cleared notifications, only count messages newer than the cleared timestamp
+      let messagesQuery = supabase
         .from("messages").select("*", { count: "exact", head: true })
         .is("read_at", null).neq("sender_id", user.id);
+
+      if (clearedAt) {
+        messagesQuery = messagesQuery.gt("created_at", clearedAt);
+      }
+
+      const { count: messagesCount } = await messagesQuery;
 
       const mockNotifications: AppNotification[] = [];
 
@@ -57,10 +73,16 @@ export const useNotifications = () => {
         });
       }
 
-      const { count: paymentCount } = await supabase
+      let paymentQuery = supabase
         .from("transactions").select("*", { count: "exact", head: true })
         .eq("buyer_id", user.id).eq("method", "remote").eq("status", "pending")
         .gt("expires_at", new Date().toISOString());
+
+      if (clearedAt) {
+        paymentQuery = paymentQuery.gt("created_at", clearedAt);
+      }
+
+      const { count: paymentCount } = await paymentQuery;
 
       if (paymentCount && paymentCount > 0) {
         mockNotifications.push({
@@ -72,14 +94,19 @@ export const useNotifications = () => {
         });
       }
 
-      // Favorite update notifications
-      const { data: favNotifs } = await supabase
+      let favQuery = supabase
         .from("favorite_notifications")
         .select("*")
         .eq("user_id", user.id)
         .eq("read", false)
         .order("created_at", { ascending: false })
         .limit(10);
+
+      if (clearedAt) {
+        favQuery = favQuery.gt("created_at", clearedAt);
+      }
+
+      const { data: favNotifs } = await favQuery;
 
       if (favNotifs && favNotifs.length > 0) {
         favNotifs.forEach((n: any) => {
@@ -213,13 +240,21 @@ export const useNotifications = () => {
   }, []);
 
   const markAllAsRead = useCallback(() => {
+    // Stamp the exact moment the user cleared notifications.
+    // Any notification created before this timestamp will be ignored on future fetches,
+    // preventing the red badge from reappearing after navigation.
+    const now = new Date().toISOString();
+    clearedAtRef.current = now;
+    sessionStorage.setItem(CLEARED_AT_KEY, now);
+
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
+
     // Also mark messages as read in DB
     if (user) {
       supabase
         .from("messages")
-        .update({ read_at: new Date().toISOString() })
+        .update({ read_at: now })
         .is("read_at", null)
         .neq("sender_id", user.id)
         .then(() => {});
