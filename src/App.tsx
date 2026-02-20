@@ -28,6 +28,7 @@ import AiChat from "./pages/AiChat";
 import PrivateRoomChat from "./pages/PrivateRoomChat";
 import PaymentRequests from "./pages/PaymentRequests";
 import Community from "./pages/Community";
+import ProfileAnalytics from "./pages/ProfileAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,7 @@ const AppRoutes = () => {
       <Route path="/group/:conversationId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
       <Route path="/user/:userId" element={<UserProfile />} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/profile/analytics" element={<ProtectedRoute><ProfileAnalytics /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       <Route path="/join/:conversationId" element={<ProtectedRoute><JoinGroup /></ProtectedRoute>} />
       <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
