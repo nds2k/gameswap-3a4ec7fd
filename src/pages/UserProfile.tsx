@@ -5,11 +5,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, User, MessageCircle, UserPlus, UserCheck, Clock } from "lucide-react";
+import { Loader2, User, MessageCircle, UserPlus, UserCheck, Clock, Star, Shield } from "lucide-react";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 import { OnlineStatusDot } from "@/components/chat/OnlineStatusDot";
-import { UserReputation } from "@/components/trades/UserReputation";
+import { useRatings } from "@/hooks/useRatings";
+import { useXP } from "@/hooks/useXP";
+import type { UserReputation } from "@/hooks/useRatings";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 
 interface PublicProfile {
@@ -28,6 +32,14 @@ interface Game {
   created_at: string;
 }
 
+const RANK_STYLES: Record<string, { label: string; color: string; bg: string }> = {
+  Bronze:   { label: "Bronze",   color: "text-amber-700",  bg: "bg-amber-700/10" },
+  Silver:   { label: "Silver",   color: "text-slate-400",  bg: "bg-slate-400/10" },
+  Gold:     { label: "Gold",     color: "text-yellow-500", bg: "bg-yellow-500/10" },
+  Platinum: { label: "Platinum", color: "text-cyan-400",   bg: "bg-cyan-400/10" },
+  Elite:    { label: "Elite",    color: "text-purple-400", bg: "bg-purple-400/10" },
+};
+
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const { user } = useAuth();
@@ -41,12 +53,17 @@ const UserProfile = () => {
   const [startingChat, setStartingChat] = useState(false);
   const [friendshipStatus, setFriendshipStatus] = useState<"none" | "pending_sent" | "pending_received" | "accepted">("none");
   const [sendingRequest, setSendingRequest] = useState(false);
+  const [reputation, setReputation] = useState<UserReputation | null>(null);
+
+  const { xpState } = useXP(userId);
+  const { getUserReputation } = useRatings();
 
   useEffect(() => {
     if (!userId) return;
     fetchPublicProfile();
     fetchUserGames();
     fetchFriendshipStatus();
+    getUserReputation(userId).then(setReputation);
   }, [userId, user]);
 
   const fetchPublicProfile = async () => {
@@ -319,12 +336,37 @@ const UserProfile = () => {
             </Button>
           )}
 
-          {/* Reputation */}
-          {userId && (
-            <div className="mt-4 w-full max-w-sm">
-              <UserReputation userId={userId} />
+          {/* Reputation Card */}
+          <div className="mt-4 w-full max-w-sm bg-card rounded-2xl border border-border p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <h2 className="font-semibold text-base">Réputation</h2>
+              {reputation?.isVerified && <Shield className="h-4 w-4 text-green-500" />}
             </div>
-          )}
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <span className="text-xl font-bold">
+                    {reputation && reputation.totalReviews > 0 ? reputation.averageRating.toFixed(1) : "—"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">Note</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold mb-1">{reputation?.totalReviews ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Avis</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold mb-1">{reputation?.completedTrades ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Échanges</p>
+              </div>
+            </div>
+            {reputation?.memberSince && (
+              <p className="text-xs text-muted-foreground mt-5 pt-4 border-t border-border">
+                Membre depuis {format(new Date(reputation.memberSince), "MMMM yyyy", { locale: fr })}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* User Publications */}
