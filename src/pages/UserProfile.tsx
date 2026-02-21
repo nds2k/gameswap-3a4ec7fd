@@ -338,9 +338,20 @@ const UserProfile = () => {
 
           {/* Reputation Card */}
           <div className="mt-4 w-full max-w-sm bg-card rounded-2xl border border-border p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <h2 className="font-semibold text-base">Réputation</h2>
-              {reputation?.isVerified && <Shield className="h-4 w-4 text-green-500" />}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold text-base">Réputation</h2>
+                {reputation?.isVerified && <Shield className="h-4 w-4 text-green-500" />}
+              </div>
+              {xpState && (() => {
+                const rs = RANK_STYLES[xpState.rank.name] ?? RANK_STYLES.Bronze;
+                return (
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${rs.bg} ${rs.color} flex items-center gap-1`}>
+                    {xpState.rank.emoji} {rs.label}
+                  </span>
+                );
+              })()}
             </div>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
@@ -350,20 +361,35 @@ const UserProfile = () => {
                     {reputation && reputation.totalReviews > 0 ? reputation.averageRating.toFixed(1) : "—"}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">Note</p>
+                <p className="text-xs text-muted-foreground">Note moyenne</p>
               </div>
               <div>
-                <p className="text-xl font-bold mb-1">{reputation?.totalReviews ?? "—"}</p>
+                <p className="text-xl font-bold mb-1">{reputation?.totalReviews ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Avis</p>
               </div>
               <div>
-                <p className="text-xl font-bold mb-1">{reputation?.completedTrades ?? "—"}</p>
+                <p className="text-xl font-bold mb-1">{reputation?.completedTrades ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Échanges</p>
               </div>
             </div>
+
+            {/* Score de réputation + progress bar */}
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Score de réputation</span>
+                <span className="font-semibold">{reputation?.reputationScore ?? 0} pts</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${Math.min((reputation?.reputationScore ?? 0) / 200 * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+
             {reputation?.memberSince && (
-              <p className="text-xs text-muted-foreground mt-5 pt-4 border-t border-border">
-                Membre depuis {format(new Date(reputation.memberSince), "MMMM yyyy", { locale: fr })}
+              <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border flex items-center gap-1.5">
+                📅 Membre depuis {format(new Date(reputation.memberSince), "MMMM yyyy", { locale: fr })}
               </p>
             )}
           </div>
