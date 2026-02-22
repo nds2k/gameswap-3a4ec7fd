@@ -4,11 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Star, TrendingUp, Zap, Shield, Award } from "lucide-react";
+import { ArrowLeft, Star, TrendingUp, Zap, Shield, Award, Trophy, Loader2 } from "lucide-react";
 import { useXP } from "@/hooks/useXP";
 import { useRatings } from "@/hooks/useRatings";
 import type { UserReputation } from "@/hooks/useRatings";
-import { Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AreaChart,
   Area,
@@ -34,6 +34,14 @@ interface MonthlyTrade {
   trades: number;
 }
 
+interface LeaderboardEntry {
+  user_id: string;
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  trade_count: number;
+}
+
 const RANK_STYLES: Record<string, { label: string; color: string; bg: string }> = {
   Bronze:   { label: "Bronze",   color: "text-amber-700",  bg: "bg-amber-700/10" },
   Silver:   { label: "Silver",   color: "text-slate-400",  bg: "bg-slate-400/10" },
@@ -51,6 +59,7 @@ const ProfileAnalytics = () => {
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [xpHistory, setXPHistory] = useState<{ date: string; xp: number }[]>([]);
   const [monthlyTrades, setMonthlyTrades] = useState<MonthlyTrade[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -107,6 +116,45 @@ const ProfileAnalytics = () => {
         months.push({ month: label, trades: count });
       }
       setMonthlyTrades(months);
+
+      // Fetch monthly leaderboard (top traders this month)
+      const monthStart = startOfMonth(new Date()).toISOString();
+      const monthEnd = endOfMonth(new Date()).toISOString();
+      const { data: allMonthlyTrades } = await supabase
+        .from("trades")
+        .select("user1_id, user2_id, created_at")
+        .eq("status", "completed")
+        .gte("created_at", monthStart)
+        .lte("created_at", monthEnd);
+
+      if (allMonthlyTrades && allMonthlyTrades.length > 0) {
+        const tradeCountMap: Record<string, number> = {};
+        allMonthlyTrades.forEach((t) => {
+          tradeCountMap[t.user1_id] = (tradeCountMap[t.user1_id] || 0) + 1;
+          tradeCountMap[t.user2_id] = (tradeCountMap[t.user2_id] || 0) + 1;
+        });
+        const topUserIds = Object.entries(tradeCountMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10);
+
+        const userIds = topUserIds.map(([id]) => id);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, username, full_name, avatar_url")
+          .in("user_id", userIds);
+
+        const lb: LeaderboardEntry[] = topUserIds.map(([uid, count]) => {
+          const p = profiles?.find((pr) => pr.user_id === uid);
+          return {
+            user_id: uid,
+            username: p?.username ?? null,
+            full_name: p?.full_name ?? null,
+            avatar_url: p?.avatar_url ?? null,
+            trade_count: count,
+          };
+        });
+        setLeaderboard(lb);
+      }
     } catch (err) {
       console.error("Analytics error:", err);
     } finally {
@@ -239,6 +287,44 @@ const ProfileAnalytics = () => {
               <Bar dataKey="trades" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Monthly Leaderboard */}
+        <div className="bg-card rounded-2xl border border-border p-5 mt-4">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-yellow-500" />
+            Top Traders — {format(new Date(), "MMMM yyyy", { locale: fr })}
+          </h3>
+          {leaderboard.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Aucun échange ce mois-ci</p>
+          ) : (
+            <div className="space-y-2">
+              {leaderboard.map((entry, index) => (
+                <button
+                  key={entry.user_id}
+                  onClick={() => navigate(`/user/${entry.user_id}`)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left"
+                >
+                  <span className="text-lg font-bold w-6 text-center shrink-0">
+                    {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}`}
+                  </span>
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={entry.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs bg-muted">
+                      {(entry.full_name || entry.username || "?")[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{entry.full_name || entry.username || "Utilisateur"}</p>
+                    {entry.username && entry.full_name && (
+                      <p className="text-xs text-muted-foreground">@{entry.username}</p>
+                    )}
+                  </div>
+                  <span className="text-sm font-bold text-primary">{entry.trade_count} échanges</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>

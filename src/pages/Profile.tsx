@@ -253,19 +253,26 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Score de réputation + progress bar */}
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Score de réputation</span>
-              <span className="font-semibold">{reputation?.reputationScore ?? 0} pts</span>
+          {/* XP Progress Bar — only visible to own profile */}
+          {xpState && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-muted-foreground flex items-center gap-1">⚡ XP</span>
+                <span className="font-semibold">{xpState.xp.toLocaleString()} XP</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${xpState.progressPercent}%` }}
+                />
+              </div>
+              {xpState.nextRank && (
+                <p className="text-xs text-muted-foreground mt-1 text-right">
+                  {xpState.xpToNext?.toLocaleString()} XP → {xpState.nextRank.emoji} {xpState.nextRank.name}
+                </p>
+              )}
             </div>
-            <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${Math.min((reputation?.reputationScore ?? 0) / 200 * 100, 100)}%` }}
-              />
-            </div>
-          </div>
+          )}
 
           {reputation?.memberSince && (
             <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border flex items-center gap-1.5">
