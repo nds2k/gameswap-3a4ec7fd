@@ -186,6 +186,44 @@ const ProfileAnalytics = () => {
           <h1 className="text-xl font-semibold">Statistiques</h1>
         </div>
 
+        {/* Monthly Leaderboard */}
+        <div className="bg-card rounded-2xl border border-border p-5 mb-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-yellow-500" />
+            Top Traders — {format(new Date(), "MMMM yyyy", { locale: fr })}
+          </h3>
+          {leaderboard.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Aucun échange ce mois-ci</p>
+          ) : (
+            <div className="space-y-2">
+              {leaderboard.map((entry, index) => (
+                <button
+                  key={entry.user_id}
+                  onClick={() => navigate(`/user/${entry.user_id}`)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left"
+                >
+                  <span className="text-lg font-bold w-6 text-center shrink-0">
+                    {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}`}
+                  </span>
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={entry.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs bg-muted">
+                      {(entry.full_name || entry.username || "?")[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{entry.full_name || entry.username || "Utilisateur"}</p>
+                    {entry.username && entry.full_name && (
+                      <p className="text-xs text-muted-foreground">@{entry.username}</p>
+                    )}
+                  </div>
+                  <span className="text-sm font-bold text-primary">{entry.trade_count} échanges</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Summary Row */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-card rounded-2xl border border-border p-4">
@@ -289,43 +327,6 @@ const ProfileAnalytics = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Monthly Leaderboard */}
-        <div className="bg-card rounded-2xl border border-border p-5 mt-4">
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-yellow-500" />
-            Top Traders — {format(new Date(), "MMMM yyyy", { locale: fr })}
-          </h3>
-          {leaderboard.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Aucun échange ce mois-ci</p>
-          ) : (
-            <div className="space-y-2">
-              {leaderboard.map((entry, index) => (
-                <button
-                  key={entry.user_id}
-                  onClick={() => navigate(`/user/${entry.user_id}`)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left"
-                >
-                  <span className="text-lg font-bold w-6 text-center shrink-0">
-                    {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}`}
-                  </span>
-                  <Avatar className="h-9 w-9 shrink-0">
-                    <AvatarImage src={entry.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs bg-muted">
-                      {(entry.full_name || entry.username || "?")[0]?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{entry.full_name || entry.username || "Utilisateur"}</p>
-                    {entry.username && entry.full_name && (
-                      <p className="text-xs text-muted-foreground">@{entry.username}</p>
-                    )}
-                  </div>
-                  <span className="text-sm font-bold text-primary">{entry.trade_count} échanges</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </MainLayout>
   );
