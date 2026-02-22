@@ -11,7 +11,7 @@ const Discover = () => {
 
   return (
     <MainLayout onSearch={setSearchQuery}>
-      <div className="container py-6">
+      <div className="max-w-5xl mx-auto px-6 py-6">
         {/* Filter Section */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">

@@ -34,7 +34,7 @@ export const GameGrid = ({ searchQuery, filter }: GameGridProps) => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="bg-card rounded-2xl border border-border overflow-hidden animate-pulse">
             <div className="aspect-[4/3] bg-muted" />
@@ -66,7 +66,7 @@ export const GameGrid = ({ searchQuery, filter }: GameGridProps) => {
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
         {filteredGames.map((game) => (
           <GameCard 
             key={game.id} 
