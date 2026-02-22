@@ -373,19 +373,7 @@ const UserProfile = () => {
               </div>
             </div>
 
-            {/* Score de réputation + progress bar */}
-            <div className="mt-4 pt-4 border-t border-border">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Score de réputation</span>
-                <span className="font-semibold">{reputation?.reputationScore ?? 0} pts</span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${Math.min((reputation?.reputationScore ?? 0) / 200 * 100, 100)}%` }}
-                />
-              </div>
-            </div>
+            {/* No XP bar for public profiles — hidden from other users */}
 
             {reputation?.memberSince && (
               <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border flex items-center gap-1.5">
