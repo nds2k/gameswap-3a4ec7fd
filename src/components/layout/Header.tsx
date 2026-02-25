@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map, Trophy } from "lucide-react";
+import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map, Gem } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PostGameModal } from "@/components/games/PostGameModal";
 import { NotificationsSidebar } from "@/components/notifications/NotificationsSidebar";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useXP } from "@/hooks/useXP";
+import { RANKS } from "@/lib/xpSystem";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -29,6 +31,7 @@ export const Header = ({ onSearch }: HeaderProps) => {
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { unreadCount } = useNotifications();
+  const { xpState, loading: xpLoading } = useXP(user?.id);
 
   useEffect(() => {
     if (user) {
@@ -92,13 +95,43 @@ export const Header = ({ onSearch }: HeaderProps) => {
               <Map className="h-5 w-5" />
             </Link>
 
-            {/* XP / Medal button */}
-            {user && (
+            {/* XP Level Widget */}
+            {user && !xpLoading && xpState && (
               <Link
-                to="/profile/analytics"
-                className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                to="/profile/xp-rewards"
+                className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm hover:bg-muted/60 transition-colors"
               >
-                <Trophy className="h-5 w-5" />
+                {(() => {
+                  const rankIndex = xpState.rank ? RANKS.findIndex((r) => r.name === xpState.rank.name) : 0;
+                  const level = rankIndex + 1;
+                  return (
+                    <>
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shadow-primary/25">
+                        <span className="text-xs font-black text-white">{level}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-muted-foreground leading-tight">Level</span>
+                        <span className="text-xs font-bold leading-tight">{xpState.rank?.name} {xpState.rank?.emoji}</span>
+                      </div>
+                      <div className="flex items-center gap-1 pl-1 border-l border-border/50">
+                        <Gem className="h-3 w-3 text-primary" />
+                        <span className="text-xs font-bold">{xpState.xp.toLocaleString()}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </Link>
+            )}
+            {user && !xpLoading && xpState && (
+              <Link
+                to="/profile/xp-rewards"
+                className="sm:hidden w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shadow-primary/25">
+                  <span className="text-[10px] font-black text-white">
+                    {(xpState.rank ? RANKS.findIndex((r) => r.name === xpState.rank.name) : 0) + 1}
+                  </span>
+                </div>
               </Link>
             )}
 
