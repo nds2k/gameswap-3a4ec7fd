@@ -34,6 +34,7 @@ const PrivateRoomChat = lazy(() => import("./pages/PrivateRoomChat"));
 const PaymentRequests = lazy(() => import("./pages/PaymentRequests"));
 const Community = lazy(() => import("./pages/Community"));
 const ProfileAnalytics = lazy(() => import("./pages/ProfileAnalytics"));
+const XPRewards = lazy(() => import("./pages/XPRewards"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -110,6 +111,7 @@ const AppRoutes = () => {
           <Route path="/user/:userId" element={<UserProfile />} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/profile/analytics" element={<ProtectedRoute><ProfileAnalytics /></ProtectedRoute>} />
+          <Route path="/profile/xp-rewards" element={<ProtectedRoute><XPRewards /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/join/:conversationId" element={<ProtectedRoute><JoinGroup /></ProtectedRoute>} />
           <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />

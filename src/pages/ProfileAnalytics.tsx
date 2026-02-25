@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Star, TrendingUp, Zap, Shield, Award, Trophy, Loader2, Gift, Palette, Sparkles, Rocket, Ticket, ShoppingBag, Lock } from "lucide-react";
+import { ArrowLeft, Star, TrendingUp, Zap, Shield, Award, Trophy, Loader2, Gift } from "lucide-react";
 import { useXP } from "@/hooks/useXP";
 import { useRatings } from "@/hooks/useRatings";
 import type { UserReputation } from "@/hooks/useRatings";
@@ -327,52 +327,20 @@ const ProfileAnalytics = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* XP Rewards Shop */}
-        <div className="bg-card rounded-2xl border border-border p-5 mt-6">
-          <h3 className="font-semibold mb-2 flex items-center gap-2">
-            <Gift className="h-4 w-4 text-primary" />
-            Dépensez vos XP
-          </h3>
-          <p className="text-xs text-muted-foreground mb-4">Débloquez des récompenses exclusives avec vos points d'expérience</p>
-          <div className="space-y-2">
-            {[
-              { icon: Palette, label: "Personnalisation du profil", desc: "Cadre, couleur de badge", cost: 500, color: "text-pink-500" },
-              { icon: Sparkles, label: "Accessoires d'avatar", desc: "Accessoires limités exclusifs", cost: 800, color: "text-purple-400" },
-              { icon: Rocket, label: "Accès anticipé", desc: "Nouvelles fonctionnalités en avant-première", cost: 1200, color: "text-blue-500" },
-              { icon: Ticket, label: "Tirage mensuel", desc: "Participation au giveaway du mois", cost: 300, color: "text-green-500" },
-              { icon: ShoppingBag, label: "Réduction merch", desc: "Réduction sur le merch GameSwapp", cost: 2000, color: "text-orange-500" },
-            ].map((reward) => {
-              const canAfford = (xpState?.xp ?? 0) >= reward.cost;
-              return (
-                <div
-                  key={reward.label}
-                  className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-                    canAfford ? "border-primary/30 bg-primary/5" : "border-border bg-muted/30 opacity-60"
-                  }`}
-                >
-                  <div className={`shrink-0 ${reward.color}`}>
-                    <reward.icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{reward.label}</p>
-                    <p className="text-xs text-muted-foreground">{reward.desc}</p>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-1">
-                    {canAfford ? (
-                      <span className="text-xs font-bold text-primary flex items-center gap-1">
-                        <Zap className="h-3 w-3" /> {reward.cost}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                        <Lock className="h-3 w-3" /> {reward.cost}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+        {/* XP Rewards Link */}
+        <button
+          onClick={() => navigate("/profile/xp-rewards")}
+          className="w-full bg-card rounded-2xl border border-border p-5 mt-6 flex items-center gap-4 hover:bg-muted/50 transition-colors text-left"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+            <Gift className="h-5 w-5 text-primary" />
           </div>
-        </div>
+          <div className="flex-1">
+            <p className="font-semibold text-sm">XP Rewards</p>
+            <p className="text-xs text-muted-foreground">Dépensez vos XP pour des récompenses exclusives</p>
+          </div>
+          <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180" />
+        </button>
 
       </div>
     </MainLayout>
