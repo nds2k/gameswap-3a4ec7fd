@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { Map as MapIcon, Navigation, X, MapPin, Loader2 } from "lucide-react";
+import { Map as MapIcon, Navigation, X, MapPin, Loader2, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
@@ -59,6 +60,7 @@ const MapController = ({ center, zoom }: { center: [number, number] | null; zoom
 };
 
 const MapPage = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { requestGeolocationPermission } = usePermissions();
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -184,6 +186,52 @@ const MapPage = () => {
     setMapZoom(14);
   };
 
+  const handleContactSeller = async (seller: Seller) => {
+    if (!user) { navigate("/auth"); return; }
+    if (seller.user_id === user.id) return;
+
+    try {
+      // Find existing 1:1 conversation
+      const { data: myConvos } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", user.id);
+
+      const { data: theirConvos } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", seller.user_id);
+
+      const myIds = new Set((myConvos || []).map(c => c.conversation_id));
+      const shared = (theirConvos || []).filter(c => myIds.has(c.conversation_id));
+
+      // Check for non-group conversation
+      for (const s of shared) {
+        const { data: conv } = await supabase
+          .from("conversations")
+          .select("id, is_group")
+          .eq("id", s.conversation_id)
+          .eq("is_group", false)
+          .single();
+        if (conv) {
+          navigate(`/chat/${conv.id}`);
+          return;
+        }
+      }
+
+      // Create new conversation
+      const convId = crypto.randomUUID();
+      await supabase.from("conversations").insert({ id: convId, is_group: false, created_by: user.id });
+      await supabase.from("conversation_participants").insert([
+        { conversation_id: convId, user_id: user.id },
+        { conversation_id: convId, user_id: seller.user_id },
+      ]);
+      navigate(`/chat/${convId}`);
+    } catch (err) {
+      console.error("Error starting chat:", err);
+    }
+  };
+
   return (
     <MainLayout showSearch={false}>
       <div className="container py-6">
@@ -299,7 +347,7 @@ const MapPage = () => {
                           )}
                         </div>
                         <div>
-                          <p className="font-semibold text-sm">{seller.full_name || "Vendeur"}</p>
+                          <p className="font-semibold text-sm cursor-pointer hover:text-primary" onClick={() => navigate(`/user/${seller.user_id}`)}>{seller.full_name || "Vendeur"}</p>
                           <p className="text-xs text-primary">{seller.game_count} jeu{seller.game_count !== 1 ? "x" : ""}</p>
                           {getDistanceText(seller.location_lat, seller.location_lng) && (
                             <p className="text-xs text-muted-foreground">{getDistanceText(seller.location_lat, seller.location_lng)}</p>
@@ -385,7 +433,10 @@ const MapPage = () => {
                   )}
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">
+                  <h3
+                    className="font-bold text-lg hover:text-primary cursor-pointer transition-colors"
+                    onClick={() => navigate(`/user/${selectedSeller.user_id}`)}
+                  >
                     {selectedSeller.full_name || "Vendeur"}
                   </h3>
                   <p className="text-primary font-semibold">
@@ -399,7 +450,8 @@ const MapPage = () => {
                 </div>
               </div>
 
-              <Button variant="gameswap" className="w-full">
+              <Button variant="gameswap" className="w-full" onClick={() => handleContactSeller(selectedSeller)}>
+                <MessageSquare className="h-4 w-4 mr-2" />
                 Contacter
               </Button>
             </div>
