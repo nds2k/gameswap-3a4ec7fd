@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map, Gem } from "lucide-react";
+import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map, Trophy } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { PostGameModal } from "@/components/games/PostGameModal";
 import { NotificationsSidebar } from "@/components/notifications/NotificationsSidebar";
 import { useNotifications } from "@/hooks/useNotifications";
-import { useXP } from "@/hooks/useXP";
-import { RANKS } from "@/lib/xpSystem";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -31,7 +29,6 @@ export const Header = ({ onSearch }: HeaderProps) => {
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { unreadCount } = useNotifications();
-  const { xpState, loading: xpLoading } = useXP(user?.id);
 
   useEffect(() => {
     if (user) {
@@ -73,7 +70,7 @@ export const Header = ({ onSearch }: HeaderProps) => {
           </Link>
 
           {/* Search Bar */}
-          <div className="flex-1 max-w-xl mx-4">
+          <div className="flex-1 max-w-md mx-2 sm:mx-4 min-w-0">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
@@ -86,61 +83,31 @@ export const Header = ({ onSearch }: HeaderProps) => {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Map button */}
             <Link
               to="/map"
-              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             >
-              <Map className="h-5 w-5" />
+              <Map className="h-4 w-4 sm:h-5 sm:w-5" />
             </Link>
 
-            {/* XP Level Widget */}
-            {user && !xpLoading && xpState && (
+            {/* Trophy / Analytics button */}
+            {user && (
               <Link
-                to="/profile/xp-rewards"
-                className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm hover:bg-muted/60 transition-colors"
+                to="/profile/analytics"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               >
-                {(() => {
-                  const rankIndex = xpState.rank ? RANKS.findIndex((r) => r.name === xpState.rank.name) : 0;
-                  const level = rankIndex + 1;
-                  return (
-                    <>
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shadow-primary/25">
-                        <span className="text-xs font-black text-white">{level}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-muted-foreground leading-tight">Level</span>
-                        <span className="text-xs font-bold leading-tight">{xpState.rank?.name} {xpState.rank?.emoji}</span>
-                      </div>
-                      <div className="flex items-center gap-1 pl-1 border-l border-border/50">
-                        <Gem className="h-3 w-3 text-primary" />
-                        <span className="text-xs font-bold">{xpState.xp.toLocaleString()}</span>
-                      </div>
-                    </>
-                  );
-                })()}
-              </Link>
-            )}
-            {user && !xpLoading && xpState && (
-              <Link
-                to="/profile/xp-rewards"
-                className="sm:hidden w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
-              >
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-sm shadow-primary/25">
-                  <span className="text-[10px] font-black text-white">
-                    {(xpState.rank ? RANKS.findIndex((r) => r.name === xpState.rank.name) : 0) + 1}
-                  </span>
-                </div>
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
               </Link>
             )}
 
             {/* Notifications button */}
             <button
               onClick={() => setNotificationsOpen(true)}
-              className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                   {unreadCount > 9 ? "9+" : unreadCount}
