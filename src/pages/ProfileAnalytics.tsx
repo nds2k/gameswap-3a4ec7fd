@@ -4,8 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Star, TrendingUp, Zap, Shield, Award, Trophy, Loader2, Gift } from "lucide-react";
+import { ArrowLeft, Star, TrendingUp, Zap, Shield, Award, Trophy, Loader2, Gift, Gem, Sparkles } from "lucide-react";
 import { useXP } from "@/hooks/useXP";
+import { RANKS } from "@/lib/xpSystem";
 import { useRatings } from "@/hooks/useRatings";
 import type { UserReputation } from "@/hooks/useRatings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -224,7 +225,71 @@ const ProfileAnalytics = () => {
           )}
         </div>
 
-        {/* Summary Row */}
+        {/* XP Level + Progress Hero (from screenshot) */}
+        {xpState && (() => {
+          const rankIndex = RANKS.findIndex((r) => r.name === xpState.rank.name);
+          const level = rankIndex + 1;
+          const nextRank = xpState.nextRank;
+          return (
+            <div className="relative rounded-2xl border border-border bg-card/80 backdrop-blur-xl p-5 mb-6 overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 blur-2xl pointer-events-none" />
+              <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-pink-500/20 blur-2xl pointer-events-none" />
+
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/25">
+                    <span className="text-xl font-black text-white">{level}</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Level</p>
+                    <p className="text-lg font-bold">{xpState.rank.name} {xpState.rank.emoji}</p>
+                  </div>
+                </div>
+                {nextRank && (
+                  <div className="text-right">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Next</p>
+                    <p className="text-sm font-semibold">{nextRank.emoji} {nextRank.name}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative z-10 mb-3">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                  <span>{xpState.xp.toLocaleString()} XP</span>
+                  <span>{nextRank ? `${nextRank.minXP.toLocaleString()} XP` : "MAX"}</span>
+                </div>
+                <div className="h-3 rounded-full bg-muted/50 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-primary via-purple-500 to-blue-500 transition-all duration-700 ease-out"
+                    style={{ width: `${xpState.progressPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="relative z-10 flex items-center gap-2 mt-4 px-3 py-2.5 rounded-xl bg-muted/30 border border-border/50">
+                <Gem className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm font-bold">{xpState.xp.toLocaleString()} XP</span>
+                <span className="text-xs text-muted-foreground">disponible</span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* XP Rewards Link */}
+        <button
+          onClick={() => navigate("/profile/xp-rewards")}
+          className="w-full bg-card rounded-2xl border border-border p-5 mb-6 flex items-center gap-4 hover:bg-muted/50 transition-colors text-left"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+            <Sparkles className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-sm">XP Rewards</p>
+            <p className="text-xs text-muted-foreground">Dépensez vos XP pour des récompenses exclusives</p>
+          </div>
+          <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180" />
+        </button>
+
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-card rounded-2xl border border-border p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -327,20 +392,6 @@ const ProfileAnalytics = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* XP Rewards Link */}
-        <button
-          onClick={() => navigate("/profile/xp-rewards")}
-          className="w-full bg-card rounded-2xl border border-border p-5 mt-6 flex items-center gap-4 hover:bg-muted/50 transition-colors text-left"
-        >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
-            <Gift className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-sm">XP Rewards</p>
-            <p className="text-xs text-muted-foreground">Dépensez vos XP pour des récompenses exclusives</p>
-          </div>
-          <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180" />
-        </button>
 
       </div>
     </MainLayout>

@@ -97,7 +97,7 @@ const XPRewards = () => {
 
         {/* Header */}
         <div className="flex items-center gap-3 pt-6 pb-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-foreground">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/profile/analytics")} className="text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-bold">XP Rewards</h1>
