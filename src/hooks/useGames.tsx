@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Game {
@@ -22,9 +22,20 @@ export interface Game {
   };
 }
 
+// Cache profiles to avoid refetching on every game list load
+let profilesCache: Map<string, { full_name: string | null; avatar_url: string | null }> | null = null;
+let profilesCacheTime = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export const useGames = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
 
   const fetchGames = useCallback(async () => {
     setLoading(true);
@@ -33,24 +44,35 @@ export const useGames = () => {
         .from("games")
         .select("*")
         .eq("status", "available")
-        .order("created_at", { ascending: false });
+        .order("is_boosted", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(50);
 
       if (error) throw error;
+      if (!isMounted.current) return;
 
-      // Fetch owner profiles for all games using RPC for visibility
       if (gamesData && gamesData.length > 0) {
         const ownerIds = [...new Set(gamesData.map((g) => g.owner_id))];
-        const { data: profiles } = await supabase.rpc("get_public_profiles");
 
-        const profileMap = new Map(
-          (profiles || [])
-            .filter((p: any) => ownerIds.includes(p.user_id))
-            .map((p: any) => [p.user_id, { user_id: p.user_id, full_name: p.full_name, avatar_url: p.avatar_url }])
-        );
+        // Use cache if fresh enough
+        const now = Date.now();
+        if (!profilesCache || now - profilesCacheTime > CACHE_TTL) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name, avatar_url")
+            .in("user_id", ownerIds);
+
+          profilesCache = new Map(
+            (profiles || []).map((p) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+          );
+          profilesCacheTime = now;
+        }
+
+        if (!isMounted.current) return;
 
         const gamesWithOwners = gamesData.map((game) => ({
           ...game,
-          owner: profileMap.get(game.owner_id) || null,
+          owner: profilesCache?.get(game.owner_id) || null,
         }));
 
         setGames(gamesWithOwners);
@@ -60,7 +82,7 @@ export const useGames = () => {
     } catch (error) {
       console.error("Error fetching games:", error);
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   }, []);
 

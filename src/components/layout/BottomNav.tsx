@@ -1,9 +1,10 @@
+import { memo } from "react";
 import { Compass, Heart, MessageSquare, User, Users } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-export const BottomNav = () => {
+export const BottomNav = memo(() => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -44,4 +45,6 @@ export const BottomNav = () => {
       })}
     </nav>
   );
-};
+});
+
+BottomNav.displayName = "BottomNav";
