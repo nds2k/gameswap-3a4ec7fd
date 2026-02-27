@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing, CreditCard, Download, Trash2, Loader2 } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing, CreditCard, Download, Trash2, Loader2, Store, CheckCircle } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -31,6 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { SellerOnboardingModal } from "@/components/seller/SellerOnboardingModal";
+
 const Settings = () => {
   const { user, signOut } = useAuth();
   const { language, setLanguage, t } = useLanguage();
@@ -55,6 +57,34 @@ const Settings = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(notificationPermission === "granted");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountActionLoading, setAccountActionLoading] = useState(false);
+  const [sellerModalOpen, setSellerModalOpen] = useState(false);
+  const [sellerStatus, setSellerStatus] = useState<{ hasAccount: boolean; onboardingComplete: boolean } | null>(null);
+  const [checkingSellerStatus, setCheckingSellerStatus] = useState(false);
+
+  // Check seller status
+  const checkSellerStatus = async () => {
+    setCheckingSellerStatus(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("check-seller-status");
+      if (!error && data) setSellerStatus(data);
+    } catch {} finally {
+      setCheckingSellerStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) checkSellerStatus();
+  }, [user]);
+
+  // Handle Stripe redirect params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("stripe") === "complete") {
+      checkSellerStatus();
+      toast({ title: "Vérification en cours", description: "Votre compte vendeur est en cours de validation." });
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, []);
 
   // Re-check notification permission every time Settings page is opened/focused
   useEffect(() => {
@@ -352,6 +382,51 @@ const Settings = () => {
             {saving ? t("settings.saving") : t("settings.save")}
           </Button>
 
+          {/* Seller Account Section */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
+              Compte vendeur
+            </h2>
+            <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+              {checkingSellerStatus ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Vérification du statut...
+                </div>
+              ) : sellerStatus?.onboardingComplete ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Compte vendeur actif</p>
+                    <p className="text-xs text-muted-foreground">Vous pouvez recevoir des paiements</p>
+                  </div>
+                </div>
+              ) : sellerStatus?.hasAccount ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Votre inscription n'est pas terminée. Finalisez votre vérification.
+                  </p>
+                  <Button variant="outline" className="w-full" onClick={() => setSellerModalOpen(true)}>
+                    <Store className="h-4 w-4 mr-2" />
+                    Finaliser mon inscription
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Créez votre compte vendeur pour recevoir des paiements lors de vos ventes.
+                  </p>
+                  <Button variant="gameswap" className="w-full" onClick={() => setSellerModalOpen(true)}>
+                    <Store className="h-4 w-4 mr-2" />
+                    Devenir vendeur
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Menu Sections */}
           {menuItems.map((section) => (
             <div key={section.section}>
@@ -498,6 +573,12 @@ const Settings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SellerOnboardingModal
+        open={sellerModalOpen}
+        onOpenChange={setSellerModalOpen}
+        onSuccess={checkSellerStatus}
+      />
     </MainLayout>
   );
 };

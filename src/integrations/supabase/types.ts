@@ -622,6 +622,8 @@ export type Database = {
           location_lng: number | null
           public_key: string | null
           show_on_map: boolean | null
+          stripe_connect_account_id: string | null
+          stripe_onboarding_complete: boolean
           updated_at: string
           user_id: string
           username: string | null
@@ -639,6 +641,8 @@ export type Database = {
           location_lng?: number | null
           public_key?: string | null
           show_on_map?: boolean | null
+          stripe_connect_account_id?: string | null
+          stripe_onboarding_complete?: boolean
           updated_at?: string
           user_id: string
           username?: string | null
@@ -656,6 +660,8 @@ export type Database = {
           location_lng?: number | null
           public_key?: string | null
           show_on_map?: boolean | null
+          stripe_connect_account_id?: string | null
+          stripe_onboarding_complete?: boolean
           updated_at?: string
           user_id?: string
           username?: string | null
