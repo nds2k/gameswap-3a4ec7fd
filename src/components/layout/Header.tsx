@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map, Trophy } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
@@ -20,6 +20,28 @@ import { useNotifications } from "@/hooks/useNotifications";
 interface HeaderProps {
   onSearch?: (query: string) => void;
 }
+
+// Debounced search to reduce re-renders
+const DebouncedSearchInput = ({ placeholder, onSearch }: { placeholder: string; onSearch?: (q: string) => void }) => {
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onSearch?.(value), 250);
+  }, [onSearch]);
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  return (
+    <input
+      type="text"
+      placeholder={placeholder}
+      className="search-input pl-11"
+      onChange={handleChange}
+    />
+  );
+};
 
 export const Header = ({ onSearch }: HeaderProps) => {
   const { user, signOut } = useAuth();
@@ -73,12 +95,7 @@ export const Header = ({ onSearch }: HeaderProps) => {
           <div className="flex-1 max-w-md mx-2 sm:mx-4 min-w-0">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder={t("header.search")}
-                className="search-input pl-11"
-                onChange={(e) => onSearch?.(e.target.value)}
-              />
+              <DebouncedSearchInput placeholder={t("header.search")} onSearch={onSearch} />
             </div>
           </div>
 

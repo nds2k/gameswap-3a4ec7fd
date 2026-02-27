@@ -1,11 +1,10 @@
 import { Heart, MapPin, MessageCircle, Zap } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, memo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useGames, type Game } from "@/hooks/useGames";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserRank } from "@/lib/xpSystem";
 
 interface GameGridProps {
   searchQuery: string;
@@ -18,19 +17,22 @@ export const GameGrid = ({ searchQuery, filter }: GameGridProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const filteredGames = games.filter((game) => {
-    const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filter === "all" || game.game_type === filter;
-    return matchesSearch && matchesFilter;
-  });
+  const filteredGames = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return games.filter((game) => {
+      const matchesSearch = game.title.toLowerCase().includes(query);
+      const matchesFilter = filter === "all" || game.game_type === filter;
+      return matchesSearch && matchesFilter;
+    });
+  }, [games, searchQuery, filter]);
 
-  const handleGameClick = (gameId: string) => {
+  const handleGameClick = useCallback((gameId: string) => {
     if (!user) {
       navigate("/auth");
       return;
     }
     setSelectedGameId(gameId);
-  };
+  }, [user, navigate]);
 
   if (loading) {
     return (
@@ -92,7 +94,7 @@ interface GameCardProps {
   isAuthenticated: boolean;
 }
 
-const GameCard = ({ game, onClick, isAuthenticated }: GameCardProps) => {
+const GameCard = memo(({ game, onClick, isAuthenticated }: GameCardProps) => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
@@ -125,6 +127,8 @@ const GameCard = ({ game, onClick, isAuthenticated }: GameCardProps) => {
           <img
             src={game.image_url}
             alt={game.title}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
@@ -221,4 +225,6 @@ const GameCard = ({ game, onClick, isAuthenticated }: GameCardProps) => {
       </div>
     </div>
   );
-};
+});
+
+GameCard.displayName = "GameCard";
