@@ -22,11 +22,12 @@ serve(async (req) => {
     );
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header");
+    if (!authHeader?.startsWith("Bearer ")) throw new Error("No authorization header");
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError || !userData.user) throw new Error("User not authenticated");
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) throw new Error("User not authenticated");
+    const userId = claimsData.claims.sub as string;
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -37,7 +38,7 @@ serve(async (req) => {
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("stripe_connect_account_id, stripe_onboarding_complete")
-      .eq("user_id", userData.user.id)
+      .eq("user_id", userId)
       .single();
 
     if (!profile?.stripe_connect_account_id) {
@@ -59,7 +60,7 @@ serve(async (req) => {
       await supabaseAdmin
         .from("profiles")
         .update({ stripe_onboarding_complete: true })
-        .eq("user_id", userData.user.id);
+        .eq("user_id", userId);
     }
 
     return new Response(JSON.stringify({ 

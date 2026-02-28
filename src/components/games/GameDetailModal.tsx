@@ -12,6 +12,8 @@ import { SellGameModal } from "@/components/games/SellGameModal";
 import { ImageGallery } from "@/components/games/ImageGallery";
 import { UserReputation } from "@/components/trades/UserReputation";
 import { useTrades } from "@/hooks/useTrades";
+import { useSellerStatus } from "@/hooks/useSellerStatus";
+import { SellerOnboardingModal } from "@/components/seller/SellerOnboardingModal";
 
 interface Game {
   id: string;
@@ -42,11 +44,14 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
   const { createConversation } = useMessages();
   const { createTrade } = useTrades();
 
+  const { checkStatus, loading: sellerCheckLoading } = useSellerStatus();
+
   const [game, setGame] = useState<Game | null>(null);
   const [owner, setOwner] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
   const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
   const [gameImages, setGameImages] = useState<string[]>([]);
   const [tradeLoading, setTradeLoading] = useState(false);
 
@@ -136,6 +141,20 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
     setTradeLoading(true);
     await createTrade(game.id, game.owner_id);
     setTradeLoading(false);
+  };
+
+  const handleSellClick = async () => {
+    if (!user || !game) return;
+    try {
+      const result = await checkStatus();
+      if (result.hasAccount && result.onboardingComplete && result.chargesEnabled) {
+        setSellModalOpen(true);
+      } else {
+        setOnboardingModalOpen(true);
+      }
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    }
   };
 
   const parseDescription = (desc: string | null) => {
@@ -281,8 +300,8 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
 
               {/* Sell button */}
               {game.owner_id === user?.id && game.game_type === "sale" && game.status !== "sold" && (
-                <Button variant="gameswap" size="lg" className="w-full mt-3" onClick={() => setSellModalOpen(true)}>
-                  <CreditCard className="h-4 w-4 mr-2" />
+                <Button variant="gameswap" size="lg" className="w-full mt-3" onClick={handleSellClick} disabled={sellerCheckLoading}>
+                  {sellerCheckLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CreditCard className="h-4 w-4 mr-2" />}
                   Vendre ce jeu
                 </Button>
               )}
@@ -311,6 +330,18 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
         onOpenChange={setSellModalOpen}
         game={game ? { id: game.id, title: game.title, price: game.price || 0, image: game.image_url || "/placeholder.svg" } : null}
         onSuccess={() => { onOpenChange(false); }}
+      />
+
+      <SellerOnboardingModal
+        open={onboardingModalOpen}
+        onOpenChange={setOnboardingModalOpen}
+        onSuccess={() => {
+          setOnboardingModalOpen(false);
+          toast({
+            title: "Onboarding lancé",
+            description: "Finalisez votre inscription, puis revenez vendre votre jeu.",
+          });
+        }}
       />
     </Dialog>
   );
