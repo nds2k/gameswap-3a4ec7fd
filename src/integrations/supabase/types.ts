@@ -799,6 +799,8 @@ export type Database = {
           buyer_id: string | null
           completed_at: string | null
           created_at: string
+          escrow_release_at: string | null
+          escrow_status: string
           expires_at: string | null
           id: string
           method: string
@@ -817,6 +819,8 @@ export type Database = {
           buyer_id?: string | null
           completed_at?: string | null
           created_at?: string
+          escrow_release_at?: string | null
+          escrow_status?: string
           expires_at?: string | null
           id?: string
           method: string
@@ -835,6 +839,8 @@ export type Database = {
           buyer_id?: string | null
           completed_at?: string | null
           created_at?: string
+          escrow_release_at?: string | null
+          escrow_status?: string
           expires_at?: string | null
           id?: string
           method?: string

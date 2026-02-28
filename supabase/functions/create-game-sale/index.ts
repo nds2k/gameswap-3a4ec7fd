@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const logStep = (step: string, details?: any) => {
@@ -14,6 +14,7 @@ const logStep = (step: string, details?: any) => {
 
 const PLATFORM_COMMISSION_RATE = 0.07; // 7% commission on card payments
 const CASH_SERVICE_FEE = 0.99; // 0.99€ fixed fee for cash in person transactions
+const ESCROW_HOLD_HOURS = 48; // 48h escrow hold
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -69,19 +70,40 @@ serve(async (req) => {
     const gamePrice = Number(game.price);
     logStep("Game verified", { gameId, title: game.title, price: gamePrice, method });
 
+    // Fetch seller's Stripe Connect account
+    const { data: sellerProfile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("stripe_connect_account_id, stripe_onboarding_complete")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileError || !sellerProfile) throw new Error("Seller profile not found");
+    if (!sellerProfile.stripe_connect_account_id) throw new Error("Seller does not have a Stripe account. Please complete onboarding first.");
+    if (!sellerProfile.stripe_onboarding_complete) throw new Error("Seller Stripe onboarding is incomplete.");
+
+    const sellerStripeAccountId = sellerProfile.stripe_connect_account_id;
+    logStep("Seller Stripe account verified", { sellerStripeAccountId });
+
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 
+    // Verify the Stripe account is fully enabled
+    const stripeAccount = await stripe.accounts.retrieve(sellerStripeAccountId);
+    if (!stripeAccount.charges_enabled || !stripeAccount.payouts_enabled) {
+      throw new Error("Seller Stripe account is not fully enabled. Please complete verification.");
+    }
+    logStep("Stripe account fully enabled", { charges: stripeAccount.charges_enabled, payouts: stripeAccount.payouts_enabled });
+
     const origin = req.headers.get("origin") || "https://gameswap.lovable.app";
+    const escrowReleaseAt = new Date(Date.now() + ESCROW_HOLD_HOURS * 60 * 60 * 1000).toISOString();
 
     if (method === "cash") {
-      // Cash flow: seller pays 5€ service fee
+      // Cash flow: seller pays 0.99€ service fee, no destination charge needed
       const customers = await stripe.customers.list({ email: user.email, limit: 1 });
       let customerId: string | undefined;
       if (customers.data.length > 0) customerId = customers.data[0].id;
 
-      // Create transaction record first
       const { data: transaction, error: txError } = await supabaseAdmin
         .from("transactions")
         .insert({
@@ -91,7 +113,8 @@ serve(async (req) => {
           platform_fee: CASH_SERVICE_FEE,
           method: "cash",
           status: "pending",
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min expiry
+          escrow_status: "none", // Cash transactions have no escrow
+          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         })
         .select()
         .single();
@@ -127,7 +150,6 @@ serve(async (req) => {
         },
       });
 
-      // Update transaction with stripe session
       await supabaseAdmin
         .from("transactions")
         .update({ stripe_checkout_session_id: session.id })
@@ -145,10 +167,11 @@ serve(async (req) => {
       });
 
     } else {
-      // Card flow: generate a payment link for the buyer
+      // Card flow: DESTINATION CHARGE to seller's Stripe account
+      // Buyer pays full price, platform takes 7% fee, seller gets the rest
+      const applicationFeeAmount = Math.round(gamePrice * PLATFORM_COMMISSION_RATE * 100); // in cents
       const platformFee = Math.round(gamePrice * PLATFORM_COMMISSION_RATE * 100) / 100;
 
-      // Create transaction record
       const { data: transaction, error: txError } = await supabaseAdmin
         .from("transactions")
         .insert({
@@ -158,15 +181,17 @@ serve(async (req) => {
           platform_fee: platformFee,
           method: "card",
           status: "pending",
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min expiry for in-person
+          escrow_status: "pending_escrow",
+          escrow_release_at: escrowReleaseAt,
+          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         })
         .select()
         .single();
 
       if (txError) throw new Error(`Failed to create transaction: ${txError.message}`);
-      logStep("Transaction created", { transactionId: transaction.id });
+      logStep("Transaction created with escrow", { transactionId: transaction.id, escrowReleaseAt });
 
-      // Create a Stripe Checkout session that the buyer will use
+      // Create Stripe Checkout with destination charge to seller's connected account
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
@@ -176,11 +201,6 @@ serve(async (req) => {
               product_data: {
                 name: game.title,
                 description: `Achat du jeu "${game.title}" sur GameSwap`,
-                metadata: {
-                  game_id: gameId,
-                  seller_id: user.id,
-                  transaction_id: transaction.id,
-                },
               },
               unit_amount: Math.round(gamePrice * 100),
             },
@@ -188,17 +208,24 @@ serve(async (req) => {
           },
         ],
         mode: "payment",
+        // Route payment to seller's Stripe account with platform fee
+        payment_intent_data: {
+          application_fee_amount: applicationFeeAmount,
+          transfer_data: {
+            destination: sellerStripeAccountId,
+          },
+        },
         success_url: `${origin}/my-games?sale=success&transaction=${transaction.id}`,
         cancel_url: `${origin}/my-games?sale=cancelled`,
         metadata: {
           transaction_id: transaction.id,
           game_id: gameId,
           seller_id: user.id,
+          seller_stripe_account: sellerStripeAccountId,
           method: "card",
         },
       });
 
-      // Update transaction with payment link
       await supabaseAdmin
         .from("transactions")
         .update({ 
@@ -207,7 +234,11 @@ serve(async (req) => {
         })
         .eq("id", transaction.id);
 
-      logStep("Card checkout session created", { sessionId: session.id, url: session.url });
+      logStep("Card destination charge session created", { 
+        sessionId: session.id, 
+        destination: sellerStripeAccountId,
+        applicationFee: applicationFeeAmount,
+      });
 
       return new Response(JSON.stringify({ 
         url: session.url, 

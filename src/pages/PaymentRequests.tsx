@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSearchParams } from "react-router-dom";
 import {
   CreditCard, Loader2, Clock, CheckCircle, XCircle,
-  AlertTriangle, ArrowRight, Send
+  AlertTriangle, ArrowRight, Send, Shield
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -25,6 +25,8 @@ interface Transaction {
   created_at: string;
   expires_at: string | null;
   completed_at: string | null;
+  escrow_status?: string;
+  escrow_release_at?: string | null;
 }
 
 interface GameInfo {
@@ -172,6 +174,12 @@ const PaymentRequests = () => {
   };
 
   const getStatusInfo = (tx: Transaction) => {
+    if (tx.status === "completed" && tx.escrow_status === "pending_escrow") {
+      return { label: "Fonds sécurisés (48h)", icon: Clock, className: "text-blue-500" };
+    }
+    if (tx.status === "completed" && tx.escrow_status === "released") {
+      return { label: "Fonds versés", icon: CheckCircle, className: "text-green-500" };
+    }
     if (tx.status === "completed") return { label: "Complété", icon: CheckCircle, className: "text-green-500" };
     if (tx.status === "expired" || isExpired(tx)) return { label: "Expiré", icon: XCircle, className: "text-muted-foreground" };
     return { label: "En attente", icon: Clock, className: "text-yellow-500" };
@@ -347,21 +355,42 @@ const PaymentRequests = () => {
                 const methodLabel = tx.method === "cash" ? "Espèces" : tx.method === "remote" ? "À distance" : "Carte";
 
                 return (
-                  <div key={tx.id} className="bg-card rounded-xl border border-border p-3 flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{game?.title || "Jeu"}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {methodLabel} · {isSeller ? "Vente" : "Achat"} ·{" "}
-                        {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true, locale: fr })}
-                      </p>
+                  <div key={tx.id} className="bg-card rounded-xl border border-border p-3 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{game?.title || "Jeu"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {methodLabel} · {isSeller ? "Vente" : "Achat"} ·{" "}
+                          {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true, locale: fr })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-sm">{tx.amount}€</p>
+                        <p className={`text-xs flex items-center gap-1 justify-end ${statusInfo.className}`}>
+                          <StatusIcon className="h-3 w-3" />
+                          {statusInfo.label}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-sm">{tx.amount}€</p>
-                      <p className={`text-xs flex items-center gap-1 justify-end ${statusInfo.className}`}>
-                        <StatusIcon className="h-3 w-3" />
-                        {statusInfo.label}
-                      </p>
-                    </div>
+                    {/* Escrow messaging */}
+                    {tx.status === "completed" && tx.escrow_status === "pending_escrow" && (
+                      <div className="flex items-center gap-2 p-2 bg-blue-500/10 rounded-lg text-xs">
+                        <Shield className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                        <span className="text-blue-600 dark:text-blue-400">
+                          {isSeller 
+                            ? `Fonds sécurisés · Versement ${tx.escrow_release_at ? formatDistanceToNow(new Date(tx.escrow_release_at), { addSuffix: true, locale: fr }) : "sous 48h"}`
+                            : "Protégé jusqu'à confirmation · Fonds en séquestre"}
+                        </span>
+                      </div>
+                    )}
+                    {tx.method === "cash" && tx.status === "completed" && (
+                      <div className="flex items-center gap-2 p-2 bg-yellow-500/10 rounded-lg text-xs">
+                        <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 shrink-0" />
+                        <span className="text-yellow-600 dark:text-yellow-400">
+                          Transaction hors plateforme · Non protégée
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
