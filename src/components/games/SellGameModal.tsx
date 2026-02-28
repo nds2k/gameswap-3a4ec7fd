@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   CreditCard, Loader2, Banknote, Smartphone, ArrowLeft, 
-  QrCode, AlertTriangle, CheckCircle, Copy, Share2 
+  QrCode, AlertTriangle, CheckCircle, Copy, Share2, Shield, ShieldAlert
 } from "lucide-react";
 
 interface SellGameModalProps {
@@ -52,7 +52,7 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
         window.open(data.url, "_blank");
         toast({
           title: "Paiement des frais de service",
-          description: "Payez les 5€ de frais pour enregistrer la vente.",
+          description: "Payez les 0,99€ de frais pour enregistrer la vente.",
         });
         handleOpenChange(false);
         onSuccess?.();
@@ -140,6 +140,31 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
                 Comment l'acheteur va-t-il payer ?
               </p>
 
+              {/* Card Option - Recommended */}
+              <button
+                onClick={handleCardPayment}
+                disabled={loading}
+                className="w-full p-4 bg-card rounded-2xl border-2 border-primary/30 hover:border-primary/60 transition-all flex items-center gap-4 text-left disabled:opacity-50"
+              >
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold">Carte / Apple Pay / Google Pay</p>
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
+                      Recommandé
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Commission 7% · Protection acheteur 48h</p>
+                  <div className="flex items-center gap-1 mt-1 text-xs text-green-600">
+                    <Shield className="h-3 w-3" />
+                    <span>Paiement sécurisé vers votre compte</span>
+                  </div>
+                </div>
+                {loading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+              </button>
+
               {/* Cash Option */}
               <button
                 onClick={() => setStep("cash-confirm")}
@@ -152,22 +177,6 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
                   <p className="font-semibold">Espèces</p>
                   <p className="text-sm text-muted-foreground">En main propre · Frais de 0,99€</p>
                 </div>
-              </button>
-
-              {/* Card Option */}
-              <button
-                onClick={handleCardPayment}
-                disabled={loading}
-                className="w-full p-4 bg-card rounded-2xl border border-border hover:border-primary/50 transition-all flex items-center gap-4 text-left disabled:opacity-50"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <CreditCard className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold">Carte / Apple Pay / Google Pay</p>
-                  <p className="text-sm text-muted-foreground">Lien de paiement · Commission 7%</p>
-                </div>
-                {loading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
               </button>
 
               {/* Payment methods icons */}
@@ -189,7 +198,7 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
           </>
         )}
 
-        {/* Step: Cash Confirm */}
+        {/* Step: Cash Confirm with Risk Warning */}
         {step === "cash-confirm" && (
           <>
             <DialogHeader>
@@ -215,14 +224,25 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
                 <p className="text-3xl font-bold text-primary mt-2">{game.price}€</p>
               </div>
 
-              {/* Warning */}
+              {/* Risk Warning for offline transactions */}
+              <div className="flex items-start gap-3 p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
+                <ShieldAlert className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm text-yellow-700 dark:text-yellow-400">Transaction hors plateforme</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Les ventes en espèces ne sont pas protégées par GameSwap. Vous perdez la protection acheteur, 
+                    les avis vérifiés et la progression XP. Seules les transactions par carte comptent pour votre réputation.
+                  </p>
+                </div>
+              </div>
+
+              {/* Service fee warning */}
               <div className="flex items-start gap-3 p-4 bg-destructive/10 rounded-xl border border-destructive/20">
                 <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
                 <div>
                   <p className="font-semibold text-sm">Frais de service : 0,99€</p>
                   <p className="text-sm text-muted-foreground">
-                    Pour valider et enregistrer cette vente en espèces, des frais de service de 0,99€ s'appliquent. 
-                    Ce montant sera prélevé par carte.
+                    Pour valider et enregistrer cette vente en espèces, des frais de service de 0,99€ s'appliquent.
                   </p>
                 </div>
               </div>
@@ -230,7 +250,7 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
               <Button
                 onClick={handleCashPayment}
                 disabled={loading}
-                variant="gameswap"
+                variant="outline"
                 className="w-full"
                 size="lg"
               >
@@ -242,7 +262,7 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Payer 0,99€ et enregistrer la vente
+                    Payer 0,99€ et enregistrer (sans protection)
                   </>
                 )}
               </Button>
@@ -269,6 +289,17 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
                   <AlertTriangle className="h-3 w-3" />
                   Montant non modifiable
                 </p>
+              </div>
+
+              {/* Escrow info */}
+              <div className="flex items-start gap-3 p-3 bg-green-500/10 rounded-xl border border-green-500/20">
+                <Shield className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-semibold text-green-700 dark:text-green-400">Protection acheteur active</p>
+                  <p className="text-muted-foreground">
+                    Les fonds sont sécurisés et versés sur votre compte sous 48h après confirmation.
+                  </p>
+                </div>
               </div>
 
               <p className="text-sm text-muted-foreground text-center">
@@ -304,7 +335,7 @@ export const SellGameModal = ({ open, onOpenChange, game, onSuccess }: SellGameM
                 <Smartphone className="h-4 w-4 mt-0.5 shrink-0" />
                 <p>
                   L'acheteur peut payer par carte, Apple Pay ou Google Pay. 
-                  Le lien expire dans 15 minutes.
+                  Le lien expire dans 15 minutes. Le paiement va directement sur votre compte Stripe.
                 </p>
               </div>
             </div>

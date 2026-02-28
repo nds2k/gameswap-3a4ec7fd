@@ -3,13 +3,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[COMPLETE-TRANSACTION] ${step}${detailsStr}`);
 };
+
+const ESCROW_HOLD_HOURS = 48;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -50,7 +52,6 @@ serve(async (req) => {
       .single();
 
     if (txError || !transaction) throw new Error("Transaction not found");
-    // Allow both seller and buyer to complete
     if (transaction.seller_id !== user.id && transaction.buyer_id !== user.id) {
       throw new Error("Only the seller or buyer can complete this transaction");
     }
@@ -65,12 +66,19 @@ serve(async (req) => {
       throw new Error("Transaction has expired");
     }
 
-    // Mark as completed
+    // For card payments with escrow, set escrow release time
+    const escrowReleaseAt = transaction.method === "card" 
+      ? new Date(Date.now() + ESCROW_HOLD_HOURS * 60 * 60 * 1000).toISOString()
+      : null;
+
+    // Mark as completed with escrow status
     await supabaseAdmin
       .from("transactions")
       .update({ 
         status: "completed",
         completed_at: new Date().toISOString(),
+        escrow_status: transaction.method === "card" ? "pending_escrow" : "none",
+        escrow_release_at: escrowReleaseAt,
       })
       .eq("id", transactionId);
 
@@ -80,9 +88,71 @@ serve(async (req) => {
       .update({ status: "sold" })
       .eq("id", transaction.post_id);
 
-    logStep("Transaction completed", { transactionId, gameId: transaction.post_id });
+    // Award XP only for Stripe-verified transactions (card payments)
+    if (transaction.method === "card") {
+      // Award seller XP
+      const { data: sellerProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("xp")
+        .eq("user_id", transaction.seller_id)
+        .single();
 
-    return new Response(JSON.stringify({ success: true }), {
+      if (sellerProfile) {
+        await supabaseAdmin
+          .from("profiles")
+          .update({ xp: (sellerProfile.xp || 0) + 100 })
+          .eq("user_id", transaction.seller_id);
+
+        await supabaseAdmin
+          .from("xp_transactions")
+          .insert({
+            user_id: transaction.seller_id,
+            amount: 100,
+            reason: "Vente vérifiée via Stripe",
+          });
+      }
+
+      // Award buyer XP if buyer exists
+      if (transaction.buyer_id) {
+        const { data: buyerProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("xp")
+          .eq("user_id", transaction.buyer_id)
+          .single();
+
+        if (buyerProfile) {
+          await supabaseAdmin
+            .from("profiles")
+            .update({ xp: (buyerProfile.xp || 0) + 40 })
+            .eq("user_id", transaction.buyer_id);
+
+          await supabaseAdmin
+            .from("xp_transactions")
+            .insert({
+              user_id: transaction.buyer_id,
+              amount: 40,
+              reason: "Achat vérifié via Stripe",
+            });
+        }
+      }
+
+      logStep("XP awarded for Stripe-verified transaction");
+    } else {
+      logStep("No XP awarded - cash transaction (not Stripe-verified)");
+    }
+
+    logStep("Transaction completed", { 
+      transactionId, 
+      gameId: transaction.post_id,
+      method: transaction.method,
+      escrowStatus: transaction.method === "card" ? "pending_escrow" : "none",
+    });
+
+    return new Response(JSON.stringify({ 
+      success: true,
+      escrowStatus: transaction.method === "card" ? "pending_escrow" : "none",
+      escrowReleaseAt,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

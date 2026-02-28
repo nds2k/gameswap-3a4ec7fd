@@ -4,13 +4,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[PAY-PAYMENT-REQUEST] ${step}${detailsStr}`);
 };
+
+const PLATFORM_COMMISSION_RATE = 0.07;
+const ESCROW_HOLD_HOURS = 48;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -73,6 +76,19 @@ serve(async (req) => {
       throw new Error("This payment request has expired");
     }
 
+    // Fetch seller's Stripe Connect account for destination charge
+    const { data: sellerProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("stripe_connect_account_id, stripe_onboarding_complete")
+      .eq("user_id", transaction.seller_id)
+      .single();
+
+    if (!sellerProfile?.stripe_connect_account_id) {
+      throw new Error("Seller does not have a verified payment account");
+    }
+
+    const sellerStripeAccountId = sellerProfile.stripe_connect_account_id;
+
     // Fetch game details for Stripe description
     const { data: game } = await supabaseAdmin
       .from("games")
@@ -82,12 +98,21 @@ serve(async (req) => {
 
     const gameTitle = game?.title || "Jeu";
     const amount = Number(transaction.amount);
+    const applicationFeeAmount = Math.round(amount * PLATFORM_COMMISSION_RATE * 100);
 
-    logStep("Creating Stripe checkout for buyer", { transactionId, amount });
+    logStep("Creating Stripe checkout with destination charge", { 
+      transactionId, amount, destination: sellerStripeAccountId 
+    });
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
+
+    // Verify seller's Stripe account is enabled
+    const stripeAccount = await stripe.accounts.retrieve(sellerStripeAccountId);
+    if (!stripeAccount.charges_enabled) {
+      throw new Error("Seller's payment account is not fully verified");
+    }
 
     // Check if buyer already has a Stripe customer record
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -114,27 +139,38 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
+      // Route payment to seller's Stripe account with platform fee
+      payment_intent_data: {
+        application_fee_amount: applicationFeeAmount,
+        transfer_data: {
+          destination: sellerStripeAccountId,
+        },
+      },
       success_url: `${origin}/payment-requests?payment=success&transaction=${transactionId}`,
       cancel_url: `${origin}/payment-requests?payment=cancelled`,
       metadata: {
         transaction_id: transactionId,
         game_id: transaction.post_id,
         seller_id: transaction.seller_id,
+        seller_stripe_account: sellerStripeAccountId,
         buyer_id: user.id,
         method: "remote",
       },
     });
 
-    // Update transaction with Stripe session
+    // Update transaction with Stripe session and escrow info
+    const escrowReleaseAt = new Date(Date.now() + ESCROW_HOLD_HOURS * 60 * 60 * 1000).toISOString();
     await supabaseAdmin
       .from("transactions")
       .update({
         stripe_checkout_session_id: session.id,
         buyer_email: user.email,
+        escrow_status: "pending_escrow",
+        escrow_release_at: escrowReleaseAt,
       })
       .eq("id", transactionId);
 
-    logStep("Checkout session created", { sessionId: session.id });
+    logStep("Destination charge checkout created", { sessionId: session.id, destination: sellerStripeAccountId });
 
     return new Response(JSON.stringify({
       url: session.url,

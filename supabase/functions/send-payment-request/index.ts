@@ -1,10 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const logStep = (step: string, details?: any) => {
@@ -53,6 +52,17 @@ serve(async (req) => {
       throw new Error("Cannot send payment request to yourself");
     }
 
+    // Verify seller has a valid Stripe Connect account
+    const { data: sellerProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("stripe_connect_account_id, stripe_onboarding_complete")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!sellerProfile?.stripe_connect_account_id || !sellerProfile?.stripe_onboarding_complete) {
+      throw new Error("You must complete seller onboarding before sending payment requests");
+    }
+
     // Verify game exists, belongs to seller, and is available
     const { data: game, error: gameError } = await supabaseAdmin
       .from("games")
@@ -69,7 +79,7 @@ serve(async (req) => {
     const gamePrice = Number(game.price);
     const platformFee = Math.round(gamePrice * PLATFORM_COMMISSION_RATE * 100) / 100;
 
-    // Rate limiting: check if seller already has a pending request for this game
+    // Rate limiting: check pending requests for this game
     const { data: existingRequests } = await supabaseAdmin
       .from("transactions")
       .select("id")
@@ -104,6 +114,7 @@ serve(async (req) => {
         platform_fee: platformFee,
         method: "remote",
         status: "pending",
+        escrow_status: "none",
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       })
       .select()
