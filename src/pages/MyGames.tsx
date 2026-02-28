@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { SellGameModal } from "@/components/games/SellGameModal";
 import { PostGameModal } from "@/components/games/PostGameModal";
+import { SellerOnboardingModal } from "@/components/seller/SellerOnboardingModal";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSellerStatus } from "@/hooks/useSellerStatus";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,10 +39,12 @@ const MyGames = () => {
   const [loading, setLoading] = useState(true);
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [postModalOpen, setPostModalOpen] = useState(false);
+  const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<MyGame | null>(null);
   const [deleteGameId, setDeleteGameId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { checkStatus, loading: sellerCheckLoading } = useSellerStatus();
 
   const fetchGames = async () => {
     if (!user) return;
@@ -92,9 +96,19 @@ const MyGames = () => {
     }
   }, [searchParams, setSearchParams, toast, user]);
 
-  const handleSellClick = (game: MyGame) => {
-    setSelectedGame(game);
-    setSellModalOpen(true);
+  const handleSellClick = async (game: MyGame) => {
+    try {
+      const result = await checkStatus();
+      if (result.hasAccount && result.onboardingComplete && result.chargesEnabled) {
+        setSelectedGame(game);
+        setSellModalOpen(true);
+      } else {
+        setSelectedGame(game);
+        setOnboardingModalOpen(true);
+      }
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    }
   };
 
   const handleDeleteGame = async () => {
@@ -276,6 +290,19 @@ const MyGames = () => {
         open={postModalOpen}
         onOpenChange={setPostModalOpen}
         onSuccess={fetchGames}
+      />
+
+      {/* Seller Onboarding Modal */}
+      <SellerOnboardingModal
+        open={onboardingModalOpen}
+        onOpenChange={setOnboardingModalOpen}
+        onSuccess={() => {
+          setOnboardingModalOpen(false);
+          toast({
+            title: "Onboarding lancé",
+            description: "Finalisez votre inscription Stripe, puis revenez vendre votre jeu.",
+          });
+        }}
       />
 
       {/* Delete Confirmation */}
