@@ -50,6 +50,39 @@ export type Database = {
         }
         Relationships: []
       }
+      badges: {
+        Row: {
+          badge_type: string
+          created_at: string
+          criteria: Json | null
+          description: string
+          emoji: string
+          id: string
+          name: string
+          rarity: string
+        }
+        Insert: {
+          badge_type?: string
+          created_at?: string
+          criteria?: Json | null
+          description: string
+          emoji?: string
+          id?: string
+          name: string
+          rarity?: string
+        }
+        Update: {
+          badge_type?: string
+          created_at?: string
+          criteria?: Json | null
+          description?: string
+          emoji?: string
+          id?: string
+          name?: string
+          rarity?: string
+        }
+        Relationships: []
+      }
       community_polls: {
         Row: {
           author_id: string
@@ -577,6 +610,33 @@ export type Database = {
           },
         ]
       }
+      monthly_draws: {
+        Row: {
+          drawn_at: string
+          id: string
+          month_year: string
+          reward_data: Json
+          reward_type: string
+          user_id: string
+        }
+        Insert: {
+          drawn_at?: string
+          id?: string
+          month_year: string
+          reward_data?: Json
+          reward_type: string
+          user_id: string
+        }
+        Update: {
+          drawn_at?: string
+          id?: string
+          month_year?: string
+          reward_data?: Json
+          reward_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       poll_votes: {
         Row: {
           created_at: string
@@ -859,6 +919,35 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
             referencedColumns: ["id"]
           },
         ]

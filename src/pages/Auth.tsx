@@ -263,6 +263,29 @@ const Auth = () => {
             {loading ? "Chargement..." : isLogin ? "Se connecter" : "Continuer"}
             <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
+
+          {isLogin && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email.trim()) {
+                  toast({ title: "Email requis", description: "Entrez votre email pour réinitialiser votre mot de passe.", variant: "destructive" });
+                  return;
+                }
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                });
+                if (error) {
+                  toast({ title: "Erreur", description: error.message, variant: "destructive" });
+                } else {
+                  toast({ title: "Email envoyé", description: "Vérifiez votre boîte mail pour réinitialiser votre mot de passe." });
+                }
+              }}
+              className="w-full text-center text-sm text-primary hover:underline mt-2"
+            >
+              Mot de passe oublié ?
+            </button>
+          )}
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
