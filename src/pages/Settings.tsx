@@ -225,9 +225,24 @@ const Settings = () => {
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{user?.email || ""}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  L'email ne peut pas être modifié
-                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={async () => {
+                    const newEmail = prompt("Entrez votre nouvel email :");
+                    if (!newEmail || !newEmail.includes("@")) return;
+                    const { error } = await supabase.auth.updateUser({ email: newEmail });
+                    if (error) {
+                      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+                    } else {
+                      toast({ title: "Email de confirmation envoyé", description: "Vérifiez votre ancien et nouvel email pour confirmer le changement." });
+                    }
+                  }}
+                >
+                  <Mail className="h-3.5 w-3.5 mr-1.5" />
+                  Changer d'email
+                </Button>
               </div>
             </div>
           </div>

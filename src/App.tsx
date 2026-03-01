@@ -35,6 +35,7 @@ const PaymentRequests = lazy(() => import("./pages/PaymentRequests"));
 const Community = lazy(() => import("./pages/Community"));
 const ProfileAnalytics = lazy(() => import("./pages/ProfileAnalytics"));
 const XPRewards = lazy(() => import("./pages/XPRewards"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -123,6 +124,7 @@ const AppRoutes = () => {
           <Route path="/private-chat" element={<ProtectedRoute><PrivateRoomChat /></ProtectedRoute>} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

@@ -12,7 +12,6 @@ export const FilterTabs = ({ activeFilter, onFilterChange }: FilterTabsProps) =>
     { id: "all", labelKey: "discover.all" },
     { id: "sale", labelKey: "discover.sale" },
     { id: "trade", labelKey: "discover.trade" },
-    { id: "showcase", labelKey: "discover.showcase" },
   ];
 
   return (
