@@ -13,6 +13,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Navigation
     "nav.discover": "Découvrir",
     "nav.friends": "Amis",
+    "nav.scan": "Scanner",
     "nav.wishlist": "Wishlist",
     "nav.forum": "Forum",
     "nav.profile": "Profil",
@@ -316,6 +317,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Navigation
     "nav.discover": "Discover",
     "nav.friends": "Friends",
+    "nav.scan": "Scan",
     "nav.wishlist": "Wishlist",
     "nav.forum": "Forum",
     "nav.profile": "Profile",
