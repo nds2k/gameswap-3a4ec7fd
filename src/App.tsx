@@ -36,6 +36,7 @@ const Community = lazy(() => import("./pages/Community"));
 const ProfileAnalytics = lazy(() => import("./pages/ProfileAnalytics"));
 const XPRewards = lazy(() => import("./pages/XPRewards"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Scanner = lazy(() => import("./pages/Scanner"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -125,6 +126,7 @@ const AppRoutes = () => {
           <Route path="/legal" element={<Legal />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

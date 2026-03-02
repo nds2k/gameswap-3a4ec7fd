@@ -83,6 +83,60 @@ export type Database = {
         }
         Relationships: []
       }
+      barcode_catalog: {
+        Row: {
+          barcode: string
+          bgg_id: string | null
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          max_players: number | null
+          min_age: number | null
+          min_players: number | null
+          name: string
+          play_time: string | null
+          publisher: string | null
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          barcode: string
+          bgg_id?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          max_players?: number | null
+          min_age?: number | null
+          min_players?: number | null
+          name: string
+          play_time?: string | null
+          publisher?: string | null
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          barcode?: string
+          bgg_id?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          max_players?: number | null
+          min_age?: number | null
+          min_players?: number | null
+          name?: string
+          play_time?: string | null
+          publisher?: string | null
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
       community_polls: {
         Row: {
           author_id: string
@@ -1028,6 +1082,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      xp_awards_log: {
+        Row: {
+          award_type: string
+          created_at: string
+          id: string
+          reference_id: string
+          user_id: string
+        }
+        Insert: {
+          award_type: string
+          created_at?: string
+          id?: string
+          reference_id: string
+          user_id: string
+        }
+        Update: {
+          award_type?: string
+          created_at?: string
+          id?: string
+          reference_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       xp_transactions: {
         Row: {

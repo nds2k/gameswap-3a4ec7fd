@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useXP } from "@/hooks/useXP";
+import { supabase } from "@/integrations/supabase/client";
 import { useBadges } from "@/hooks/useBadges";
 import { useMonthlyDraw } from "@/hooks/useMonthlyDraw";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -44,7 +46,8 @@ const BADGE_RARITY_STYLES: Record<string, { bg: string; text: string }> = {
 const XPRewards = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { xpState, loading } = useXP(user?.id);
+  const { xpState, loading, spendXPBoost, fetchXP } = useXP(user?.id);
+  const { toast } = useToast();
   const { userBadges, loading: badgesLoading } = useBadges(user?.id);
   const { checkDrawStatus, performDraw, drawing, lastReward, hasDrawnThisMonth } = useMonthlyDraw();
 
@@ -85,8 +88,28 @@ const XPRewards = () => {
     return () => clearTimeout(timeout);
   }, [progress, loading]);
 
-  const handleTap = (id: string) => {
+  const handleTap = async (id: string, cost: number) => {
+    if (!user || xp < cost) return;
     setTappedId(id);
+
+    try {
+      // Deduct XP from profile
+      const newXP = xp - cost;
+      await supabase.from("profiles").update({ xp: newXP }).eq("user_id", user.id);
+
+      // Log the transaction
+      await supabase.from("xp_transactions").insert({
+        user_id: user.id,
+        amount: -cost,
+        reason: `Échange XP: ${id}`,
+      });
+
+      await fetchXP();
+      toast({ title: "Récompense débloquée !", description: `Vous avez dépensé ${cost} XP.` });
+    } catch (err) {
+      console.error("Error spending XP:", err);
+      toast({ title: "Erreur", description: "Impossible de dépenser les XP", variant: "destructive" });
+    }
     setTimeout(() => setTappedId(null), 300);
   };
 
@@ -242,7 +265,7 @@ const XPRewards = () => {
             return (
               <button
                 key={reward.id}
-                onClick={() => handleTap(reward.id)}
+                onClick={() => handleTap(reward.id, reward.cost)}
                 className={`
                   w-full text-left rounded-2xl border p-4 transition-all duration-200
                   bg-card/60 backdrop-blur-sm
