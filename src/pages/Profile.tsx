@@ -6,7 +6,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Loader2, User, Settings, Star, Shield, Plus, Trash2 } from "lucide-react";
+import { Camera, Loader2, User, Settings, Star, Shield, Plus, Trash2, Pencil } from "lucide-react";
 import { useXP } from "@/hooks/useXP";
 import { useRatings } from "@/hooks/useRatings";
 import { format } from "date-fns";
@@ -14,23 +14,20 @@ import { fr } from "date-fns/locale";
 import type { UserReputation } from "@/hooks/useRatings";
 import { PostGameModal } from "@/components/games/PostGameModal";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
+import { ProfileEditModal } from "@/components/profile/ProfileEditModal";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface Profile {
+interface ProfileData {
   id: string;
   user_id: string;
   full_name: string | null;
   username: string | null;
   avatar_url: string | null;
+  selected_badge_id: string | null;
+  last_username_change: string | null;
 }
 
 interface Game {
@@ -56,7 +53,7 @@ const Profile = () => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -65,6 +62,7 @@ const Profile = () => {
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [deleteGameId, setDeleteGameId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const { xpState } = useXP(user?.id);
   const { getUserReputation } = useRatings();
@@ -84,11 +82,11 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, user_id, full_name, username, avatar_url")
+        .select("id, user_id, full_name, username, avatar_url, selected_badge_id, last_username_change")
         .eq("user_id", user.id)
         .single();
       if (error && error.code !== "PGRST116") throw error;
-      if (data) setProfile(data);
+      if (data) setProfile(data as ProfileData);
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
@@ -131,12 +129,10 @@ const Profile = () => {
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
       const newAvatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-      const { error: updateError } = await supabase.from("profiles").update({ avatar_url: newAvatarUrl }).eq("user_id", user.id);
-      if (updateError) throw updateError;
+      await supabase.from("profiles").update({ avatar_url: newAvatarUrl }).eq("user_id", user.id);
       setProfile((prev) => prev ? { ...prev, avatar_url: newAvatarUrl } : null);
-      toast({ title: "Photo mise à jour", description: "Votre photo de profil a été modifiée" });
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
+      toast({ title: "Photo mise à jour" });
+    } catch {
       toast({ title: "Erreur", description: "Impossible de mettre à jour la photo", variant: "destructive" });
     } finally {
       setUploading(false);
@@ -147,16 +143,11 @@ const Profile = () => {
     if (!user || !deleteGameId) return;
     setDeleting(true);
     try {
-      const { error } = await supabase
-        .from("games")
-        .delete()
-        .eq("id", deleteGameId)
-        .eq("owner_id", user.id);
+      const { error } = await supabase.from("games").delete().eq("id", deleteGameId).eq("owner_id", user.id);
       if (error) throw error;
       setGames((prev) => prev.filter((g) => g.id !== deleteGameId));
-      toast({ title: "Annonce supprimée", description: "Votre annonce a été supprimée avec succès" });
-    } catch (error) {
-      console.error("Error deleting game:", error);
+      toast({ title: "Annonce supprimée" });
+    } catch {
       toast({ title: "Erreur", description: "Impossible de supprimer l'annonce", variant: "destructive" });
     } finally {
       setDeleting(false);
@@ -180,7 +171,6 @@ const Profile = () => {
   return (
     <MainLayout showSearch={false}>
       <div className="max-w-md mx-auto pb-24 px-4">
-
         {/* Profile Header */}
         <div className="flex flex-col items-center pt-10 pb-8 gap-3">
           <div className="relative">
@@ -200,13 +190,22 @@ const Profile = () => {
             </button>
           </div>
 
-          <div className="text-center">
-            <h1 className="text-xl font-semibold">{displayName}</h1>
-            {profile?.username && profile.full_name && (
-              <p className="text-sm text-muted-foreground">@{profile.username}</p>
-            )}
+          <div className="text-center flex items-center gap-2">
+            <div>
+              <h1 className="text-xl font-semibold">{displayName}</h1>
+              {profile?.username && profile.full_name && (
+                <p className="text-sm text-muted-foreground">@{profile.username}</p>
+              )}
+            </div>
+            {/* Edit pen icon — only on own profile */}
+            <button
+              onClick={() => setEditModalOpen(true)}
+              className="w-7 h-7 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all hover:scale-110"
+              title="Modifier le profil"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
           </div>
-
 
           <Link to="/settings">
             <Button variant="outline" size="sm" className="mt-1">
@@ -216,7 +215,7 @@ const Profile = () => {
           </Link>
         </div>
 
-        {/* Reputation Card — clickable → analytics */}
+        {/* Reputation Card */}
         <button
           onClick={() => navigate("/profile/analytics")}
           className="w-full bg-card rounded-2xl border border-border p-6 text-left hover:shadow-md transition-shadow group"
@@ -253,7 +252,6 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* XP Progress Bar — only visible to own profile */}
           {xpState && (
             <div className="mt-4 pt-4 border-t border-border">
               <div className="flex items-center justify-between text-sm mb-2">
@@ -261,10 +259,7 @@ const Profile = () => {
                 <span className="font-semibold">{xpState.xp.toLocaleString()} XP</span>
               </div>
               <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${xpState.progressPercent}%` }}
-                />
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${xpState.progressPercent}%` }} />
               </div>
               {xpState.nextRank && (
                 <p className="text-xs text-muted-foreground mt-1 text-right">
@@ -310,27 +305,19 @@ const Profile = () => {
                   key={game.id}
                   className="bg-card rounded-xl border border-border overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 relative group"
                 >
-                  <div
-                    onClick={() => setSelectedGameId(game.id)}
-                    className="aspect-square overflow-hidden bg-muted"
-                  >
+                  <div onClick={() => setSelectedGameId(game.id)} className="aspect-square overflow-hidden bg-muted">
                     {game.image_url ? (
                       <img src={game.image_url} alt={game.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-3xl">🎲</span>
-                      </div>
+                      <div className="w-full h-full flex items-center justify-center"><span className="text-3xl">🎲</span></div>
                     )}
                   </div>
-
-                  {/* Delete button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setDeleteGameId(game.id); }}
                     className="absolute top-2 right-2 w-8 h-8 rounded-full bg-destructive/90 text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
-
                   <div className="p-3" onClick={() => setSelectedGameId(game.id)}>
                     <h3 className="font-medium text-sm truncate">{game.title}</h3>
                     {game.game_type === "sale" && game.price != null && (
@@ -349,33 +336,19 @@ const Profile = () => {
         </div>
       </div>
 
-      <PostGameModal
-        open={postModalOpen}
-        onOpenChange={setPostModalOpen}
-        onSuccess={() => { setPostModalOpen(false); fetchUserGames(); }}
-      />
-
-      <GameDetailModal
-        gameId={selectedGameId}
-        open={!!selectedGameId}
-        onOpenChange={(open) => !open && setSelectedGameId(null)}
-      />
+      <PostGameModal open={postModalOpen} onOpenChange={setPostModalOpen} onSuccess={() => { setPostModalOpen(false); fetchUserGames(); }} />
+      <GameDetailModal gameId={selectedGameId} open={!!selectedGameId} onOpenChange={(open) => !open && setSelectedGameId(null)} />
+      <ProfileEditModal open={editModalOpen} onOpenChange={setEditModalOpen} currentProfile={profile} onSuccess={fetchProfile} />
 
       <AlertDialog open={!!deleteGameId} onOpenChange={(open) => !open && setDeleteGameId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer cette annonce ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action est irréversible. L'annonce sera définitivement supprimée.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteGame}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeleteGame} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting ? "Suppression..." : "Supprimer"}
             </AlertDialogAction>
           </AlertDialogFooter>

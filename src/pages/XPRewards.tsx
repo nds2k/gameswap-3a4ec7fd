@@ -5,10 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useXP } from "@/hooks/useXP";
 import { supabase } from "@/integrations/supabase/client";
 import { useBadges } from "@/hooks/useBadges";
-import { useMonthlyDraw } from "@/hooks/useMonthlyDraw";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Gem, Lock, Sparkles, Check, Eye, Gift, Award } from "lucide-react";
+import { ArrowLeft, Gem, Lock, Sparkles, Check, Eye, Award } from "lucide-react";
 import { RANKS } from "@/lib/xpSystem";
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
@@ -23,11 +22,9 @@ interface Reward {
 }
 
 const REWARDS: Reward[] = [
-  { id: "giveaway", icon: "🎟️", title: "Tirage mensuel", description: "Participation au giveaway du mois", cost: 300, rarity: "common" },
   { id: "profile", icon: "🎨", title: "Personnalisation du profil", description: "Cadre et couleur de badge uniques", cost: 400, rarity: "rare" },
   { id: "boost24", icon: "🚀", title: "Boost annonce", description: "Mettez en avant votre annonce", cost: 600, rarity: "rare" },
   { id: "avatar", icon: "✨", title: "Accessoires d'avatar", description: "Accessoires limités exclusifs", cost: 900, rarity: "rare" },
-  { id: "merch", icon: "👑", title: "Réduction merch", description: "Réduction exclusive sur le merch GameSwapp", cost: 2000, rarity: "legendary" },
 ];
 
 const RARITY_CONFIG: Record<Rarity, { label: string; border: string; glow: string; badge: string; text: string }> = {
@@ -46,15 +43,13 @@ const BADGE_RARITY_STYLES: Record<string, { bg: string; text: string }> = {
 const XPRewards = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { xpState, loading, spendXPBoost, fetchXP } = useXP(user?.id);
+  const { xpState, loading, fetchXP } = useXP(user?.id);
   const { toast } = useToast();
   const { userBadges, loading: badgesLoading } = useBadges(user?.id);
-  const { checkDrawStatus, performDraw, drawing, lastReward, hasDrawnThisMonth } = useMonthlyDraw();
 
   const [animatedXP, setAnimatedXP] = useState(0);
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [tappedId, setTappedId] = useState<string | null>(null);
-  const [showDrawResult, setShowDrawResult] = useState(false);
 
   const xp = xpState?.xp ?? 0;
   const progress = xpState?.progressPercent ?? 0;
@@ -62,8 +57,6 @@ const XPRewards = () => {
   const nextRank = xpState?.nextRank;
   const rankIndex = rank ? RANKS.findIndex((r) => r.name === rank.name) : 0;
   const level = rankIndex + 1;
-
-  useEffect(() => { checkDrawStatus(); }, [checkDrawStatus]);
 
   // Animate XP counter
   useEffect(() => {
@@ -91,31 +84,16 @@ const XPRewards = () => {
   const handleTap = async (id: string, cost: number) => {
     if (!user || xp < cost) return;
     setTappedId(id);
-
     try {
-      // Deduct XP from profile
       const newXP = xp - cost;
       await supabase.from("profiles").update({ xp: newXP }).eq("user_id", user.id);
-
-      // Log the transaction
-      await supabase.from("xp_transactions").insert({
-        user_id: user.id,
-        amount: -cost,
-        reason: `Échange XP: ${id}`,
-      });
-
+      await supabase.from("xp_transactions").insert({ user_id: user.id, amount: -cost, reason: `Échange XP: ${id}` });
       await fetchXP();
       toast({ title: "Récompense débloquée !", description: `Vous avez dépensé ${cost} XP.` });
-    } catch (err) {
-      console.error("Error spending XP:", err);
+    } catch {
       toast({ title: "Erreur", description: "Impossible de dépenser les XP", variant: "destructive" });
     }
     setTimeout(() => setTappedId(null), 300);
-  };
-
-  const handleDraw = async () => {
-    const result = await performDraw();
-    if (result) setShowDrawResult(true);
   };
 
   if (loading) {
@@ -131,7 +109,6 @@ const XPRewards = () => {
   return (
     <MainLayout showSearch={false}>
       <div className="max-w-lg mx-auto pb-28 px-4">
-
         {/* Header */}
         <div className="flex items-center gap-3 pt-6 pb-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/profile/analytics")} className="text-foreground">
@@ -181,47 +158,11 @@ const XPRewards = () => {
             <span className="text-sm font-bold">{animatedXP.toLocaleString()} XP</span>
             <span className="text-xs text-muted-foreground">disponible</span>
           </div>
-        </div>
 
-        {/* Monthly Draw */}
-        <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5 p-5 mb-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-              <Gift className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold">Tirage Mensuel</h2>
-              <p className="text-xs text-muted-foreground">1 récompense aléatoire par mois</p>
-            </div>
-          </div>
-
-          {hasDrawnThisMonth ? (
-            <div className="bg-card/60 rounded-xl p-4 border border-border/50">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{lastReward?.emoji || "🎁"}</span>
-                <div>
-                  <p className="font-semibold text-sm">{lastReward?.label || "Récompense obtenue"}</p>
-                  <p className="text-xs text-muted-foreground">{lastReward?.description}</p>
-                </div>
-                <Check className="h-5 w-5 text-emerald-500 ml-auto" />
-              </div>
-              <p className="text-xs text-muted-foreground mt-3 text-center">Revenez le mois prochain !</p>
-            </div>
-          ) : hasDrawnThisMonth === false ? (
-            <Button
-              variant="gameswap"
-              className="w-full"
-              onClick={handleDraw}
-              disabled={drawing}
-            >
-              {drawing ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-              ) : (
-                <Gift className="h-4 w-4 mr-2" />
-              )}
-              {drawing ? "Tirage en cours..." : "Tirer ma récompense !"}
-            </Button>
-          ) : null}
+          {/* XP info — only from transactions */}
+          <p className="text-[10px] text-muted-foreground mt-3 text-center relative z-10">
+            XP gagné uniquement via les achats et ventes vérifiés
+          </p>
         </div>
 
         {/* Badges Section */}
@@ -280,7 +221,6 @@ const XPRewards = () => {
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 ${canAfford ? "bg-gradient-to-br from-primary/20 to-purple-500/20" : "bg-muted/40"}`}>
                     {reward.icon}
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="text-sm font-semibold truncate">{reward.title}</p>
@@ -295,13 +235,11 @@ const XPRewards = () => {
                       </p>
                     )}
                   </div>
-
                   <div className="shrink-0 flex flex-col items-end gap-1">
                     {canAfford ? (
                       <>
                         <span className="text-sm font-bold text-primary flex items-center gap-1">
-                          <Gem className="h-3 w-3" />
-                          {reward.cost.toLocaleString()}
+                          <Gem className="h-3 w-3" />{reward.cost.toLocaleString()}
                         </span>
                         <span className="text-[10px] text-emerald-400 flex items-center gap-0.5">
                           <Check className="h-3 w-3" /> Disponible
@@ -310,15 +248,13 @@ const XPRewards = () => {
                     ) : (
                       <>
                         <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                          <Lock className="h-3 w-3" />
-                          {reward.cost.toLocaleString()}
+                          <Lock className="h-3 w-3" />{reward.cost.toLocaleString()}
                         </span>
                         <span className="text-[10px] text-muted-foreground/60">Verrouillé</span>
                       </>
                     )}
                   </div>
                 </div>
-
                 {canAfford && (reward.id === "profile" || reward.id === "avatar") && (
                   <div className="mt-3 pt-3 border-t border-border/30">
                     <span className="inline-flex items-center gap-1 text-xs text-primary font-medium">
