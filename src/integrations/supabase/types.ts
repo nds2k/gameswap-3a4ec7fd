@@ -731,10 +731,12 @@ export type Database = {
           full_name: string | null
           id: string
           last_login_streak: string | null
+          last_username_change: string | null
           location_geohash: string | null
           location_lat: number | null
           location_lng: number | null
           public_key: string | null
+          selected_badge_id: string | null
           show_on_map: boolean | null
           stripe_connect_account_id: string | null
           stripe_onboarding_complete: boolean
@@ -750,10 +752,12 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_login_streak?: string | null
+          last_username_change?: string | null
           location_geohash?: string | null
           location_lat?: number | null
           location_lng?: number | null
           public_key?: string | null
+          selected_badge_id?: string | null
           show_on_map?: boolean | null
           stripe_connect_account_id?: string | null
           stripe_onboarding_complete?: boolean
@@ -769,10 +773,12 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_login_streak?: string | null
+          last_username_change?: string | null
           location_geohash?: string | null
           location_lat?: number | null
           location_lng?: number | null
           public_key?: string | null
+          selected_badge_id?: string | null
           show_on_map?: boolean | null
           stripe_connect_account_id?: string | null
           stripe_onboarding_complete?: boolean
@@ -781,7 +787,15 @@ export type Database = {
           username?: string | null
           xp?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_selected_badge_id_fkey"
+            columns: ["selected_badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ratings: {
         Row: {
