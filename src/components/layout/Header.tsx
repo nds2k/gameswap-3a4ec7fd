@@ -109,6 +109,14 @@ export const Header = ({ onSearch }: HeaderProps) => {
               <Map className="h-4 w-4 sm:h-5 sm:w-5" />
             </Link>
 
+            {/* Forum button */}
+            <Link
+              to="/forum"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <MessageSquareText className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Link>
+
             {/* Trophy / Analytics button */}
             {user && (
               <Link
