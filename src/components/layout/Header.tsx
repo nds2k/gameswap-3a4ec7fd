@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map, Trophy } from "lucide-react";
+import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map, Trophy, MessageSquareText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
 import { Button } from "@/components/ui/button";
@@ -107,6 +107,14 @@ export const Header = ({ onSearch }: HeaderProps) => {
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             >
               <Map className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Link>
+
+            {/* Forum button */}
+            <Link
+              to="/forum"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <MessageSquareText className="h-4 w-4 sm:h-5 sm:w-5" />
             </Link>
 
             {/* Trophy / Analytics button */}
