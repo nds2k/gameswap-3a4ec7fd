@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map, Trophy } from "lucide-react";
+import { Search, Plus, ChevronDown, LogOut, Settings, User, FileText, LogIn, Bell, Map, Trophy, MessageSquareText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
 import { Button } from "@/components/ui/button";
