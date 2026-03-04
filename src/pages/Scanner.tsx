@@ -9,10 +9,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Html5Qrcode } from "html5-qrcode";
 
 interface ScannedGame {
-  name: string;
+  title?: string;
+  name?: string;
   publisher?: string | null;
   year?: number | null;
+  release_year?: number | null;
   image_url?: string | null;
+  cover_image_url?: string | null;
   description?: string | null;
   category?: string | null;
   min_players?: number | null;
@@ -20,6 +23,8 @@ interface ScannedGame {
   min_age?: number | null;
   play_time?: string | null;
   barcode: string;
+  estimated_price?: number | null;
+  confidence?: number;
 }
 
 const Scanner = () => {
@@ -84,7 +89,7 @@ const Scanner = () => {
       });
       if (error) throw error;
       if (data?.found && data.game) {
-        setScannedGame({ ...data.game, barcode });
+        setScannedGame({ ...data.game, barcode, confidence: data.confidence });
       } else {
         toast({ title: "Jeu non trouvé", description: `Aucun résultat pour le code ${barcode}` });
         setScannedGame(null);
@@ -110,7 +115,7 @@ const Scanner = () => {
 
   const handleUseForPost = () => {
     if (!scannedGame) return;
-    // Navigate to home and pass scanned data via sessionStorage
+    // Pass full game data (supports both old barcode_catalog and new master_games format)
     sessionStorage.setItem("scanned_game", JSON.stringify(scannedGame));
     navigate("/", { state: { openPostModal: true } });
   };
@@ -193,18 +198,27 @@ const Scanner = () => {
         {scannedGame && (
           <div className="space-y-4 animate-fade-in">
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
-              {scannedGame.image_url && (
-                <img src={scannedGame.image_url} alt={scannedGame.name} className="w-full h-48 object-cover" />
+              {(scannedGame.cover_image_url || scannedGame.image_url) && (
+                <img src={scannedGame.cover_image_url || scannedGame.image_url!} alt={scannedGame.title || scannedGame.name} className="w-full h-48 object-cover" />
               )}
               <div className="p-5 space-y-3">
-                <h2 className="text-xl font-bold">{scannedGame.name}</h2>
+                <h2 className="text-xl font-bold">{scannedGame.title || scannedGame.name}</h2>
                 
+                {scannedGame.confidence != null && (
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${Math.round(scannedGame.confidence * 100)}%` }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{Math.round(scannedGame.confidence * 100)}%</span>
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2">
                   {scannedGame.publisher && (
                     <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.publisher}</span>
                   )}
-                  {scannedGame.year && (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.year}</span>
+                  {(scannedGame.release_year || scannedGame.year) && (
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.release_year || scannedGame.year}</span>
                   )}
                   {scannedGame.min_age && (
                     <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.min_age}+</span>
@@ -217,6 +231,13 @@ const Scanner = () => {
                       <span>👥 {scannedGame.min_players}{scannedGame.max_players ? `-${scannedGame.max_players}` : ""} joueurs</span>
                     )}
                     {scannedGame.play_time && <span>⏱ {scannedGame.play_time} min</span>}
+                  </div>
+                )}
+
+                {scannedGame.estimated_price && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                    <span className="text-sm font-medium">💰 Prix estimé :</span>
+                    <span className="text-lg font-bold text-primary">{Math.round(scannedGame.estimated_price)} €</span>
                   </div>
                 )}
 

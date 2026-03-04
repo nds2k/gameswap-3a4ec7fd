@@ -471,6 +471,41 @@ export type Database = {
         }
         Relationships: []
       }
+      game_barcodes: {
+        Row: {
+          barcode: string
+          confidence_score: number | null
+          created_at: string | null
+          game_id: string
+          id: string
+          source: string | null
+        }
+        Insert: {
+          barcode: string
+          confidence_score?: number | null
+          created_at?: string | null
+          game_id: string
+          id?: string
+          source?: string | null
+        }
+        Update: {
+          barcode?: string
+          confidence_score?: number | null
+          created_at?: string | null
+          game_id?: string
+          id?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_barcodes_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "master_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_images: {
         Row: {
           created_at: string
@@ -499,6 +534,44 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_price_history: {
+        Row: {
+          average_price: number | null
+          game_id: string
+          id: string
+          max_price: number | null
+          min_price: number | null
+          recorded_at: string | null
+          sample_count: number | null
+        }
+        Insert: {
+          average_price?: number | null
+          game_id: string
+          id?: string
+          max_price?: number | null
+          min_price?: number | null
+          recorded_at?: string | null
+          sample_count?: number | null
+        }
+        Update: {
+          average_price?: number | null
+          game_id?: string
+          id?: string
+          max_price?: number | null
+          min_price?: number | null
+          recorded_at?: string | null
+          sample_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_price_history_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "master_games"
             referencedColumns: ["id"]
           },
         ]
@@ -566,6 +639,60 @@ export type Database = {
           title?: string
           updated_at?: string
           view_count?: number | null
+        }
+        Relationships: []
+      }
+      master_games: {
+        Row: {
+          category: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          max_players: number | null
+          min_age: number | null
+          min_players: number | null
+          normalized_title: string
+          play_time: string | null
+          popularity_score: number | null
+          publisher: string | null
+          release_year: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          max_players?: number | null
+          min_age?: number | null
+          min_players?: number | null
+          normalized_title: string
+          play_time?: string | null
+          popularity_score?: number | null
+          publisher?: string | null
+          release_year?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          max_players?: number | null
+          min_age?: number | null
+          min_players?: number | null
+          normalized_title?: string
+          play_time?: string | null
+          popularity_score?: number | null
+          publisher?: string | null
+          release_year?: number | null
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1044,6 +1171,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_collections: {
+        Row: {
+          acquired_at: string | null
+          condition: string | null
+          created_at: string | null
+          game_id: string
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string | null
+          condition?: string | null
+          created_at?: string | null
+          game_id: string
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string | null
+          condition?: string | null
+          created_at?: string | null
+          game_id?: string
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_collections_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "master_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1220,6 +1385,7 @@ export type Database = {
         Args: { check_username: string }
         Returns: boolean
       }
+      normalize_game_title: { Args: { raw_title: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

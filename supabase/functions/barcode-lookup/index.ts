@@ -6,6 +6,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]/g, "")
+    .trim();
+}
+
+// Simple Levenshtein-based similarity (0-1)
+function similarity(a: string, b: string): number {
+  const la = a.length, lb = b.length;
+  if (la === 0 || lb === 0) return 0;
+  const matrix: number[][] = [];
+  for (let i = 0; i <= la; i++) { matrix[i] = [i]; }
+  for (let j = 0; j <= lb; j++) { matrix[0][j] = j; }
+  for (let i = 1; i <= la; i++) {
+    for (let j = 1; j <= lb; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
+    }
+  }
+  return 1 - matrix[la][lb] / Math.max(la, lb);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -22,7 +47,6 @@ serve(async (req) => {
   );
 
   try {
-    // Auth check
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
@@ -33,35 +57,40 @@ serve(async (req) => {
       throw new Error("Invalid barcode");
     }
 
-    // 1. Check internal DB first
-    const { data: cached } = await supabaseAdmin
-      .from("barcode_catalog")
-      .select("*")
+    // Layer 1: O(1) indexed barcode lookup
+    const { data: barcodeEntry } = await supabaseAdmin
+      .from("game_barcodes")
+      .select("*, master_games(*)")
       .eq("barcode", barcode)
       .maybeSingle();
 
-    if (cached) {
-      return new Response(JSON.stringify({ found: true, source: "internal", game: cached }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (barcodeEntry?.master_games) {
+      const g = barcodeEntry.master_games;
+      // Fetch latest price
+      const { data: priceData } = await supabaseAdmin
+        .from("game_price_history")
+        .select("average_price")
+        .eq("game_id", g.id)
+        .order("recorded_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      return new Response(JSON.stringify({
+        found: true, source: "internal", confidence: barcodeEntry.confidence_score,
+        game: { ...g, barcode, estimated_price: priceData?.average_price || null },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // 2. Search BoardGameGeek XML API by barcode (UPC search)
-    // BGG doesn't support direct barcode search, so we'll try the BGG search API
-    // First try exact barcode match via BGG API2
-    let bggGame = null;
-
+    // Layer 2: External API (BoardGameGeek)
+    let bggGame: any = null;
     try {
-      // Search BGG by barcode using their search
       const searchUrl = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(barcode)}&type=boardgame`;
       const searchRes = await fetch(searchUrl);
       const searchXml = await searchRes.text();
-
-      // Parse XML to find game ID
       const idMatch = searchXml.match(/id="(\d+)"/);
+
       if (idMatch) {
         const bggId = idMatch[1];
-        // Get full game details
         const detailUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${bggId}&stats=1`;
         const detailRes = await fetch(detailUrl);
         const detailXml = await detailRes.text();
@@ -75,35 +104,83 @@ serve(async (req) => {
         const minAge = detailXml.match(/minage value="(\d+)"/)?.[1];
         const playTime = detailXml.match(/playingtime value="(\d+)"/)?.[1];
         const publisher = detailXml.match(/<link type="boardgamepublisher"[^>]*value="([^"]+)"/)?.[1];
+        const category = detailXml.match(/<link type="boardgamecategory"[^>]*value="([^"]+)"/)?.[1];
 
         if (name) {
           bggGame = {
-            barcode,
-            name,
+            title: name,
+            normalized_title: normalizeTitle(name),
             publisher: publisher || null,
-            year: yearPublished ? parseInt(yearPublished) : null,
-            image_url: image || null,
+            category: category || null,
+            release_year: yearPublished ? parseInt(yearPublished) : null,
+            cover_image_url: image || null,
             description: description ? description.substring(0, 500).replace(/&#10;/g, "\n").replace(/&amp;/g, "&") : null,
-            category: null,
             min_players: minPlayers ? parseInt(minPlayers) : null,
             max_players: maxPlayers ? parseInt(maxPlayers) : null,
             min_age: minAge ? parseInt(minAge) : null,
             play_time: playTime || null,
-            bgg_id: bggId,
           };
         }
       }
-    } catch (bggError) {
-      console.error("BGG lookup failed:", bggError);
+    } catch (e) {
+      console.error("BGG lookup failed:", e);
     }
 
     if (bggGame) {
-      // Save to catalog for future lookups
-      await supabaseAdmin.from("barcode_catalog").insert(bggGame);
+      // Layer 3: Fuzzy match against existing master_games
+      const { data: existingGames } = await supabaseAdmin
+        .from("master_games")
+        .select("id, normalized_title, publisher")
+        .limit(500);
 
-      return new Response(JSON.stringify({ found: true, source: "bgg", game: bggGame }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      let bestMatchId: string | null = null;
+      let bestScore = 0;
+
+      if (existingGames) {
+        for (const eg of existingGames) {
+          let score = similarity(bggGame.normalized_title, eg.normalized_title);
+          // Boost if publisher matches
+          if (bggGame.publisher && eg.publisher &&
+              normalizeTitle(bggGame.publisher) === normalizeTitle(eg.publisher)) {
+            score = Math.min(1, score + 0.1);
+          }
+          if (score > bestScore) { bestScore = score; bestMatchId = eg.id; }
+        }
+      }
+
+      let gameId: string;
+
+      if (bestScore >= 0.9 && bestMatchId) {
+        // Auto-match: just add barcode to existing game
+        gameId = bestMatchId;
+      } else {
+        // Insert new master game
+        const { data: inserted, error } = await supabaseAdmin
+          .from("master_games")
+          .insert(bggGame)
+          .select()
+          .single();
+        if (error) throw error;
+        gameId = inserted.id;
+      }
+
+      // Add barcode index
+      const confidence = bestScore >= 0.9 ? bestScore : 0.8;
+      await supabaseAdmin.from("game_barcodes").insert({
+        game_id: gameId, barcode, confidence_score: confidence, source: "bgg",
+      }).onConflict("barcode").merge();
+
+      // Return full game
+      const { data: fullGame } = await supabaseAdmin
+        .from("master_games")
+        .select("*")
+        .eq("id", gameId)
+        .single();
+
+      return new Response(JSON.stringify({
+        found: true, source: "bgg", confidence,
+        game: { ...fullGame, barcode, estimated_price: null },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ found: false, barcode }), {
