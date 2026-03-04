@@ -9,10 +9,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Html5Qrcode } from "html5-qrcode";
 
 interface ScannedGame {
-  name: string;
+  title?: string;
+  name?: string;
   publisher?: string | null;
   year?: number | null;
+  release_year?: number | null;
   image_url?: string | null;
+  cover_image_url?: string | null;
   description?: string | null;
   category?: string | null;
   min_players?: number | null;
@@ -20,6 +23,8 @@ interface ScannedGame {
   min_age?: number | null;
   play_time?: string | null;
   barcode: string;
+  estimated_price?: number | null;
+  confidence?: number;
 }
 
 const Scanner = () => {
@@ -84,7 +89,7 @@ const Scanner = () => {
       });
       if (error) throw error;
       if (data?.found && data.game) {
-        setScannedGame({ ...data.game, barcode });
+        setScannedGame({ ...data.game, barcode, confidence: data.confidence });
       } else {
         toast({ title: "Jeu non trouvé", description: `Aucun résultat pour le code ${barcode}` });
         setScannedGame(null);
