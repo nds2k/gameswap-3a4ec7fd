@@ -110,7 +110,7 @@ const Scanner = () => {
 
   const handleUseForPost = () => {
     if (!scannedGame) return;
-    // Navigate to home and pass scanned data via sessionStorage
+    // Pass full game data (supports both old barcode_catalog and new master_games format)
     sessionStorage.setItem("scanned_game", JSON.stringify(scannedGame));
     navigate("/", { state: { openPostModal: true } });
   };

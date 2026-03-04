@@ -88,7 +88,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
     condition: "", category: "", players: "", playtime: "", age: "",
   });
 
-  // Check for scanned game data on open
+  // Check for scanned game data on open (supports both old and new format)
   useEffect(() => {
     if (!open) return;
     const raw = sessionStorage.getItem("scanned_game");
@@ -96,9 +96,12 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
     try {
       const scanned = JSON.parse(raw);
       sessionStorage.removeItem("scanned_game");
+      // Support both old (name) and new (title) format from master_games
+      const title = scanned.title || scanned.name || "";
+      const coverImage = scanned.cover_image_url || scanned.image_url || null;
       setFormData((f) => ({
         ...f,
-        title: scanned.name || f.title,
+        title: title || f.title,
         category: mapToInternalCategory(scanned.category) || f.category,
         players: scanned.min_players
           ? scanned.max_players
@@ -108,8 +111,9 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         playtime: scanned.play_time || f.playtime,
         age: scanned.min_age ? String(scanned.min_age) : f.age,
         description: scanned.description || f.description,
+        price: scanned.estimated_price ? String(Math.round(scanned.estimated_price)) : f.price,
       }));
-      if (scanned.image_url) setScannedImageUrl(scanned.image_url);
+      if (coverImage) setScannedImageUrl(coverImage);
     } catch { /* ignore */ }
   }, [open]);
 

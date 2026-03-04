@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.check-seller-status]
 verify_jwt = false
+
+[functions.barcode-lookup]
+verify_jwt = false
