@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing, CreditCard, Download, Trash2, Loader2, Store, CheckCircle } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing, CreditCard, Download, Trash2, Loader2, Store, CheckCircle, Upload } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -516,6 +516,16 @@ const Settings = () => {
                 </div>
               </div>
               {accountActionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            </button>
+            <button
+              onClick={() => setChangeEmailOpen(true)}
+              className="w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors border-b border-border"
+            >
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <div className="text-left">
+                <span className="font-medium block">Changer d'email</span>
+                <span className="text-xs text-muted-foreground">{user?.email}</span>
+              </div>
             </button>
             <button
               onClick={() => setDeleteDialogOpen(true)}
