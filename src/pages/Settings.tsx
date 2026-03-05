@@ -630,6 +630,8 @@ const Settings = () => {
         onOpenChange={setSellerModalOpen}
         onSuccess={checkSellerStatus}
       />
+      <CSVImportModal open={csvImportOpen} onOpenChange={setCSVImportOpen} />
+      <ChangeEmailModal open={changeEmailOpen} onOpenChange={setChangeEmailOpen} />
     </MainLayout>
   );
 };
