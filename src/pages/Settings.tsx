@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing, CreditCard, Download, Trash2, Loader2, Store, CheckCircle } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Sun, Scale, Mail, MapPin, Globe, UserX, BellRing, CreditCard, Download, Trash2, Loader2, Store, CheckCircle, Upload } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/select";
 
 import { SellerOnboardingModal } from "@/components/seller/SellerOnboardingModal";
+import { CSVImportModal } from "@/components/collection/CSVImportModal";
+import { ChangeEmailModal } from "@/components/settings/ChangeEmailModal";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -60,6 +62,8 @@ const Settings = () => {
   const [sellerModalOpen, setSellerModalOpen] = useState(false);
   const [sellerStatus, setSellerStatus] = useState<{ hasAccount: boolean; onboardingComplete: boolean } | null>(null);
   const [checkingSellerStatus, setCheckingSellerStatus] = useState(false);
+  const [csvImportOpen, setCSVImportOpen] = useState(false);
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false);
 
   // Check seller status
   const checkSellerStatus = async () => {
@@ -397,6 +401,28 @@ const Settings = () => {
             {saving ? t("settings.saving") : t("settings.save")}
           </Button>
 
+          {/* Collection Import */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
+              Collection
+            </h2>
+            <div className="bg-card rounded-2xl border border-border overflow-hidden">
+              <button
+                onClick={() => setCSVImportOpen(true)}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <div className="text-left">
+                    <span className="font-medium block">Importer ma collection</span>
+                    <span className="text-xs text-muted-foreground">CSV depuis MyLudo, BGG, etc.</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+
           {/* Seller Account Section */}
           <div>
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
@@ -514,6 +540,16 @@ const Settings = () => {
               {accountActionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             </button>
             <button
+              onClick={() => setChangeEmailOpen(true)}
+              className="w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors border-b border-border"
+            >
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <div className="text-left">
+                <span className="font-medium block">Changer d'email</span>
+                <span className="text-xs text-muted-foreground">{user?.email}</span>
+              </div>
+            </button>
+            <button
               onClick={() => setDeleteDialogOpen(true)}
               className="w-full flex items-center gap-3 p-4 hover:bg-destructive/5 transition-colors text-destructive"
             >
@@ -594,6 +630,8 @@ const Settings = () => {
         onOpenChange={setSellerModalOpen}
         onSuccess={checkSellerStatus}
       />
+      <CSVImportModal open={csvImportOpen} onOpenChange={setCSVImportOpen} />
+      <ChangeEmailModal open={changeEmailOpen} onOpenChange={setChangeEmailOpen} />
     </MainLayout>
   );
 };

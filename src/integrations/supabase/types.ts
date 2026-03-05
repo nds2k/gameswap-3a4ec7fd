@@ -859,6 +859,7 @@ export type Database = {
           id: string
           last_login_streak: string | null
           last_username_change: string | null
+          last_wheel_spin: string | null
           location_geohash: string | null
           location_lat: number | null
           location_lng: number | null
@@ -880,6 +881,7 @@ export type Database = {
           id?: string
           last_login_streak?: string | null
           last_username_change?: string | null
+          last_wheel_spin?: string | null
           location_geohash?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -901,6 +903,7 @@ export type Database = {
           id?: string
           last_login_streak?: string | null
           last_username_change?: string | null
+          last_wheel_spin?: string | null
           location_geohash?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -1208,6 +1211,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_interests: {
+        Row: {
+          category: string
+          id: string
+          score: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          id?: string
+          score?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          id?: string
+          score?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_rewards: {
+        Row: {
+          claimed_at: string
+          expires_at: string | null
+          id: string
+          reward_data: Json | null
+          reward_type: string
+          used: boolean
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          expires_at?: string | null
+          id?: string
+          reward_data?: Json | null
+          reward_type: string
+          used?: boolean
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
+          expires_at?: string | null
+          id?: string
+          reward_data?: Json | null
+          reward_type?: string
+          used?: boolean
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
