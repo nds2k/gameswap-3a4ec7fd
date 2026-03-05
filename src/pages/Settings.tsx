@@ -401,6 +401,28 @@ const Settings = () => {
             {saving ? t("settings.saving") : t("settings.save")}
           </Button>
 
+          {/* Collection Import */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
+              Collection
+            </h2>
+            <div className="bg-card rounded-2xl border border-border overflow-hidden">
+              <button
+                onClick={() => setCSVImportOpen(true)}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <div className="text-left">
+                    <span className="font-medium block">Importer ma collection</span>
+                    <span className="text-xs text-muted-foreground">CSV depuis MyLudo, BGG, etc.</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+
           {/* Seller Account Section */}
           <div>
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-2">
