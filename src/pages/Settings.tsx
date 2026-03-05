@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/select";
 
 import { SellerOnboardingModal } from "@/components/seller/SellerOnboardingModal";
+import { CSVImportModal } from "@/components/collection/CSVImportModal";
+import { ChangeEmailModal } from "@/components/settings/ChangeEmailModal";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -60,6 +62,8 @@ const Settings = () => {
   const [sellerModalOpen, setSellerModalOpen] = useState(false);
   const [sellerStatus, setSellerStatus] = useState<{ hasAccount: boolean; onboardingComplete: boolean } | null>(null);
   const [checkingSellerStatus, setCheckingSellerStatus] = useState(false);
+  const [csvImportOpen, setCSVImportOpen] = useState(false);
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false);
 
   // Check seller status
   const checkSellerStatus = async () => {

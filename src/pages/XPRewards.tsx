@@ -7,8 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBadges } from "@/hooks/useBadges";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Gem, Lock, Sparkles, Check, Eye, Award } from "lucide-react";
+import { ArrowLeft, Gem, Lock, Sparkles, Check, Eye, Award, RotateCw } from "lucide-react";
 import { RANKS } from "@/lib/xpSystem";
+import { LuckyWheel } from "@/components/rewards/LuckyWheel";
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
 
@@ -50,6 +51,7 @@ const XPRewards = () => {
   const [animatedXP, setAnimatedXP] = useState(0);
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [tappedId, setTappedId] = useState<string | null>(null);
+  const [showWheel, setShowWheel] = useState(false);
 
   const xp = xpState?.xp ?? 0;
   const progress = xpState?.progressPercent ?? 0;
@@ -189,6 +191,29 @@ const XPRewards = () => {
             </div>
           </div>
         )}
+
+        {/* Lucky Wheel Section */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowWheel(!showWheel)}
+            className="w-full flex items-center gap-3 p-4 rounded-2xl border border-border bg-gradient-to-r from-primary/5 via-purple-500/5 to-blue-500/5 hover:from-primary/10 hover:via-purple-500/10 hover:to-blue-500/10 transition-all"
+          >
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg">
+              <span className="text-xl">🎰</span>
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-sm">Lucky Wheel</p>
+              <p className="text-xs text-muted-foreground">Tentez votre chance pour 200 XP</p>
+            </div>
+            <RotateCw className={`h-5 w-5 text-muted-foreground transition-transform ${showWheel ? "rotate-180" : ""}`} />
+          </button>
+
+          {showWheel && (
+            <div className="mt-4 animate-fade-in">
+              <LuckyWheel xp={xp} onRewardClaimed={fetchXP} />
+            </div>
+          )}
+        </div>
 
         {/* Section title */}
         <div className="flex items-center gap-2 mb-4">
