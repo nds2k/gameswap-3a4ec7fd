@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Camera, Loader2, User, Settings, Star, Shield, Plus, Trash2, Pencil } from "lucide-react";
 import { useXP } from "@/hooks/useXP";
 import { useRatings } from "@/hooks/useRatings";
+import { useBadges } from "@/hooks/useBadges";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { UserReputation } from "@/hooks/useRatings";
@@ -66,6 +67,12 @@ const Profile = () => {
 
   const { xpState } = useXP(user?.id);
   const { getUserReputation } = useRatings();
+  const { allBadges } = useBadges(user?.id);
+
+  // Get the selected badge object
+  const selectedBadge = profile?.selected_badge_id
+    ? allBadges.find((b) => b.id === profile.selected_badge_id)
+    : null;
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
@@ -192,7 +199,12 @@ const Profile = () => {
 
           <div className="text-center flex items-center gap-2">
             <div>
-              <h1 className="text-xl font-semibold">{displayName}</h1>
+              <div className="flex items-center gap-2 justify-center">
+                <h1 className="text-xl font-semibold">{displayName}</h1>
+                {selectedBadge && (
+                  <span className="text-lg" title={selectedBadge.name}>{selectedBadge.emoji}</span>
+                )}
+              </div>
               {profile?.username && profile.full_name && (
                 <p className="text-sm text-muted-foreground">@{profile.username}</p>
               )}
