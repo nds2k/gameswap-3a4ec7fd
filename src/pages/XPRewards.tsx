@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBadges } from "@/hooks/useBadges";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Gem, Lock, Sparkles, Check, Eye, Award, RotateCw } from "lucide-react";
+import { ArrowLeft, Gem, Lock, Sparkles, Check, Eye, Award } from "lucide-react";
 import { RANKS } from "@/lib/xpSystem";
 import { LuckyWheel } from "@/components/rewards/LuckyWheel";
 
@@ -20,19 +20,25 @@ interface Reward {
   description: string;
   cost: number;
   rarity: Rarity;
+  action?: "wheel";
 }
 
 const REWARDS: Reward[] = [
+  { id: "wheel", icon: "🎰", title: "Lucky Wheel", description: "Tournez la roue pour gagner des récompenses aléatoires", cost: 200, rarity: "rare", action: "wheel" },
   { id: "profile", icon: "🎨", title: "Personnalisation du profil", description: "Cadre et couleur de badge uniques", cost: 400, rarity: "rare" },
-  { id: "boost24", icon: "🚀", title: "Boost annonce", description: "Mettez en avant votre annonce", cost: 600, rarity: "rare" },
-  { id: "avatar", icon: "✨", title: "Accessoires d'avatar", description: "Accessoires limités exclusifs", cost: 900, rarity: "rare" },
+  { id: "boost24", icon: "🚀", title: "Boost annonce 24h", description: "Mettez en avant votre annonce pendant 24 heures", cost: 600, rarity: "rare" },
+  { id: "title_color", icon: "🌈", title: "Couleur de pseudo", description: "Changez la couleur de votre pseudo sur vos annonces", cost: 500, rarity: "epic" },
+  { id: "avatar", icon: "✨", title: "Accessoires d'avatar", description: "Accessoires limités exclusifs pour votre profil", cost: 900, rarity: "epic" },
+  { id: "emote_pack", icon: "😎", title: "Pack d'emojis", description: "Emojis exclusifs pour le chat et les commentaires", cost: 350, rarity: "common" },
+  { id: "banner", icon: "🏞️", title: "Bannière de profil", description: "Bannière personnalisée en haut de votre profil", cost: 750, rarity: "epic" },
+  { id: "lucky_badge", icon: "🍀", title: "Badge Chanceux", description: "Badge exclusif affiché sur votre profil", cost: 1200, rarity: "legendary" },
 ];
 
 const RARITY_CONFIG: Record<Rarity, { label: string; border: string; glow: string; badge: string; text: string }> = {
-  common:    { label: "Common",    border: "border-emerald-500/40", glow: "",                                           badge: "bg-emerald-500/20 text-emerald-400", text: "text-emerald-400" },
-  rare:      { label: "Rare",      border: "border-blue-500/40",    glow: "",                                           badge: "bg-blue-500/20 text-blue-400",       text: "text-blue-400" },
-  epic:      { label: "Epic",      border: "border-purple-500/40",  glow: "",                                           badge: "bg-purple-500/20 text-purple-400",   text: "text-purple-400" },
-  legendary: { label: "Legendary", border: "border-yellow-500/50",  glow: "shadow-[0_0_20px_rgba(234,179,8,0.15)]",     badge: "bg-yellow-500/20 text-yellow-400",   text: "text-yellow-400" },
+  common:    { label: "Common",    border: "border-emerald-500/40", glow: "",                                       badge: "bg-emerald-500/20 text-emerald-400", text: "text-emerald-400" },
+  rare:      { label: "Rare",      border: "border-blue-500/40",    glow: "",                                       badge: "bg-blue-500/20 text-blue-400",       text: "text-blue-400" },
+  epic:      { label: "Epic",      border: "border-purple-500/40",  glow: "",                                       badge: "bg-purple-500/20 text-purple-400",   text: "text-purple-400" },
+  legendary: { label: "Legendary", border: "border-yellow-500/50",  glow: "shadow-[0_0_20px_rgba(234,179,8,0.15)]", badge: "bg-yellow-500/20 text-yellow-400",   text: "text-yellow-400" },
 };
 
 const BADGE_RARITY_STYLES: Record<string, { bg: string; text: string }> = {
@@ -51,7 +57,7 @@ const XPRewards = () => {
   const [animatedXP, setAnimatedXP] = useState(0);
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [tappedId, setTappedId] = useState<string | null>(null);
-  const [showWheel, setShowWheel] = useState(false);
+  const [wheelOpen, setWheelOpen] = useState(false);
 
   const xp = xpState?.xp ?? 0;
   const progress = xpState?.progressPercent ?? 0;
@@ -83,15 +89,27 @@ const XPRewards = () => {
     return () => clearTimeout(timeout);
   }, [progress, loading]);
 
-  const handleTap = async (id: string, cost: number) => {
-    if (!user || xp < cost) return;
-    setTappedId(id);
+  const handleTap = async (reward: Reward) => {
+    if (!user || xp < reward.cost) return;
+
+    // Special action: open the wheel
+    if (reward.action === "wheel") {
+      setWheelOpen(true);
+      return;
+    }
+
+    setTappedId(reward.id);
     try {
-      const newXP = xp - cost;
+      const newXP = xp - reward.cost;
       await supabase.from("profiles").update({ xp: newXP }).eq("user_id", user.id);
-      await supabase.from("xp_transactions").insert({ user_id: user.id, amount: -cost, reason: `Échange XP: ${id}` });
+      await supabase.from("xp_transactions").insert({ user_id: user.id, amount: -reward.cost, reason: `Échange XP: ${reward.id}` });
+      await supabase.from("user_rewards").insert({
+        user_id: user.id,
+        reward_type: reward.id,
+        reward_data: { label: reward.title, emoji: reward.icon, rarity: reward.rarity },
+      });
       await fetchXP();
-      toast({ title: "Récompense débloquée !", description: `Vous avez dépensé ${cost} XP.` });
+      toast({ title: "Récompense débloquée !", description: `Vous avez dépensé ${reward.cost} XP.` });
     } catch {
       toast({ title: "Erreur", description: "Impossible de dépenser les XP", variant: "destructive" });
     }
@@ -116,7 +134,7 @@ const XPRewards = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/profile/analytics")} className="text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold">XP Rewards</h1>
+          <h1 className="text-xl font-black font-nunito">XP Rewards</h1>
         </div>
 
         {/* Level + Progress Hero */}
@@ -130,14 +148,14 @@ const XPRewards = () => {
                 <span className="text-xl font-black text-white">{level}</span>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Level</p>
-                <p className="text-lg font-bold">{rank?.name ?? "Bronze"} {rank?.emoji}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-extrabold font-nunito">Level</p>
+                <p className="text-lg font-black font-nunito">{rank?.name ?? "Bronze"} {rank?.emoji}</p>
               </div>
             </div>
             {nextRank && (
               <div className="text-right">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Next</p>
-                <p className="text-sm font-semibold">{nextRank.emoji} {nextRank.name}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-extrabold font-nunito">Next</p>
+                <p className="text-sm font-bold font-nunito">{nextRank.emoji} {nextRank.name}</p>
               </div>
             )}
           </div>
@@ -157,11 +175,10 @@ const XPRewards = () => {
 
           <div className="relative z-10 flex items-center gap-2 mt-4 px-3 py-2.5 rounded-xl bg-muted/30 border border-border/50">
             <Gem className="h-4 w-4 text-primary shrink-0" />
-            <span className="text-sm font-bold">{animatedXP.toLocaleString()} XP</span>
+            <span className="text-sm font-black font-nunito">{animatedXP.toLocaleString()} XP</span>
             <span className="text-xs text-muted-foreground">disponible</span>
           </div>
 
-          {/* XP info — only from transactions */}
           <p className="text-[10px] text-muted-foreground mt-3 text-center relative z-10">
             XP gagné uniquement via les achats et ventes vérifiés
           </p>
@@ -172,7 +189,7 @@ const XPRewards = () => {
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Award className="h-4 w-4 text-primary" />
-              <h2 className="text-base font-bold">Mes Badges</h2>
+              <h2 className="text-base font-black font-nunito">Mes Badges</h2>
             </div>
             <div className="flex flex-wrap gap-2">
               {userBadges.map((ub) => {
@@ -192,33 +209,23 @@ const XPRewards = () => {
           </div>
         )}
 
-        {/* Lucky Wheel Section */}
-        <div className="mb-6">
-          <button
-            onClick={() => setShowWheel(!showWheel)}
-            className="w-full flex items-center gap-3 p-4 rounded-2xl border border-border bg-gradient-to-r from-primary/5 via-purple-500/5 to-blue-500/5 hover:from-primary/10 hover:via-purple-500/10 hover:to-blue-500/10 transition-all"
-          >
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg">
-              <span className="text-xl">🎰</span>
+        {/* Lucky Wheel Modal */}
+        {wheelOpen && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setWheelOpen(false)}>
+            <div className="bg-card border border-border rounded-3xl p-6 max-w-sm w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-black font-nunito">Lucky Wheel</h3>
+                <button onClick={() => setWheelOpen(false)} className="text-muted-foreground hover:text-foreground text-xl">✕</button>
+              </div>
+              <LuckyWheel xp={xp} onRewardClaimed={() => { fetchXP(); setWheelOpen(false); }} />
             </div>
-            <div className="flex-1 text-left">
-              <p className="font-semibold text-sm">Lucky Wheel</p>
-              <p className="text-xs text-muted-foreground">Tentez votre chance pour 200 XP</p>
-            </div>
-            <RotateCw className={`h-5 w-5 text-muted-foreground transition-transform ${showWheel ? "rotate-180" : ""}`} />
-          </button>
-
-          {showWheel && (
-            <div className="mt-4 animate-fade-in">
-              <LuckyWheel xp={xp} onRewardClaimed={fetchXP} />
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Section title */}
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-bold">Dépenser vos XP</h2>
+          <h2 className="text-base font-black font-nunito">Dépenser vos XP</h2>
         </div>
 
         {/* Rewards list */}
@@ -231,7 +238,7 @@ const XPRewards = () => {
             return (
               <button
                 key={reward.id}
-                onClick={() => handleTap(reward.id, reward.cost)}
+                onClick={() => handleTap(reward)}
                 className={`
                   w-full text-left rounded-2xl border p-4 transition-all duration-200
                   bg-card/60 backdrop-blur-sm
@@ -248,8 +255,8 @@ const XPRewards = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-semibold truncate">{reward.title}</p>
-                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md ${rarity.badge}`}>
+                      <p className="text-sm font-bold font-nunito truncate">{reward.title}</p>
+                      <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md font-nunito ${rarity.badge}`}>
                         {rarity.label}
                       </span>
                     </div>

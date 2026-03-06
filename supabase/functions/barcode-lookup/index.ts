@@ -15,7 +15,6 @@ function normalizeTitle(title: string): string {
     .trim();
 }
 
-// Simple Levenshtein-based similarity (0-1)
 function similarity(a: string, b: string): number {
   const la = a.length, lb = b.length;
   if (la === 0 || lb === 0) return 0;
@@ -29,6 +28,78 @@ function similarity(a: string, b: string): number {
     }
   }
   return 1 - matrix[la][lb] / Math.max(la, lb);
+}
+
+// Try to resolve a UPC/EAN barcode to a product name via Open Food Facts (works for many barcodes)
+async function resolveBarcodeName(barcode: string): Promise<string | null> {
+  try {
+    // Try UPC item DB via Open Food Facts (covers many products including board games)
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 1 && data.product?.product_name) {
+        return data.product.product_name;
+      }
+    }
+  } catch { /* ignore timeout/network */ }
+  return null;
+}
+
+// Search BGG by game name
+async function searchBGGByName(query: string): Promise<any | null> {
+  try {
+    const searchUrl = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(query)}&type=boardgame&exact=1`;
+    const searchRes = await fetch(searchUrl, { signal: AbortSignal.timeout(8000) });
+    let searchXml = await searchRes.text();
+    let idMatch = searchXml.match(/id="(\d+)"/);
+
+    // If exact match fails, try non-exact
+    if (!idMatch) {
+      const fuzzyUrl = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(query)}&type=boardgame`;
+      const fuzzyRes = await fetch(fuzzyUrl, { signal: AbortSignal.timeout(8000) });
+      searchXml = await fuzzyRes.text();
+      idMatch = searchXml.match(/id="(\d+)"/);
+    }
+
+    if (!idMatch) return null;
+
+    const bggId = idMatch[1];
+    const detailUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${bggId}&stats=1`;
+    const detailRes = await fetch(detailUrl, { signal: AbortSignal.timeout(8000) });
+    const detailXml = await detailRes.text();
+
+    const name = detailXml.match(/<name type="primary" sortindex="\d+" value="([^"]+)"/)?.[1];
+    if (!name) return null;
+
+    const image = detailXml.match(/<image>([^<]+)<\/image>/)?.[1];
+    const description = detailXml.match(/<description>([^<]*)<\/description>/)?.[1];
+    const yearPublished = detailXml.match(/yearpublished value="(\d+)"/)?.[1];
+    const minPlayers = detailXml.match(/minplayers value="(\d+)"/)?.[1];
+    const maxPlayers = detailXml.match(/maxplayers value="(\d+)"/)?.[1];
+    const minAge = detailXml.match(/minage value="(\d+)"/)?.[1];
+    const playTime = detailXml.match(/playingtime value="(\d+)"/)?.[1];
+    const publisher = detailXml.match(/<link type="boardgamepublisher"[^>]*value="([^"]+)"/)?.[1];
+    const category = detailXml.match(/<link type="boardgamecategory"[^>]*value="([^"]+)"/)?.[1];
+
+    return {
+      title: name,
+      normalized_title: normalizeTitle(name),
+      publisher: publisher || null,
+      category: category || null,
+      release_year: yearPublished ? parseInt(yearPublished) : null,
+      cover_image_url: image || null,
+      description: description ? description.substring(0, 500).replace(/&#10;/g, "\n").replace(/&amp;/g, "&") : null,
+      min_players: minPlayers ? parseInt(minPlayers) : null,
+      max_players: maxPlayers ? parseInt(maxPlayers) : null,
+      min_age: minAge ? parseInt(minAge) : null,
+      play_time: playTime || null,
+    };
+  } catch (e) {
+    console.error("BGG search failed:", e);
+    return null;
+  }
 }
 
 serve(async (req) => {
@@ -57,7 +128,7 @@ serve(async (req) => {
       throw new Error("Invalid barcode");
     }
 
-    // Layer 1: O(1) indexed barcode lookup
+    // ===== Layer 1: Internal barcode index (O(1)) =====
     const { data: barcodeEntry } = await supabaseAdmin
       .from("game_barcodes")
       .select("*, master_games(*)")
@@ -66,7 +137,6 @@ serve(async (req) => {
 
     if (barcodeEntry?.master_games) {
       const g = barcodeEntry.master_games;
-      // Fetch latest price
       const { data: priceData } = await supabaseAdmin
         .from("game_price_history")
         .select("average_price")
@@ -81,53 +151,27 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Layer 2: External API (BoardGameGeek)
+    // ===== Layer 2: Resolve barcode to product name via external UPC databases =====
+    let productName = await resolveBarcodeName(barcode);
+
+    // ===== Layer 3: Search BGG by product name or barcode digits =====
     let bggGame: any = null;
-    try {
-      const searchUrl = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(barcode)}&type=boardgame`;
-      const searchRes = await fetch(searchUrl);
-      const searchXml = await searchRes.text();
-      const idMatch = searchXml.match(/id="(\d+)"/);
 
-      if (idMatch) {
-        const bggId = idMatch[1];
-        const detailUrl = `https://boardgamegeek.com/xmlapi2/thing?id=${bggId}&stats=1`;
-        const detailRes = await fetch(detailUrl);
-        const detailXml = await detailRes.text();
+    if (productName) {
+      // Clean up product name for BGG search
+      const cleanName = productName.replace(/\b(board game|jeu de société|game|edition|édition)\b/gi, "").trim();
+      bggGame = await searchBGGByName(cleanName);
+      // Fallback with original name
+      if (!bggGame) bggGame = await searchBGGByName(productName);
+    }
 
-        const name = detailXml.match(/<name type="primary" sortindex="\d+" value="([^"]+)"/)?.[1];
-        const image = detailXml.match(/<image>([^<]+)<\/image>/)?.[1];
-        const description = detailXml.match(/<description>([^<]*)<\/description>/)?.[1];
-        const yearPublished = detailXml.match(/yearpublished value="(\d+)"/)?.[1];
-        const minPlayers = detailXml.match(/minplayers value="(\d+)"/)?.[1];
-        const maxPlayers = detailXml.match(/maxplayers value="(\d+)"/)?.[1];
-        const minAge = detailXml.match(/minage value="(\d+)"/)?.[1];
-        const playTime = detailXml.match(/playingtime value="(\d+)"/)?.[1];
-        const publisher = detailXml.match(/<link type="boardgamepublisher"[^>]*value="([^"]+)"/)?.[1];
-        const category = detailXml.match(/<link type="boardgamecategory"[^>]*value="([^"]+)"/)?.[1];
-
-        if (name) {
-          bggGame = {
-            title: name,
-            normalized_title: normalizeTitle(name),
-            publisher: publisher || null,
-            category: category || null,
-            release_year: yearPublished ? parseInt(yearPublished) : null,
-            cover_image_url: image || null,
-            description: description ? description.substring(0, 500).replace(/&#10;/g, "\n").replace(/&amp;/g, "&") : null,
-            min_players: minPlayers ? parseInt(minPlayers) : null,
-            max_players: maxPlayers ? parseInt(maxPlayers) : null,
-            min_age: minAge ? parseInt(minAge) : null,
-            play_time: playTime || null,
-          };
-        }
-      }
-    } catch (e) {
-      console.error("BGG lookup failed:", e);
+    // If no product name resolved, try searching BGG with the barcode directly (rarely works, but fast)
+    if (!bggGame) {
+      bggGame = await searchBGGByName(barcode);
     }
 
     if (bggGame) {
-      // Layer 3: Fuzzy match against existing master_games
+      // ===== Layer 4: Fuzzy match against existing master_games =====
       const { data: existingGames } = await supabaseAdmin
         .from("master_games")
         .select("id, normalized_title, publisher")
@@ -139,7 +183,6 @@ serve(async (req) => {
       if (existingGames) {
         for (const eg of existingGames) {
           let score = similarity(bggGame.normalized_title, eg.normalized_title);
-          // Boost if publisher matches
           if (bggGame.publisher && eg.publisher &&
               normalizeTitle(bggGame.publisher) === normalizeTitle(eg.publisher)) {
             score = Math.min(1, score + 0.1);
@@ -151,10 +194,8 @@ serve(async (req) => {
       let gameId: string;
 
       if (bestScore >= 0.9 && bestMatchId) {
-        // Auto-match: just add barcode to existing game
         gameId = bestMatchId;
       } else {
-        // Insert new master game
         const { data: inserted, error } = await supabaseAdmin
           .from("master_games")
           .insert(bggGame)
@@ -170,7 +211,6 @@ serve(async (req) => {
         game_id: gameId, barcode, confidence_score: confidence, source: "bgg",
       }).onConflict("barcode").merge();
 
-      // Return full game
       const { data: fullGame } = await supabaseAdmin
         .from("master_games")
         .select("*")
