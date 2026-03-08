@@ -17,7 +17,7 @@ const Discover = () => {
 
   return (
     <MainLayout showSearch={false}>
-      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3 sm:py-6">
+      <div className="max-w-5xl mx-auto px-2.5 sm:px-6 py-2.5 sm:py-5">
         {/* Large Search Bar */}
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1">
