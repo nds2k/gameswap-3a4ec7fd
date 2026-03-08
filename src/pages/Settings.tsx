@@ -83,10 +83,15 @@ const Settings = () => {
   // Handle Stripe redirect params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("stripe") === "complete") {
+    const stripeParam = params.get("stripe");
+    if (stripeParam === "complete") {
       checkSellerStatus();
       toast({ title: "Vérification en cours", description: "Votre compte vendeur est en cours de validation." });
       window.history.replaceState({}, "", "/settings");
+    } else if (stripeParam === "refresh") {
+      toast({ title: "Inscription interrompue", description: "Cliquez sur 'Finaliser mon inscription' pour reprendre." });
+      window.history.replaceState({}, "", "/settings");
+      checkSellerStatus();
     }
   }, []);
 
