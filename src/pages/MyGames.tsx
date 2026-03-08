@@ -290,18 +290,6 @@ const MyGames = () => {
         onSuccess={fetchGames}
       />
 
-      {/* Seller Onboarding Modal */}
-      <SellerOnboardingModal
-        open={onboardingModalOpen}
-        onOpenChange={setOnboardingModalOpen}
-        onSuccess={() => {
-          setOnboardingModalOpen(false);
-          toast({
-            title: "Onboarding lancé",
-            description: "Finalisez votre inscription Stripe, puis revenez vendre votre jeu.",
-          });
-        }}
-      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteGameId} onOpenChange={() => setDeleteGameId(null)}>
