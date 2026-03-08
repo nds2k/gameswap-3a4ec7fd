@@ -454,7 +454,7 @@ const Settings = () => {
                   <p className="text-sm text-muted-foreground">
                     Votre inscription n'est pas terminée. Finalisez votre vérification.
                   </p>
-                  <Button variant="outline" className="w-full" onClick={() => setSellerModalOpen(true)}>
+                  <Button variant="outline" className="w-full" onClick={() => navigate("/become-seller")}>
                     <Store className="h-4 w-4 mr-2" />
                     Finaliser mon inscription
                   </Button>
@@ -464,7 +464,7 @@ const Settings = () => {
                   <p className="text-sm text-muted-foreground">
                     Créez votre compte vendeur pour recevoir des paiements lors de vos ventes.
                   </p>
-                  <Button variant="gameswap" className="w-full" onClick={() => setSellerModalOpen(true)}>
+                  <Button variant="gameswap" className="w-full" onClick={() => navigate("/become-seller")}>
                     <Store className="h-4 w-4 mr-2" />
                     Devenir vendeur
                   </Button>

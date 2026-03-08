@@ -37,6 +37,11 @@ const ProfileAnalytics = lazy(() => import("./pages/ProfileAnalytics"));
 const XPRewards = lazy(() => import("./pages/XPRewards"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Scanner = lazy(() => import("./pages/Scanner"));
+const BecomeSeller = lazy(() => import("./pages/seller/BecomeSeller"));
+const SellerInfo = lazy(() => import("./pages/seller/SellerInfo"));
+const SellerVerification = lazy(() => import("./pages/seller/SellerVerification"));
+const SellerPayout = lazy(() => import("./pages/seller/SellerPayout"));
+const SellerSuccess = lazy(() => import("./pages/seller/SellerSuccess"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -127,6 +132,11 @@ const AppRoutes = () => {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
+          <Route path="/become-seller" element={<ProtectedRoute><BecomeSeller /></ProtectedRoute>} />
+          <Route path="/become-seller/info" element={<ProtectedRoute><SellerInfo /></ProtectedRoute>} />
+          <Route path="/become-seller/verification" element={<ProtectedRoute><SellerVerification /></ProtectedRoute>} />
+          <Route path="/become-seller/payout" element={<ProtectedRoute><SellerPayout /></ProtectedRoute>} />
+          <Route path="/become-seller/success" element={<ProtectedRoute><SellerSuccess /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

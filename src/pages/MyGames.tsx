@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { SellGameModal } from "@/components/games/SellGameModal";
 import { PostGameModal } from "@/components/games/PostGameModal";
-import { SellerOnboardingModal } from "@/components/seller/SellerOnboardingModal";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,11 +34,11 @@ interface MyGame {
 const MyGames = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [games, setGames] = useState<MyGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [postModalOpen, setPostModalOpen] = useState(false);
-  const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<MyGame | null>(null);
   const [deleteGameId, setDeleteGameId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -103,8 +102,7 @@ const MyGames = () => {
         setSelectedGame(game);
         setSellModalOpen(true);
       } else {
-        setSelectedGame(game);
-        setOnboardingModalOpen(true);
+        navigate("/become-seller");
       }
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
@@ -292,18 +290,6 @@ const MyGames = () => {
         onSuccess={fetchGames}
       />
 
-      {/* Seller Onboarding Modal */}
-      <SellerOnboardingModal
-        open={onboardingModalOpen}
-        onOpenChange={setOnboardingModalOpen}
-        onSuccess={() => {
-          setOnboardingModalOpen(false);
-          toast({
-            title: "Onboarding lancé",
-            description: "Finalisez votre inscription Stripe, puis revenez vendre votre jeu.",
-          });
-        }}
-      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteGameId} onOpenChange={() => setDeleteGameId(null)}>

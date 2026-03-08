@@ -40,6 +40,14 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
 
+    // Parse body
+    const body = await req.json();
+    const { firstName, lastName, dob, country, email, accountHolder, iban, address, city, postalCode } = body;
+
+    if (!firstName || !lastName || !dob || !country || !iban) {
+      throw new Error("Missing required fields");
+    }
+
     // Check existing profile
     const { data: profile } = await supabaseAdmin
       .from("profiles")
@@ -50,9 +58,8 @@ serve(async (req) => {
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     let accountId = profile?.stripe_connect_account_id;
 
-    // If already fully onboarded, don't recreate
+    // If already fully onboarded, return early
     if (accountId && profile?.stripe_onboarding_complete) {
-      // Check if really complete
       const existing = await stripe.accounts.retrieve(accountId);
       if (existing.charges_enabled && existing.payouts_enabled) {
         return new Response(JSON.stringify({
@@ -65,15 +72,44 @@ serve(async (req) => {
       }
     }
 
+    // Parse DOB
+    const dobParts = dob.split("-");
+    const dobObj = {
+      year: parseInt(dobParts[0]),
+      month: parseInt(dobParts[1]),
+      day: parseInt(dobParts[2]),
+    };
+
     if (!accountId) {
-      // Create a new Express connected account — Stripe handles all identity/banking
-      logStep("Creating Stripe Connect Express account");
+      // Create a Custom connected account with full data
+      logStep("Creating Stripe Connect Custom account");
       const account = await stripe.accounts.create({
-        type: "express",
-        country: "FR",
-        email: user.email ?? undefined,
+        type: "custom",
+        country: country || "FR",
+        email: email || user.email || undefined,
         capabilities: {
           transfers: { requested: true },
+        },
+        business_type: "individual",
+        individual: {
+          first_name: firstName,
+          last_name: lastName,
+          dob: dobObj,
+          email: email || user.email || undefined,
+          address: {
+            line1: address,
+            city: city,
+            postal_code: postalCode,
+            country: country || "FR",
+          },
+        },
+        business_profile: {
+          mcc: "5945", // Hobby, Toy, and Game Shops
+          url: "https://gameswap.lovable.app",
+        },
+        tos_acceptance: {
+          date: Math.floor(Date.now() / 1000),
+          ip: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "0.0.0.0",
         },
         metadata: {
           gameswap_user_id: user.id,
@@ -82,32 +118,66 @@ serve(async (req) => {
 
       accountId = account.id;
       logStep("Account created", { accountId });
-
-      // Save to profile
-      await supabaseAdmin
-        .from("profiles")
-        .update({
-          stripe_connect_account_id: accountId,
-          stripe_onboarding_complete: false,
-        })
-        .eq("user_id", user.id);
+    } else {
+      // Update existing account with new data
+      logStep("Updating existing account", { accountId });
+      await stripe.accounts.update(accountId, {
+        individual: {
+          first_name: firstName,
+          last_name: lastName,
+          dob: dobObj,
+          email: email || user.email || undefined,
+          address: {
+            line1: address,
+            city: city,
+            postal_code: postalCode,
+            country: country || "FR",
+          },
+        },
+      });
     }
 
-    // Always generate a fresh onboarding link
-    const origin = req.headers.get("origin") || "https://gameswap.lovable.app";
-    const accountLink = await stripe.accountLinks.create({
-      account: accountId,
-      refresh_url: `${origin}/settings?stripe=refresh`,
-      return_url: `${origin}/settings?stripe=complete`,
-      type: "account_onboarding",
-    });
+    // Create bank account token and attach it
+    logStep("Creating bank account");
+    try {
+      const bankToken = await stripe.tokens.create({
+        bank_account: {
+          country: country || "FR",
+          currency: "eur",
+          account_holder_name: accountHolder || `${firstName} ${lastName}`,
+          account_holder_type: "individual",
+          account_number: iban.replace(/\s/g, ""),
+        },
+      });
 
-    logStep("Account link created", { url: accountLink.url });
+      await stripe.accounts.createExternalAccount(accountId, {
+        external_account: bankToken.id,
+      });
+      logStep("Bank account attached");
+    } catch (bankError: any) {
+      logStep("Bank account error", { message: bankError.message });
+      // If bank account fails, still save the account but report the error
+      if (bankError.message?.includes("already has")) {
+        logStep("Bank account already exists, continuing");
+      } else {
+        throw new Error(`Erreur IBAN : ${bankError.message}`);
+      }
+    }
+
+    // Save to profile
+    await supabaseAdmin
+      .from("profiles")
+      .update({
+        stripe_connect_account_id: accountId,
+        stripe_onboarding_complete: true,
+      })
+      .eq("user_id", user.id);
+
+    logStep("Profile updated, onboarding complete");
 
     return new Response(JSON.stringify({
       success: true,
       accountId,
-      onboardingUrl: accountLink.url,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
