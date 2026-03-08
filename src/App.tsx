@@ -37,6 +37,10 @@ const ProfileAnalytics = lazy(() => import("./pages/ProfileAnalytics"));
 const XPRewards = lazy(() => import("./pages/XPRewards"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Scanner = lazy(() => import("./pages/Scanner"));
+const GamesCatalog = lazy(() => import("./pages/GamesCatalog"));
+const GameDetailPage = lazy(() => import("./pages/GameDetail"));
+const MyCollection = lazy(() => import("./pages/MyCollection"));
+const ActivityHistory = lazy(() => import("./pages/ActivityHistory"));
 const BecomeSeller = lazy(() => import("./pages/seller/BecomeSeller"));
 const SellerInfo = lazy(() => import("./pages/seller/SellerInfo"));
 const SellerVerification = lazy(() => import("./pages/seller/SellerVerification"));
@@ -132,6 +136,10 @@ const AppRoutes = () => {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
+          <Route path="/games" element={<GamesCatalog />} />
+          <Route path="/games/:id" element={<GameDetailPage />} />
+          <Route path="/my-collection" element={<ProtectedRoute><MyCollection /></ProtectedRoute>} />
+          <Route path="/history" element={<ProtectedRoute><ActivityHistory /></ProtectedRoute>} />
           <Route path="/become-seller" element={<ProtectedRoute><BecomeSeller /></ProtectedRoute>} />
           <Route path="/become-seller/info" element={<ProtectedRoute><SellerInfo /></ProtectedRoute>} />
           <Route path="/become-seller/verification" element={<ProtectedRoute><SellerVerification /></ProtectedRoute>} />
