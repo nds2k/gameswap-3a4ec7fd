@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Compass, Heart, MessageSquare, User, Users, ScanLine } from "lucide-react";
+import { Compass, Heart, User, Users, ScanLine, Library, BookOpen } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
