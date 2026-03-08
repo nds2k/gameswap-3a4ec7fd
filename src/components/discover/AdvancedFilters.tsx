@@ -30,6 +30,12 @@ const CONDITIONS = [
   { value: "Correct", label: "Correct" },
 ];
 
+const TYPE_FILTERS = [
+  { id: "all", label: "Tous" },
+  { id: "sale", label: "Vente" },
+  { id: "trade", label: "Échange" },
+];
+
 export interface AdvancedFilterState {
   categories: string[];
   priceRange: [number, number];
@@ -39,6 +45,8 @@ export interface AdvancedFilterState {
 interface AdvancedFiltersProps {
   filters: AdvancedFilterState;
   onFiltersChange: (filters: AdvancedFilterState) => void;
+  activeTypeFilter?: string;
+  onTypeFilterChange?: (filter: string) => void;
 }
 
 export const defaultAdvancedFilters: AdvancedFilterState = {
@@ -47,14 +55,15 @@ export const defaultAdvancedFilters: AdvancedFilterState = {
   conditions: [],
 };
 
-export const AdvancedFilters = ({ filters, onFiltersChange }: AdvancedFiltersProps) => {
+export const AdvancedFilters = ({ filters, onFiltersChange, activeTypeFilter = "all", onTypeFilterChange }: AdvancedFiltersProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useLanguage();
 
   const activeCount =
     filters.categories.length +
     filters.conditions.length +
-    (filters.priceRange[0] > 0 || filters.priceRange[1] < 200 ? 1 : 0);
+    (filters.priceRange[0] > 0 || filters.priceRange[1] < 200 ? 1 : 0) +
+    (activeTypeFilter !== "all" ? 1 : 0);
 
   const toggleCategory = (value: string) => {
     const updated = filters.categories.includes(value)
@@ -70,7 +79,10 @@ export const AdvancedFilters = ({ filters, onFiltersChange }: AdvancedFiltersPro
     onFiltersChange({ ...filters, conditions: updated });
   };
 
-  const resetFilters = () => onFiltersChange(defaultAdvancedFilters);
+  const resetFilters = () => {
+    onFiltersChange(defaultAdvancedFilters);
+    onTypeFilterChange?.("all");
+  };
 
   return (
     <div className="space-y-3">
@@ -80,7 +92,7 @@ export const AdvancedFilters = ({ filters, onFiltersChange }: AdvancedFiltersPro
         className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors text-sm font-medium"
       >
         <SlidersHorizontal className="h-4 w-4" />
-        Filtres avancés
+        Filtres
         {activeCount > 0 && (
           <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">
             {activeCount}
@@ -91,6 +103,26 @@ export const AdvancedFilters = ({ filters, onFiltersChange }: AdvancedFiltersPro
 
       {isOpen && (
         <div className="bg-card rounded-2xl border border-border p-4 space-y-5 animate-fade-in">
+          {/* Type filter (Sale / Trade) */}
+          <div>
+            <p className="text-sm font-semibold mb-2">Type</p>
+            <div className="flex flex-wrap gap-2">
+              {TYPE_FILTERS.map((tf) => (
+                <button
+                  key={tf.id}
+                  onClick={() => onTypeFilterChange?.(tf.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    activeTypeFilter === tf.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Categories */}
           <div>
             <p className="text-sm font-semibold mb-2">Catégorie</p>

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Compass, Heart, User, Users, ScanLine, Library, BookOpen } from "lucide-react";
+import { Compass, Heart, User, Users, ScanLine, Library } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,9 +12,10 @@ export const BottomNav = memo(() => {
 
   const navItems = [
     { path: "/", icon: Compass, labelKey: "nav.discover", requiresAuth: false },
-    { path: "/games", icon: BookOpen, labelKey: "nav.catalog", requiresAuth: false },
     { path: "/scanner", icon: ScanLine, labelKey: "nav.scan", requiresAuth: true },
+    { path: "/wishlist", icon: Heart, labelKey: "nav.wishlist", requiresAuth: true },
     { path: "/my-collection", icon: Library, labelKey: "nav.collection", requiresAuth: true },
+    { path: "/friends", icon: Users, labelKey: "nav.friends", requiresAuth: true },
     { path: "/profile", icon: User, labelKey: "nav.profile", requiresAuth: true },
   ];
 
@@ -38,8 +39,8 @@ export const BottomNav = memo(() => {
             onClick={(e) => handleNavClick(e, item.path, item.requiresAuth)}
             className={`nav-tab ${isActive ? "active" : ""}`}
           >
-            <Icon className={`nav-icon h-6 w-6 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />
-            <span className="text-xs font-semibold">{t(item.labelKey)}</span>
+            <Icon className={`nav-icon h-5 w-5 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />
+            <span className="text-[10px] font-semibold">{t(item.labelKey)}</span>
           </Link>
         );
       })}
