@@ -34,11 +34,11 @@ interface MyGame {
 const MyGames = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [games, setGames] = useState<MyGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [postModalOpen, setPostModalOpen] = useState(false);
-  const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<MyGame | null>(null);
   const [deleteGameId, setDeleteGameId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
