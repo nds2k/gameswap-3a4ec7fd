@@ -26,69 +26,54 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+    // Auth user
     const supabaseClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "");
-
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header");
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError || !userData.user) throw new Error("User not authenticated");
-    
+
     const user = userData.user;
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const { email, phone, firstName, lastName, iban } = await req.json();
-
-    // Validate inputs
-    if (!email || !firstName || !lastName || !iban) {
-      throw new Error("Champs obligatoires manquants: email, prénom, nom, IBAN");
-    }
-
-    // Validate IBAN format (basic check)
-    const cleanIban = iban.replace(/\s/g, "").toUpperCase();
-    if (cleanIban.length < 15 || cleanIban.length > 34) {
-      throw new Error("Format IBAN invalide");
-    }
-
-    // Check if user already has a connect account
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
+
+    // Check existing profile
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("stripe_connect_account_id, stripe_onboarding_complete")
       .eq("user_id", user.id)
       .single();
 
-    if (profile?.stripe_connect_account_id && profile?.stripe_onboarding_complete) {
-      throw new Error("Vous avez déjà un compte vendeur actif");
-    }
-
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-
     let accountId = profile?.stripe_connect_account_id;
 
+    // If already fully onboarded, don't recreate
+    if (accountId && profile?.stripe_onboarding_complete) {
+      // Check if really complete
+      const existing = await stripe.accounts.retrieve(accountId);
+      if (existing.charges_enabled && existing.payouts_enabled) {
+        return new Response(JSON.stringify({
+          success: true,
+          accountId,
+          alreadyComplete: true,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     if (!accountId) {
-      // Create a new Express connected account
-      logStep("Creating Stripe Connect account");
+      // Create a new Express connected account — Stripe handles all identity/banking
+      logStep("Creating Stripe Connect Express account");
       const account = await stripe.accounts.create({
         type: "express",
-        email: email,
         country: "FR",
+        email: user.email ?? undefined,
         capabilities: {
           transfers: { requested: true },
-        },
-        business_type: "individual",
-        individual: {
-          first_name: firstName,
-          last_name: lastName,
-          email: email,
-          ...(phone ? { phone } : {}),
-        },
-        external_account: {
-          object: "bank_account",
-          country: "FR",
-          currency: "eur",
-          account_number: cleanIban,
         },
         metadata: {
           gameswap_user_id: user.id,
@@ -101,11 +86,14 @@ serve(async (req) => {
       // Save to profile
       await supabaseAdmin
         .from("profiles")
-        .update({ stripe_connect_account_id: accountId })
+        .update({
+          stripe_connect_account_id: accountId,
+          stripe_onboarding_complete: false,
+        })
         .eq("user_id", user.id);
     }
 
-    // Create an account link for onboarding completion
+    // Always generate a fresh onboarding link
     const origin = req.headers.get("origin") || "https://gameswap.lovable.app";
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
@@ -116,10 +104,10 @@ serve(async (req) => {
 
     logStep("Account link created", { url: accountLink.url });
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      accountId, 
-      onboardingUrl: accountLink.url 
+    return new Response(JSON.stringify({
+      success: true,
+      accountId,
+      onboardingUrl: accountLink.url,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
