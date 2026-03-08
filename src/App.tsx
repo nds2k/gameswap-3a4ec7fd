@@ -132,6 +132,11 @@ const AppRoutes = () => {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
+          <Route path="/become-seller" element={<ProtectedRoute><BecomeSeller /></ProtectedRoute>} />
+          <Route path="/become-seller/info" element={<ProtectedRoute><SellerInfo /></ProtectedRoute>} />
+          <Route path="/become-seller/verification" element={<ProtectedRoute><SellerVerification /></ProtectedRoute>} />
+          <Route path="/become-seller/payout" element={<ProtectedRoute><SellerPayout /></ProtectedRoute>} />
+          <Route path="/become-seller/success" element={<ProtectedRoute><SellerSuccess /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
