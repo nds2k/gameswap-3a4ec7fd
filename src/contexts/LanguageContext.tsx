@@ -41,6 +41,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Discover page
     "discover.filters": "Filtres",
+    "discover.searchPlaceholder": "Rechercher un jeu...",
     "discover.all": "Tout",
     "discover.sale": "Vente",
     "discover.trade": "Échange",
