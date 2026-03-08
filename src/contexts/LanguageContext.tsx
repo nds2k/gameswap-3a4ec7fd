@@ -17,6 +17,8 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.wishlist": "Wishlist",
     "nav.forum": "Forum",
     "nav.profile": "Profil",
+    "nav.catalog": "Catalogue",
+    "nav.collection": "Collection",
     
     // Auth
     "auth.welcome": "Bienvenue !",
@@ -321,6 +323,8 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.wishlist": "Wishlist",
     "nav.forum": "Forum",
     "nav.profile": "Profile",
+    "nav.catalog": "Catalog",
+    "nav.collection": "Collection",
     
     // Auth
     "auth.welcome": "Welcome!",

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Compass, Heart, MessageSquare, User, Users, ScanLine } from "lucide-react";
+import { Compass, Heart, User, Users, ScanLine, Library, BookOpen } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,9 +12,9 @@ export const BottomNav = memo(() => {
 
   const navItems = [
     { path: "/", icon: Compass, labelKey: "nav.discover", requiresAuth: false },
-    { path: "/friends", icon: Users, labelKey: "nav.friends", requiresAuth: true },
+    { path: "/games", icon: BookOpen, labelKey: "nav.catalog", requiresAuth: false },
     { path: "/scanner", icon: ScanLine, labelKey: "nav.scan", requiresAuth: true },
-    { path: "/wishlist", icon: Heart, labelKey: "nav.wishlist", requiresAuth: true },
+    { path: "/my-collection", icon: Library, labelKey: "nav.collection", requiresAuth: true },
     { path: "/profile", icon: User, labelKey: "nav.profile", requiresAuth: true },
   ];
 
