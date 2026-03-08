@@ -39,7 +39,7 @@ export const BottomNav = memo(() => {
             className={`nav-tab ${isActive ? "active" : ""}`}
           >
             <Icon className={`nav-icon h-6 w-6 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />
-            <span className="text-xs font-semibold">{t(item.labelKey)}</span>
+            <span className="text-xs font-semibold">{item.label}</span>
           </Link>
         );
       })}
