@@ -102,8 +102,7 @@ const MyGames = () => {
         setSelectedGame(game);
         setSellModalOpen(true);
       } else {
-        setSelectedGame(game);
-        setOnboardingModalOpen(true);
+        navigate("/become-seller");
       }
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
