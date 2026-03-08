@@ -37,6 +37,11 @@ const ProfileAnalytics = lazy(() => import("./pages/ProfileAnalytics"));
 const XPRewards = lazy(() => import("./pages/XPRewards"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Scanner = lazy(() => import("./pages/Scanner"));
+const BecomeSeller = lazy(() => import("./pages/seller/BecomeSeller"));
+const SellerInfo = lazy(() => import("./pages/seller/SellerInfo"));
+const SellerVerification = lazy(() => import("./pages/seller/SellerVerification"));
+const SellerPayout = lazy(() => import("./pages/seller/SellerPayout"));
+const SellerSuccess = lazy(() => import("./pages/seller/SellerSuccess"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
