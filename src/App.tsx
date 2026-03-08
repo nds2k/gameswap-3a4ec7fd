@@ -136,6 +136,10 @@ const AppRoutes = () => {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
+          <Route path="/games" element={<GameCatalog />} />
+          <Route path="/games/:id" element={<GameDetailPage />} />
+          <Route path="/my-collection" element={<ProtectedRoute><MyCollection /></ProtectedRoute>} />
+          <Route path="/history" element={<ProtectedRoute><ActivityHistory /></ProtectedRoute>} />
           <Route path="/become-seller" element={<ProtectedRoute><BecomeSeller /></ProtectedRoute>} />
           <Route path="/become-seller/info" element={<ProtectedRoute><SellerInfo /></ProtectedRoute>} />
           <Route path="/become-seller/verification" element={<ProtectedRoute><SellerVerification /></ProtectedRoute>} />
