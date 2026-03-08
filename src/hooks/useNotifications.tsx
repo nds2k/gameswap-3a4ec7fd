@@ -16,9 +16,23 @@ export interface AppNotification {
 
 const profilesCache = new Map<string, { full_name: string; avatar_url: string | null }>();
 
-// Tracks when the user last cleared notifications, persisted in sessionStorage
-// so it survives navigation within the same tab session
+// Persistent storage keys
 const CLEARED_AT_KEY = "notifications_cleared_at";
+const READ_IDS_KEY = "notifications_read_ids";
+
+// Helper to get/set read notification IDs from localStorage
+const getReadIds = (): Set<string> => {
+  try {
+    const stored = localStorage.getItem(READ_IDS_KEY);
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch { return new Set(); }
+};
+
+const saveReadIds = (ids: Set<string>) => {
+  // Keep max 200 entries to avoid bloating localStorage
+  const arr = [...ids].slice(-200);
+  localStorage.setItem(READ_IDS_KEY, JSON.stringify(arr));
+};
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -27,8 +41,8 @@ export const useNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [pushPermission, setPushPermission] = useState<NotificationPermission>("default");
   const lastNotificationRef = useRef<string | null>(null);
-  // Ref to hold the cleared-at timestamp so fetchNotifications always uses latest value
-  const clearedAtRef = useRef<string | null>(sessionStorage.getItem(CLEARED_AT_KEY));
+  const clearedAtRef = useRef<string | null>(localStorage.getItem(CLEARED_AT_KEY));
+  const readIdsRef = useRef<Set<string>>(getReadIds());
 
   useEffect(() => {
     if ("Notification" in window) setPushPermission(Notification.permission);
@@ -49,79 +63,74 @@ export const useNotifications = () => {
 
     try {
       const clearedAt = clearedAtRef.current;
+      const readIds = readIdsRef.current;
 
-      // Count unread messages not sent by the current user
-      // If user cleared notifications, only count messages newer than the cleared timestamp
+      // Unread messages
       let messagesQuery = supabase
         .from("messages").select("*", { count: "exact", head: true })
         .is("read_at", null).neq("sender_id", user.id);
-
-      if (clearedAt) {
-        messagesQuery = messagesQuery.gt("created_at", clearedAt);
-      }
-
+      if (clearedAt) messagesQuery = messagesQuery.gt("created_at", clearedAt);
       const { count: messagesCount } = await messagesQuery;
 
-      const mockNotifications: AppNotification[] = [];
+      const allNotifications: AppNotification[] = [];
 
       if (messagesCount && messagesCount > 0) {
-        mockNotifications.push({
-          id: "msg-unread", type: "message",
+        const id = "msg-unread";
+        allNotifications.push({
+          id, type: "message",
           title: "Nouveaux messages",
           body: `Vous avez ${messagesCount} message${messagesCount > 1 ? "s" : ""} non lu${messagesCount > 1 ? "s" : ""}`,
-          read: false, created_at: new Date().toISOString(),
+          read: readIds.has(id),
+          created_at: new Date().toISOString(),
         });
       }
 
+      // Pending payment requests
       let paymentQuery = supabase
         .from("transactions").select("*", { count: "exact", head: true })
         .eq("buyer_id", user.id).eq("method", "remote").eq("status", "pending")
         .gt("expires_at", new Date().toISOString());
-
-      if (clearedAt) {
-        paymentQuery = paymentQuery.gt("created_at", clearedAt);
-      }
-
+      if (clearedAt) paymentQuery = paymentQuery.gt("created_at", clearedAt);
       const { count: paymentCount } = await paymentQuery;
 
       if (paymentCount && paymentCount > 0) {
-        mockNotifications.push({
-          id: "payment-pending", type: "payment_request",
+        const id = "payment-pending";
+        allNotifications.push({
+          id, type: "payment_request",
           title: "Demande de paiement",
           body: `Vous avez ${paymentCount} demande${paymentCount > 1 ? "s" : ""} de paiement en attente`,
-          read: false, created_at: new Date().toISOString(),
+          read: readIds.has(id),
+          created_at: new Date().toISOString(),
           data: { route: "/payment-requests" },
         });
       }
 
+      // Favorite notifications (these have DB-level read status)
       let favQuery = supabase
         .from("favorite_notifications")
         .select("*")
         .eq("user_id", user.id)
-        .eq("read", false)
         .order("created_at", { ascending: false })
         .limit(10);
-
-      if (clearedAt) {
-        favQuery = favQuery.gt("created_at", clearedAt);
-      }
-
+      if (clearedAt) favQuery = favQuery.gt("created_at", clearedAt);
       const { data: favNotifs } = await favQuery;
 
       if (favNotifs && favNotifs.length > 0) {
         favNotifs.forEach((n: any) => {
-          mockNotifications.push({
-            id: `fav-${n.id}`, type: "favorite_update",
+          const id = `fav-${n.id}`;
+          allNotifications.push({
+            id, type: "favorite_update",
             title: "Annonce mise à jour",
             body: n.message,
-            read: false, created_at: n.created_at,
+            read: n.read || readIds.has(id),
+            created_at: n.created_at,
             data: { listingId: n.listing_id },
           });
         });
       }
 
-      setNotifications(mockNotifications);
-      setUnreadCount(mockNotifications.filter((n) => !n.read).length);
+      setNotifications(allNotifications);
+      setUnreadCount(allNotifications.filter((n) => !n.read).length);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     } finally {
@@ -234,32 +243,63 @@ export const useNotifications = () => {
     }
   }, [user, fetchNotifications, fetchProfiles, showPushNotification, playNotificationSound]);
 
-  const markAsRead = useCallback((notificationId: string) => {
+  const markAsRead = useCallback(async (notificationId: string) => {
+    // Update local state immediately
+    readIdsRef.current.add(notificationId);
+    saveReadIds(readIdsRef.current);
+
     setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)));
     setUnreadCount((prev) => Math.max(0, prev - 1));
-  }, []);
 
-  const markAllAsRead = useCallback(() => {
-    // Stamp the exact moment the user cleared notifications.
-    // Any notification created before this timestamp will be ignored on future fetches,
-    // preventing the red badge from reappearing after navigation.
+    // Persist to DB for favorite_notifications
+    if (notificationId.startsWith("fav-") && user) {
+      const dbId = notificationId.replace("fav-", "");
+      await supabase
+        .from("favorite_notifications")
+        .update({ read: true })
+        .eq("id", dbId)
+        .eq("user_id", user.id);
+    }
+
+    // For message notifications, mark messages as read
+    if (notificationId === "msg-unread" && user) {
+      const now = new Date().toISOString();
+      await supabase
+        .from("messages")
+        .update({ read_at: now })
+        .is("read_at", null)
+        .neq("sender_id", user.id);
+    }
+  }, [user]);
+
+  const markAllAsRead = useCallback(async () => {
     const now = new Date().toISOString();
     clearedAtRef.current = now;
-    sessionStorage.setItem(CLEARED_AT_KEY, now);
+    localStorage.setItem(CLEARED_AT_KEY, now);
+
+    // Mark all current notification IDs as read
+    notifications.forEach((n) => readIdsRef.current.add(n.id));
+    saveReadIds(readIdsRef.current);
 
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
 
-    // Also mark messages as read in DB
     if (user) {
-      supabase
+      // Mark messages as read in DB
+      await supabase
         .from("messages")
         .update({ read_at: now })
         .is("read_at", null)
-        .neq("sender_id", user.id)
-        .then(() => {});
+        .neq("sender_id", user.id);
+
+      // Mark favorite notifications as read in DB
+      await supabase
+        .from("favorite_notifications")
+        .update({ read: true })
+        .eq("user_id", user.id)
+        .eq("read", false);
     }
-  }, [user]);
+  }, [user, notifications]);
 
   const requestPermission = useCallback(async () => {
     if ("Notification" in window) {

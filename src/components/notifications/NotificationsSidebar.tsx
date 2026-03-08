@@ -141,13 +141,18 @@ export const NotificationsSidebar = ({ open, onOpenChange }: NotificationsSideba
                 <button
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className="w-full p-4 flex gap-3 text-left hover:bg-muted/50 transition-colors"
+                  className={`w-full p-4 flex gap-3 text-left hover:bg-muted/50 transition-colors ${
+                    !notification.read ? "bg-primary/5" : ""
+                  }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center shrink-0">
+                  <div className="relative w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center shrink-0">
                     {getNotificationIcon(notification.type)}
+                    {!notification.read && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{notification.title}</p>
+                    <p className={`text-sm ${!notification.read ? "font-semibold" : "font-medium text-muted-foreground"}`}>{notification.title}</p>
                     <p className="text-sm text-muted-foreground line-clamp-2">{notification.body}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: fr })}
