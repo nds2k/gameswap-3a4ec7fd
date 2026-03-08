@@ -11,11 +11,11 @@ export const BottomNav = memo(() => {
   const { t } = useLanguage();
 
   const navItems = [
-    { path: "/", icon: Compass, labelKey: "nav.discover", requiresAuth: false },
-    { path: "/friends", icon: Users, labelKey: "nav.friends", requiresAuth: true },
-    { path: "/scanner", icon: ScanLine, labelKey: "nav.scan", requiresAuth: true },
-    { path: "/wishlist", icon: Heart, labelKey: "nav.wishlist", requiresAuth: true },
-    { path: "/profile", icon: User, labelKey: "nav.profile", requiresAuth: true },
+    { path: "/", icon: Compass, label: t("nav.discover"), requiresAuth: false },
+    { path: "/games", icon: Search, label: "Catalogue", requiresAuth: false },
+    { path: "/scanner", icon: ScanLine, label: t("nav.scan"), requiresAuth: true },
+    { path: "/my-collection", icon: BookOpen, label: "Collection", requiresAuth: true },
+    { path: "/profile", icon: User, label: t("nav.profile"), requiresAuth: true },
   ];
 
   const handleNavClick = (e: React.MouseEvent, path: string, requiresAuth: boolean) => {
