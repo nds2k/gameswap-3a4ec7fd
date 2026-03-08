@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Compass, Heart, BookOpen, User, Users, ScanLine, Search } from "lucide-react";
+import { Compass, Heart, MessageSquare, User, Users, ScanLine } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,11 +11,11 @@ export const BottomNav = memo(() => {
   const { t } = useLanguage();
 
   const navItems = [
-    { path: "/", icon: Compass, label: t("nav.discover"), requiresAuth: false },
-    { path: "/games", icon: Search, label: "Catalogue", requiresAuth: false },
-    { path: "/scanner", icon: ScanLine, label: t("nav.scan"), requiresAuth: true },
-    { path: "/my-collection", icon: BookOpen, label: "Collection", requiresAuth: true },
-    { path: "/profile", icon: User, label: t("nav.profile"), requiresAuth: true },
+    { path: "/", icon: Compass, labelKey: "nav.discover", requiresAuth: false },
+    { path: "/friends", icon: Users, labelKey: "nav.friends", requiresAuth: true },
+    { path: "/scanner", icon: ScanLine, labelKey: "nav.scan", requiresAuth: true },
+    { path: "/wishlist", icon: Heart, labelKey: "nav.wishlist", requiresAuth: true },
+    { path: "/profile", icon: User, labelKey: "nav.profile", requiresAuth: true },
   ];
 
   const handleNavClick = (e: React.MouseEvent, path: string, requiresAuth: boolean) => {
@@ -39,7 +39,7 @@ export const BottomNav = memo(() => {
             className={`nav-tab ${isActive ? "active" : ""}`}
           >
             <Icon className={`nav-icon h-6 w-6 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />
-            <span className="text-xs font-semibold">{item.label}</span>
+            <span className="text-xs font-semibold">{t(item.labelKey)}</span>
           </Link>
         );
       })}

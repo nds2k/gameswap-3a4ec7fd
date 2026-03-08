@@ -14,38 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      activity_history: {
-        Row: {
-          action_type: string
-          created_at: string
-          game_id: string | null
-          id: string
-          user_id: string
-        }
-        Insert: {
-          action_type: string
-          created_at?: string
-          game_id?: string | null
-          id?: string
-          user_id: string
-        }
-        Update: {
-          action_type?: string
-          created_at?: string
-          game_id?: string | null
-          id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_history_game_id_fkey"
-            columns: ["game_id"]
-            isOneToOne: false
-            referencedRelation: "master_games"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       admin_logs: {
         Row: {
           action: string
