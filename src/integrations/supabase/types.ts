@@ -676,6 +676,7 @@ export type Database = {
       }
       master_games: {
         Row: {
+          bgg_id: number | null
           category: string | null
           cover_image_url: string | null
           created_at: string | null
@@ -685,14 +686,18 @@ export type Database = {
           min_age: number | null
           min_players: number | null
           normalized_title: string
+          num_reviews: number | null
           play_time: string | null
           popularity_score: number | null
           publisher: string | null
+          rating: number | null
           release_year: number | null
+          thumbnail_url: string | null
           title: string
           updated_at: string | null
         }
         Insert: {
+          bgg_id?: number | null
           category?: string | null
           cover_image_url?: string | null
           created_at?: string | null
@@ -702,14 +707,18 @@ export type Database = {
           min_age?: number | null
           min_players?: number | null
           normalized_title: string
+          num_reviews?: number | null
           play_time?: string | null
           popularity_score?: number | null
           publisher?: string | null
+          rating?: number | null
           release_year?: number | null
+          thumbnail_url?: string | null
           title: string
           updated_at?: string | null
         }
         Update: {
+          bgg_id?: number | null
           category?: string | null
           cover_image_url?: string | null
           created_at?: string | null
@@ -719,10 +728,13 @@ export type Database = {
           min_age?: number | null
           min_players?: number | null
           normalized_title?: string
+          num_reviews?: number | null
           play_time?: string | null
           popularity_score?: number | null
           publisher?: string | null
+          rating?: number | null
           release_year?: number | null
+          thumbnail_url?: string | null
           title?: string
           updated_at?: string | null
         }
