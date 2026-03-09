@@ -678,6 +678,7 @@ export type Database = {
         Row: {
           bgg_id: number | null
           category: string | null
+          complexity: number | null
           cover_image_url: string | null
           created_at: string | null
           description: string | null
@@ -699,6 +700,7 @@ export type Database = {
         Insert: {
           bgg_id?: number | null
           category?: string | null
+          complexity?: number | null
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
@@ -720,6 +722,7 @@ export type Database = {
         Update: {
           bgg_id?: number | null
           category?: string | null
+          complexity?: number | null
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
@@ -1005,6 +1008,51 @@ export type Database = {
             columns: ["trade_id"]
             isOneToOne: false
             referencedRelation: "trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_history: {
+        Row: {
+          condition: string | null
+          created_at: string
+          game_id: string
+          id: string
+          listing_id: string | null
+          price: number
+          sold_at: string
+        }
+        Insert: {
+          condition?: string | null
+          created_at?: string
+          game_id: string
+          id?: string
+          listing_id?: string | null
+          price: number
+          sold_at?: string
+        }
+        Update: {
+          condition?: string | null
+          created_at?: string
+          game_id?: string
+          id?: string
+          listing_id?: string | null
+          price?: number
+          sold_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_history_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "master_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_history_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "games"
             referencedColumns: ["id"]
           },
         ]

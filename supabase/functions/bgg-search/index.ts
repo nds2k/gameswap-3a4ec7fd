@@ -10,15 +10,14 @@ function normalizeTitle(title: string): string {
   return title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, "").trim();
 }
 
-async function searchBGG(query: string): Promise<any[]> {
+async function searchBGG(query: string): Promise<string[]> {
   const url = `https://boardgamegeek.com/xmlapi2/search?query=${encodeURIComponent(query)}&type=boardgame`;
   const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
   const xml = await res.text();
-
   const ids: string[] = [];
   const regex = /id="(\d+)"/g;
   let match;
-  while ((match = regex.exec(xml)) !== null && ids.length < 5) {
+  while ((match = regex.exec(xml)) !== null && ids.length < 8) {
     ids.push(match[1]);
   }
   return ids;
@@ -45,6 +44,7 @@ async function fetchBGGDetails(bggId: string): Promise<any | null> {
     const category = xml.match(/<link type="boardgamecategory"[^>]*value="([^"]+)"/)?.[1];
     const rating = xml.match(/<average value="([^"]+)"/)?.[1];
     const numRatings = xml.match(/<usersrated value="(\d+)"/)?.[1];
+    const complexity = xml.match(/<averageweight value="([^"]+)"/)?.[1];
 
     return {
       bgg_id: parseInt(bggId),
@@ -62,6 +62,7 @@ async function fetchBGGDetails(bggId: string): Promise<any | null> {
       play_time: playTime || null,
       rating: rating ? parseFloat(rating) : 0,
       num_reviews: numRatings ? parseInt(numRatings) : 0,
+      complexity: complexity ? parseFloat(complexity) : null,
     };
   } catch (e) {
     console.error("BGG detail fetch failed:", e);
@@ -84,12 +85,8 @@ serve(async (req) => {
 
     // If fetching a specific BGG game by ID
     if (bgg_id) {
-      // Check if already cached
       const { data: existing } = await supabaseAdmin
-        .from("master_games")
-        .select("*")
-        .eq("bgg_id", parseInt(bgg_id))
-        .maybeSingle();
+        .from("master_games").select("*").eq("bgg_id", parseInt(bgg_id)).maybeSingle();
 
       if (existing) {
         return new Response(JSON.stringify({ game: existing }), {
@@ -105,13 +102,9 @@ serve(async (req) => {
       }
 
       const { data: inserted, error } = await supabaseAdmin
-        .from("master_games")
-        .insert(details)
-        .select()
-        .single();
+        .from("master_games").insert(details).select().single();
 
       if (error) {
-        // Might be duplicate bgg_id race condition
         const { data: fallback } = await supabaseAdmin
           .from("master_games").select("*").eq("bgg_id", parseInt(bgg_id)).maybeSingle();
         if (fallback) {
@@ -137,13 +130,11 @@ serve(async (req) => {
     // 1. Search internal DB first
     const normalizedQuery = normalizeTitle(query);
     const { data: internalResults } = await supabaseAdmin
-      .from("master_games")
-      .select("*")
+      .from("master_games").select("*")
       .ilike("normalized_title", `%${normalizedQuery}%`)
       .order("popularity_score", { ascending: false })
       .limit(10);
 
-    // If we have enough internal results, return them
     if (internalResults && internalResults.length >= 3) {
       return new Response(JSON.stringify({ games: internalResults, source: "internal" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -158,21 +149,16 @@ serve(async (req) => {
       });
     }
 
-    // Fetch details for each BGG result
     const games: any[] = [...(internalResults || [])];
     const existingBggIds = new Set(games.filter(g => g.bgg_id).map(g => g.bgg_id));
 
     for (const id of bggIds) {
       if (existingBggIds.has(parseInt(id))) continue;
 
-      // Check if already in DB
       const { data: existing } = await supabaseAdmin
         .from("master_games").select("*").eq("bgg_id", parseInt(id)).maybeSingle();
 
-      if (existing) {
-        games.push(existing);
-        continue;
-      }
+      if (existing) { games.push(existing); continue; }
 
       const details = await fetchBGGDetails(id);
       if (!details) continue;
@@ -181,7 +167,6 @@ serve(async (req) => {
         .from("master_games").insert(details).select().single();
 
       if (error) {
-        // Race condition - try to fetch
         const { data: fallback } = await supabaseAdmin
           .from("master_games").select("*").eq("bgg_id", parseInt(id)).maybeSingle();
         if (fallback) games.push(fallback);

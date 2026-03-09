@@ -115,9 +115,19 @@ const Scanner = () => {
 
   const handleUseForPost = () => {
     if (!scannedGame) return;
-    // Pass full game data (supports both old barcode_catalog and new master_games format)
     sessionStorage.setItem("scanned_game", JSON.stringify(scannedGame));
     navigate("/", { state: { openPostModal: true } });
+  };
+
+  const handleViewGame = () => {
+    if (!scannedGame) return;
+    // If scanned game has an id from master_games, navigate to detail page
+    const gameId = (scannedGame as any).id;
+    if (gameId) {
+      navigate(`/games/${gameId}`);
+    } else {
+      toast({ title: "Page indisponible", description: "Ce jeu n'a pas encore de page détaillée" });
+    }
   };
 
   return (
@@ -251,8 +261,11 @@ const Scanner = () => {
               <Button variant="outline" className="flex-1" onClick={() => { setScannedGame(null); }}>
                 Nouveau scan
               </Button>
-              <Button variant="gameswap" className="flex-1" onClick={handleUseForPost}>
-                Publier ce jeu
+              <Button variant="gameswap" className="flex-1" onClick={handleViewGame}>
+                Voir la fiche
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={handleUseForPost}>
+                Publier
               </Button>
             </div>
           </div>
