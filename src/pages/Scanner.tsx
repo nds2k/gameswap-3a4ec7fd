@@ -261,8 +261,11 @@ const Scanner = () => {
               <Button variant="outline" className="flex-1" onClick={() => { setScannedGame(null); }}>
                 Nouveau scan
               </Button>
-              <Button variant="gameswap" className="flex-1" onClick={handleUseForPost}>
-                Publier ce jeu
+              <Button variant="gameswap" className="flex-1" onClick={handleViewGame}>
+                Voir la fiche
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={handleUseForPost}>
+                Publier
               </Button>
             </div>
           </div>
