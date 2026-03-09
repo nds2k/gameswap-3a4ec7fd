@@ -68,55 +68,40 @@ const GameDetailPage = () => {
         setGame(gameData as unknown as GameDetail);
 
         // Parallel fetches
-        const promises: Promise<any>[] = [];
-
-        // Check collection
-        if (user) {
-          promises.push(
-            supabase.from("user_collections").select("id")
+        const collectionPromise = user
+          ? supabase.from("user_collections").select("id")
               .eq("user_id", user.id).eq("game_id", id).maybeSingle()
               .then(({ data }) => setInCollection(!!data))
-          );
-        }
+          : Promise.resolve();
 
-        // Fetch sales history for StockX chart
-        promises.push(
-          supabase.from("sales_history").select("*")
-            .eq("game_id", id).order("sold_at", { ascending: true })
-            .then(({ data }) => {
-              if (data && data.length > 0) {
-                setSalesData(data.map((s: any) => ({
-                  date: new Date(s.sold_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }),
-                  price: Number(s.price),
-                  rawDate: new Date(s.sold_at),
-                })));
-                // Last 5 sales
-                setRecentSales(data.slice(-5).reverse().map((s: any) => ({
-                  id: s.id, price: Number(s.price), condition: s.condition, sold_at: s.sold_at,
-                })));
-              }
-            })
-        );
+        const salesPromise = supabase.from("sales_history").select("*")
+          .eq("game_id", id).order("sold_at", { ascending: true })
+          .then(({ data }) => {
+            if (data && data.length > 0) {
+              setSalesData(data.map((s: any) => ({
+                date: new Date(s.sold_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }),
+                price: Number(s.price),
+                rawDate: new Date(s.sold_at),
+              })));
+              setRecentSales(data.slice(-5).reverse().map((s: any) => ({
+                id: s.id, price: Number(s.price), condition: s.condition, sold_at: s.sold_at,
+              })));
+            }
+          });
 
-        // Fetch marketplace listings
-        promises.push(
-          supabase.from("games").select("id, title, price, game_type, image_url, condition, status")
-            .eq("status", "available")
-            .ilike("title", `%${gameData.title.substring(0, 20)}%`)
-            .limit(6)
-            .then(({ data }) => setListings(data || []))
-        );
+        const listingsPromise = supabase.from("games").select("id, title, price, game_type, image_url, condition, status")
+          .eq("status", "available")
+          .ilike("title", `%${gameData.title.substring(0, 20)}%`)
+          .limit(6)
+          .then(({ data }) => setListings(data || []));
 
-        // Log activity
-        if (user) {
-          promises.push(
-            supabase.from("activity_history").insert({
+        const activityPromise = user
+          ? supabase.from("activity_history").insert({
               user_id: user.id, game_id: id, action_type: "view",
             }).then(() => {})
-          );
-        }
+          : Promise.resolve();
 
-        await Promise.all(promises);
+        await Promise.all([collectionPromise, salesPromise, listingsPromise, activityPromise]);
       } catch (err) {
         console.error(err);
       } finally {
