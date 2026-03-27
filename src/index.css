@@ -1,0 +1,229 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    /* GameSwap Violet & Rose Theme */
+    --background: 270 20% 97%;
+    --foreground: 260 20% 10%;
+
+    --card: 270 15% 98%;
+    --card-foreground: 260 20% 10%;
+
+    --popover: 270 15% 98%;
+    --popover-foreground: 260 20% 10%;
+
+    /* Primary Violet */
+    --primary: 270 60% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary */
+    --secondary: 270 15% 94%;
+    --secondary-foreground: 260 15% 15%;
+
+    --muted: 270 10% 92%;
+    --muted-foreground: 260 10% 40%;
+
+    --accent: 330 65% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 270 15% 88%;
+    --input: 270 15% 92%;
+    --ring: 270 60% 55%;
+
+    --radius: 1rem;
+
+    /* Custom GameSwap tokens */
+    --gameswap-primary: 270 60% 55%;
+    --gameswap-primary-hover: 270 60% 48%;
+    --gameswap-cream: 270 20% 97%;
+    --gameswap-cream-dark: 270 15% 92%;
+    --gameswap-blob: 280 30% 90%;
+    --gameswap-text-dark: 260 20% 10%;
+    --gameswap-text-muted: 260 10% 50%;
+    --gameswap-accent: 330 65% 55%;
+
+    /* Bottom nav */
+    --nav-background: 0 0% 100%;
+    --nav-inactive: 260 10% 50%;
+    --nav-active: 270 60% 55%;
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -4px hsl(210 30% 20% / 0.08);
+    --shadow-card: 0 2px 12px -2px hsl(210 30% 20% / 0.06);
+    --shadow-elevated: 0 8px 30px -8px hsl(210 30% 20% / 0.12);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 270 15% 8%;
+    --foreground: 270 15% 95%;
+
+    --card: 270 15% 12%;
+    --card-foreground: 270 15% 95%;
+
+    --popover: 270 15% 12%;
+    --popover-foreground: 270 15% 95%;
+
+    --primary: 270 60% 60%;
+    --primary-foreground: 270 15% 5%;
+
+    --secondary: 270 12% 16%;
+    --secondary-foreground: 270 15% 90%;
+
+    --muted: 270 12% 18%;
+    --muted-foreground: 270 10% 60%;
+
+    --accent: 330 55% 60%;
+    --accent-foreground: 270 15% 5%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 270 12% 20%;
+    --input: 270 12% 18%;
+    --ring: 270 60% 60%;
+
+    --gameswap-primary: 270 60% 60%;
+    --gameswap-primary-hover: 270 60% 65%;
+    --gameswap-cream: 270 15% 8%;
+    --gameswap-cream-dark: 270 15% 12%;
+    --gameswap-blob: 280 25% 15%;
+    --gameswap-text-dark: 270 15% 95%;
+    --gameswap-text-muted: 270 10% 60%;
+    --gameswap-accent: 330 50% 60%;
+
+    --nav-background: 270 15% 10%;
+    --nav-inactive: 270 10% 50%;
+    --nav-active: 270 60% 60%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply text-foreground font-nunito antialiased;
+    background: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background: hsl(var(--background));
+  }
+}
+
+@layer components {
+  /* Decorative blobs */
+  .blob {
+    @apply absolute rounded-full opacity-60 pointer-events-none;
+    background: hsl(var(--gameswap-blob));
+  }
+
+  /* Filter pill styles */
+  .filter-pill {
+    @apply px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer;
+  }
+
+  .filter-pill-active {
+    @apply bg-foreground text-background;
+  }
+
+  .filter-pill-inactive {
+    @apply bg-card text-foreground border border-border hover:border-primary/50;
+  }
+
+  /* Bottom navigation */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border;
+    @apply flex justify-around items-center py-2 px-4 z-50;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .nav-tab {
+    @apply flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-all duration-200;
+    @apply text-muted-foreground hover:text-foreground;
+  }
+
+  .nav-tab.active {
+    @apply text-primary;
+  }
+
+  .nav-tab.active .nav-icon {
+    @apply scale-110;
+  }
+
+  /* Search input */
+  .search-input {
+    @apply w-full max-w-xl bg-card border border-border rounded-full px-5 py-3;
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary;
+    @apply transition-all duration-200;
+  }
+
+  /* Game card */
+  .game-card {
+    @apply bg-card rounded-2xl overflow-hidden shadow-sm border border-border;
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  /* Page container with bottom nav spacing */
+  .page-container {
+    @apply min-h-screen pb-24;
+  }
+}
+
+@layer utilities {
+  .font-nunito {
+    font-family: 'Nunito', system-ui, sans-serif;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes floatSlow {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-35px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 10s ease-in-out infinite;
+}
