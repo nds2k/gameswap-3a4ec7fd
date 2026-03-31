@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DecorativeBlobs } from "@/components/layout/DecorativeBlobs";
-import { Mail, Lock, User, ArrowRight, Plus, Users, RefreshCw, AtSign, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, AtSign, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import logo from "@/assets/gameswap-logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,25 +27,22 @@ const Auth = () => {
       setUsernameAvailable(null);
       return;
     }
-
     const isValidFormat = /^[a-zA-Z0-9_]+$/.test(username);
     if (!isValidFormat) {
       setUsernameAvailable(false);
       return;
     }
-
     setCheckingUsername(true);
     const timer = setTimeout(async () => {
       try {
         const { data, error } = await supabase.rpc("is_username_available", { check_username: username });
         if (!error) setUsernameAvailable(data);
       } catch (err) {
-        console.error("Error checking username:", err);
+        console.error(err);
       } finally {
         setCheckingUsername(false);
       }
     }, 400);
-
     return () => clearTimeout(timer);
   }, [username, isLogin]);
 
@@ -65,48 +62,56 @@ const Auth = () => {
         toast({ title: "Pseudo indisponible", description: "Choisissez un autre pseudo.", variant: "destructive" });
         return;
       }
-    }
 
-    setLoading(true);
-    try {
-      if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          if (error.message.includes("User not found")) {
-            toast({ title: "Compte introuvable", description: "Aucun compte avec cet email. Créez-en un !", variant: "destructive" });
-          } else {
-            toast({ title: "Erreur de connexion", description: error.message, variant: "destructive" });
-          }
-          return;
-        }
-        navigate("/");
-      } else {
-        const { data: signUpData, error } = await supabase.auth.signUp({
+      setLoading(true);
+      try {
+        // 1️⃣ Sign up
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName, username: username } },
+          options: { data: { full_name: fullName } },
         });
 
-        if (error) {
-          if (error.message.includes("already registered")) {
-            toast({ title: "Compte existant", description: "Email déjà utilisé.", variant: "destructive" });
-          } else {
-            toast({ title: "Erreur d'inscription", description: error.message, variant: "destructive" });
-          }
+        if (signUpError) {
+          toast({ title: "Erreur signup", description: signUpError.message, variant: "destructive" });
           return;
         }
 
-        // Auto-login après signup
-        if (signUpData?.user) {
-          const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-          if (loginError) {
-            toast({ title: "Erreur login", description: loginError.message, variant: "destructive" });
-          } else {
-            toast({ title: "Compte créé !", description: "Bienvenue !" });
-            navigate("/");
-          }
+        // 2️⃣ Create profile
+        const { error: profileError } = await supabase.from("profiles").insert([{ id: signUpData.user?.id, username, full_name: fullName }]);
+        if (profileError) {
+          toast({ title: "Erreur profil", description: profileError.message, variant: "destructive" });
+          return;
         }
+
+        // 3️⃣ Auto-login
+        const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+        if (loginError) {
+          toast({ title: "Erreur login", description: loginError.message, variant: "destructive" });
+          return;
+        }
+
+        toast({ title: "Compte créé !", description: "Bienvenue !" });
+        navigate("/");
+      } finally {
+        setLoading(false);
       }
+      return;
+    }
+
+    // LOGIN flow
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          toast({ title: "Compte introuvable", description: "Email ou mot de passe incorrect. Créez un compte si vous n'en avez pas.", variant: "destructive" });
+        } else {
+          toast({ title: "Erreur login", description: error.message, variant: "destructive" });
+        }
+        return;
+      }
+      navigate("/");
     } finally {
       setLoading(false);
     }
@@ -154,7 +159,6 @@ const Auth = () => {
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" />
           </div>
-
           <div>
             <Label htmlFor="password">Mot de passe</Label>
             <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1" />
