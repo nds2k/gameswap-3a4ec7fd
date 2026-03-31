@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DecorativeBlobs } from "@/components/layout/DecorativeBlobs";
-import { Mail, Lock, User, ArrowRight, Plus, Users, RefreshCw, AtSign, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, AtSign, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import logo from "@/assets/gameswap-logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,15 +23,14 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check username availability
+  // Vérification pseudo
   useEffect(() => {
     if (isLogin || !username.trim() || username.length < 3) {
       setUsernameAvailable(null);
       return;
     }
 
-    const isValidFormat = /^[a-zA-Z0-9_]+$/.test(username);
-    if (!isValidFormat) {
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       setUsernameAvailable(false);
       return;
     }
@@ -76,8 +75,15 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await signInWithEmail(email, password);
         if (error) {
-          // refresh app state if login fails
-          window.location.reload();
+          if (error.message.includes("Invalid login credentials") || error.message.includes("NOT_FOUND")) {
+            toast({
+              title: "Compte introuvable",
+              description: "Email ou mot de passe incorrect. Créez un compte si vous n'en avez pas.",
+              variant: "destructive",
+            });
+          } else {
+            toast({ title: "Erreur de connexion", description: error.message, variant: "destructive" });
+          }
           return;
         } else {
           navigate("/");
@@ -86,7 +92,7 @@ const Auth = () => {
         const { error } = await signUpWithEmail(email, password, fullName, username);
         if (error) {
           if (error.message.includes("already registered")) {
-            toast({ title: "Compte existant", description: "Email déjà utilisé.", variant: "destructive" });
+            toast({ title: "Compte existant", description: "Email déjà utilisé. Connectez-vous.", variant: "destructive" });
           } else if (error.message.includes("duplicate") || error.message.includes("username")) {
             toast({ title: "Pseudo indisponible", description: "Choisissez un autre pseudo.", variant: "destructive" });
           } else {
@@ -105,16 +111,13 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <DecorativeBlobs />
-
       <div className="mb-8 animate-fade-in">
         <img src={logo} alt="GameSwap" className="w-20 h-20 rounded-2xl shadow-lg" />
       </div>
-
       <div className="text-center mb-8 animate-fade-in">
         <h1 className="text-3xl font-bold mb-2">Bienvenue !</h1>
         <p className="text-muted-foreground">Le marché privé dédié à votre groupe de jeux de société.</p>
       </div>
-
       <div className="w-full max-w-md bg-card rounded-3xl border border-border p-6 shadow-soft animate-slide-up">
         <div className="flex items-center gap-2 mb-6">
           <User className="h-5 w-5 text-primary" />
@@ -148,12 +151,10 @@ const Auth = () => {
             <Label htmlFor="password">Mot de passe</Label>
             <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1" />
           </div>
-
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Chargement..." : isLogin ? "Se connecter" : "Continuer"} <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         </form>
-
         <p className="text-center text-sm text-muted-foreground mt-6">
           {isLogin ? "Pas encore de compte ?" : "Déjà un compte ?"}{" "}
           <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-primary font-semibold hover:underline">
