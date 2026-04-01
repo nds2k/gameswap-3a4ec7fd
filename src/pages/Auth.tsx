@@ -12,44 +12,70 @@ import { supabase } from "@/integrations/supabase/client";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Vérifie la disponibilité d'un username sans planter si aucune ligne n'existe.
- * `.single()` lève une erreur PGRST116 quand 0 ligne → on utilise `.maybeSingle()` à la place.
- */
 const checkUsernameAvailability = async (username: string): Promise<boolean> => {
   const { data, error } = await supabase
     .from("profiles")
     .select("id")
     .eq("username", username)
-    .maybeSingle(); // ✅ retourne null si 0 ligne, pas d'erreur
-
+    .maybeSingle();
   if (error) throw error;
-  return data === null; // true = disponible
+  return data === null;
+};
+
+const getFriendlyError = (message: string): string => {
+  if (message.includes("already registered") || message.includes("User already registered"))
+    return "Cet email est déjà utilisé. Connectez-vous ou utilisez un autre email.";
+  if (message.includes("Invalid login credentials"))
+    return "Email ou mot de passe incorrect.";
+  if (message.includes("Email not confirmed"))
+    return "Veuillez confirmer votre email avant de vous connecter.";
+  if (message.includes("Password should be at least"))
+    return "Le mot de passe doit contenir au moins 6 caractères.";
+  if (message.includes("duplicate key") && message.includes("username"))
+    return "Ce pseudo est déjà pris. Choisissez-en un autre.";
+  if (message.includes("duplicate key") && message.includes("email"))
+    return "Cet email est déjà utilisé.";
+  return "Une erreur inattendue s'est produite. Veuillez réessayer.";
 };
 
 /**
- * Traduit les messages d'erreur Supabase en messages user-friendly.
+ * ✅ FIX DÉCONNEXION PRINCIPAL
+ *
+ * Problème : navigate("/") s'exécute immédiatement après signUp/signIn,
+ * mais onAuthStateChange dans AuthContext n'a pas encore eu le temps de
+ * mettre à jour user/session. La page d'accueil trouve user=null et
+ * redirige vers /auth.
+ *
+ * Solution : on attend que la session soit confirmée avant de naviguer.
+ * Timeout de sécurité à 3s pour ne pas bloquer indéfiniment.
  */
-const getFriendlyError = (message: string): string => {
-  if (message.includes("already registered") || message.includes("User already registered")) {
-    return "Cet email est déjà utilisé. Connectez-vous ou utilisez un autre email.";
-  }
-  if (message.includes("Invalid login credentials")) {
-    return "Email ou mot de passe incorrect.";
-  }
-  if (message.includes("Email not confirmed")) {
-    return "Veuillez confirmer votre email avant de vous connecter.";
-  }
-  if (message.includes("Password should be at least")) {
-    return "Le mot de passe doit contenir au moins 6 caractères.";
-  }
-  if (message.includes("duplicate key") && message.includes("username")) {
-    return "Ce pseudo est déjà pris. Choisissez-en un autre.";
-  }
-  if (message.includes("duplicate key") && message.includes("email")) {
-    return "Cet email est déjà utilisé.";
-  }
-  return "Une erreur inattendue s'est produite. Veuillez réessayer.";
+const navigateWhenSessionReady = (navigate: ReturnType<typeof useNavigate>): Promise<void> => {
+  return new Promise((resolve) => {
+    // Vérifier si la session est déjà disponible
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate("/");
+        resolve();
+        return;
+      }
+
+      // Sinon, attendre le prochain événement SIGNED_IN
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" && session) {
+          subscription.unsubscribe();
+          navigate("/");
+          resolve();
+        }
+      });
+
+      // Timeout de sécurité : 3 secondes max
+      setTimeout(() => {
+        subscription.unsubscribe();
+        navigate("/");
+        resolve();
+      }, 3000);
+    });
+  });
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -74,7 +100,6 @@ const Auth = () => {
       setUsernameAvailable(null);
       return;
     }
-
     setCheckingUsername(true);
     setUsernameAvailable(null);
 
@@ -83,7 +108,6 @@ const Auth = () => {
         const available = await checkUsernameAvailability(username);
         setUsernameAvailable(available);
       } catch {
-        // En cas d'erreur réseau, on laisse passer — la validation finale bloquera
         setUsernameAvailable(null);
       } finally {
         setCheckingUsername(false);
@@ -121,9 +145,7 @@ const Auth = () => {
   // ── Handler principal ────────────────────────────────────────────────────────
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!isLogin && !validateSignUp()) return;
-
     setLoading(true);
 
     try {
@@ -138,13 +160,13 @@ const Auth = () => {
           });
           return;
         }
-        navigate("/");
+        await navigateWhenSessionReady(navigate);
         return;
       }
 
       // ── INSCRIPTION ────────────────────────────────────────────────────────
 
-      // Vérification finale du username (au cas où le debounce n'a pas eu le temps)
+      // Vérification finale username
       if (usernameAvailable === null) {
         try {
           const available = await checkUsernameAvailability(username);
@@ -153,7 +175,7 @@ const Auth = () => {
             return;
           }
         } catch {
-          // Si on ne peut pas vérifier, on laisse Supabase gérer la contrainte unique
+          // On laisse Supabase gérer via la contrainte UNIQUE
         }
       }
 
@@ -170,7 +192,6 @@ const Auth = () => {
       }
 
       if (!user?.id) {
-        // Ne devrait pas arriver avec email confirmation OFF, mais on gère quand même
         toast({
           title: "Vérifiez vos emails",
           description: "Un lien de confirmation vous a été envoyé.",
@@ -178,8 +199,7 @@ const Auth = () => {
         return;
       }
 
-      // 2. Insérer le profil avec l'id récupéré
-      //    ✅ On utilise upsert pour éviter les doublons si jamais la fonction est appelée deux fois
+      // 2. Insérer le profil (upsert = idempotent)
       const { error: profileError } = await supabase.from("profiles").upsert({
         id: user.id,
         full_name: fullName,
@@ -190,25 +210,21 @@ const Auth = () => {
 
       if (profileError) {
         console.error("Profile insert error:", profileError);
-        // Le compte auth est créé, on redirige quand même mais on prévient
         toast({
           title: "Profil incomplet",
-          description: "Compte créé mais le profil n'a pas pu être sauvegardé. Contactez le support.",
+          description: "Compte créé mais le profil n'a pas pu être sauvegardé.",
           variant: "destructive",
         });
-        // On tente quand même la navigation car l'auth a réussi
-        navigate("/");
+        await navigateWhenSessionReady(navigate);
         return;
       }
 
-      // 3. Avec email confirmation OFF, l'utilisateur est déjà connecté après signUp.
-      //    Pas besoin de re-signIn — ça casserait la session.
-      //    onAuthStateChange dans AuthContext a déjà mis à jour user/session.
+      // 3. ✅ Attendre la session confirmée PUIS naviguer
       toast({
         title: "Bienvenue sur GameSwap ! 🎲",
         description: `Bonjour ${fullName.split(" ")[0]} !`,
       });
-      navigate("/");
+      await navigateWhenSessionReady(navigate);
 
     } catch (err) {
       console.error("Auth error:", err);
@@ -222,7 +238,6 @@ const Auth = () => {
     }
   };
 
-  // ── Reset état quand on bascule login/signup ─────────────────────────────────
   const handleToggleMode = () => {
     setIsLogin((prev) => !prev);
     setEmail("");
@@ -232,7 +247,6 @@ const Auth = () => {
     setUsernameAvailable(null);
   };
 
-  // ── Indicateur username ──────────────────────────────────────────────────────
   const renderUsernameHint = () => {
     if (username.length < 3) return null;
     if (checkingUsername) return <p className="text-xs text-muted-foreground mt-1">Vérification...</p>;
@@ -241,7 +255,6 @@ const Auth = () => {
     return null;
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <DecorativeBlobs />
@@ -282,9 +295,7 @@ const Auth = () => {
                   id="username"
                   type="text"
                   value={username}
-                  onChange={(e) =>
-                    setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))
-                  }
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
                   placeholder="marie_dupont"
                   className="mt-1"
                   required
@@ -327,11 +338,7 @@ const Auth = () => {
             className="w-full"
             disabled={loading || (!isLogin && checkingUsername)}
           >
-            {loading
-              ? "Chargement..."
-              : isLogin
-              ? "Se connecter"
-              : "Créer mon compte"}
+            {loading ? "Chargement..." : isLogin ? "Se connecter" : "Créer mon compte"}
             <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         </form>
