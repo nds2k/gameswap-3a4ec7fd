@@ -143,7 +143,7 @@ const GameDetailPage = () => {
 
   if (loading) {
     return (
-      <MainLayout showSearch={false}>
+      <MainLayout >
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -153,7 +153,7 @@ const GameDetailPage = () => {
 
   if (!game) {
     return (
-      <MainLayout showSearch={false}>
+      <MainLayout >
         <div className="text-center py-20">
           <h2 className="text-xl font-bold mb-2">Jeu introuvable</h2>
           <Button variant="outline" onClick={() => navigate("/games")}>Retour au catalogue</Button>
@@ -167,7 +167,7 @@ const GameDetailPage = () => {
     : null;
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="max-w-3xl mx-auto px-4 pb-28">
         {/* Back */}
         <div className="pt-4 pb-2">

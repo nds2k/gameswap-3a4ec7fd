@@ -165,7 +165,7 @@ const MyGames = () => {
 
   if (loading) {
     return (
-      <MainLayout showSearch={false}>
+      <MainLayout >
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -174,7 +174,7 @@ const MyGames = () => {
   }
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="container py-6 pb-24">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

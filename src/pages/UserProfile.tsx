@@ -223,7 +223,7 @@ const UserProfile = () => {
 
   if (loading) {
     return (
-      <MainLayout showSearch={false}>
+      <MainLayout >
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -233,7 +233,7 @@ const UserProfile = () => {
 
   if (!profile) {
     return (
-      <MainLayout showSearch={false}>
+      <MainLayout >
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <User className="h-16 w-16 text-muted-foreground mb-4" />
           <h1 className="text-xl font-semibold">Profil introuvable</h1>
@@ -246,7 +246,7 @@ const UserProfile = () => {
   const isOwnProfile = user?.id === userId;
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="max-w-2xl mx-auto pb-24">
         {/* Profile Header */}
         <div className="flex flex-col items-center pt-6 pb-8">

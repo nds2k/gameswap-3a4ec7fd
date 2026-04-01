@@ -465,7 +465,7 @@ const Forum = () => {
   };
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="container py-6 pb-24">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
