@@ -8,7 +8,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  // ✅ signUpWithEmail retourne maintenant { error, user }
+  // ✅ Retourne { error, user } — nécessaire pour créer le profil avec l'id correct
   signUpWithEmail: (
     email: string,
     password: string,
@@ -26,9 +26,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) => {
+    // ✅ Listener d'abord, getSession ensuite — ordre critique pour éviter les race conditions
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -70,8 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         data: { full_name: fullName, username },
       },
     });
-
-    // ✅ On retourne user pour que Auth.tsx puisse créer le profil avec l'id correct
+    // ✅ On retourne data.user pour que Auth.tsx puisse faire l'insert profil avec l'id correct
     return { error: error as Error | null, user: data.user ?? null };
   };
 
