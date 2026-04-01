@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 // Eagerly loaded pages (critical path)
 import Discover from "./pages/Discover";
 import Auth from "./pages/Auth";
+const SearchPage = lazy(() => import("./pages/SearchPage"));
 
 // Lazy loaded pages
 const Wishlist = lazy(() => import("./pages/Wishlist"));
