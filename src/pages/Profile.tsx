@@ -164,7 +164,7 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <MainLayout showSearch={false}>
+      <MainLayout >
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -176,7 +176,7 @@ const Profile = () => {
   const displayName = profile?.full_name || profile?.username || "Utilisateur";
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="max-w-md mx-auto pb-24 px-4">
         {/* Profile Header */}
         <div className="flex flex-col items-center pt-10 pb-8 gap-3">

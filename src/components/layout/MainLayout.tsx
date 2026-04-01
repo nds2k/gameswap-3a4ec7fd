@@ -1,19 +1,15 @@
 import { ReactNode } from "react";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
-import { DecorativeBlobs } from "./DecorativeBlobs";
 
 interface MainLayoutProps {
   children: ReactNode;
-  showSearch?: boolean;
-  onSearch?: (query: string) => void;
 }
 
-export const MainLayout = ({ children, showSearch = true, onSearch }: MainLayoutProps) => {
+export const MainLayout = ({ children }: MainLayoutProps) => {
   return (
-    <div className="min-h-screen">
-      <DecorativeBlobs />
-      <Header onSearch={showSearch ? onSearch : undefined} />
+    <div className="min-h-screen bg-background">
+      <Header />
       <main className="page-container">
         {children}
       </main>

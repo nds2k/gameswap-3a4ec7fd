@@ -68,7 +68,7 @@ const GameCatalog = () => {
   };
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="max-w-3xl mx-auto px-4 pb-28">
         {/* Header */}
         <div className="pt-6 pb-4">

@@ -40,7 +40,7 @@ const mockLists: GameList[] = [
 
 const Lists = () => {
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="container py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

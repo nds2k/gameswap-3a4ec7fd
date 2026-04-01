@@ -52,7 +52,7 @@ const Support = () => {
   ];
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="container py-6 max-w-2xl mx-auto pb-24">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">

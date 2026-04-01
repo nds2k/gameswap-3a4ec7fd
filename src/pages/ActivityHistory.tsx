@@ -79,7 +79,7 @@ const ActivityHistory = () => {
 
   if (loading) {
     return (
-      <MainLayout showSearch={false}>
+      <MainLayout >
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -88,7 +88,7 @@ const ActivityHistory = () => {
   }
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="max-w-3xl mx-auto px-4 pb-28">
         <div className="pt-6 pb-4">
           <h1 className="text-2xl font-bold">Historique</h1>

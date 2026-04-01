@@ -53,12 +53,8 @@ export const GameGrid = ({ searchQuery, filter, advancedFilters }: GameGridProps
   }, [games, searchQuery, filter, advancedFilters]);
 
   const handleGameClick = useCallback((gameId: string) => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
     setSelectedGameId(gameId);
-  }, [user, navigate]);
+  }, []);
 
   if (loading) {
     return (

@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 // Eagerly loaded pages (critical path)
 import Discover from "./pages/Discover";
 import Auth from "./pages/Auth";
+const SearchPage = lazy(() => import("./pages/SearchPage"));
 
 // Lazy loaded pages
 const Wishlist = lazy(() => import("./pages/Wishlist"));
@@ -112,6 +113,7 @@ const AppRoutes = () => {
         <Routes>
           <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
           <Route path="/" element={<Discover />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
           <Route path="/forum" element={<ProtectedRoute><Forum /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

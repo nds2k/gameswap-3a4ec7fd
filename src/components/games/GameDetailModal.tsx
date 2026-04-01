@@ -150,7 +150,8 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
       if (result.hasAccount && result.onboardingComplete && result.chargesEnabled) {
         setSellModalOpen(true);
       } else {
-        setOnboardingModalOpen(true);
+        // Redirect to external seller onboarding
+        window.location.href = "https://gameswapp.com/become-seller";
       }
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });

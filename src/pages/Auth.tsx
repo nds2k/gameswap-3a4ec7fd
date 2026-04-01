@@ -201,10 +201,9 @@ const Auth = () => {
 
       // 2. Insérer le profil (upsert = idempotent)
       const { error: profileError } = await supabase.from("profiles").upsert({
-        id: user.id,
+        user_id: user.id,
         full_name: fullName,
         username: username,
-        email: email,
         updated_at: new Date().toISOString(),
       });
 

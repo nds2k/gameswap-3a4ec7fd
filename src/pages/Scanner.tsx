@@ -131,7 +131,7 @@ const Scanner = () => {
   };
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="max-w-lg mx-auto px-4 pb-28">
         {/* Header */}
         <div className="flex items-center gap-3 pt-6 pb-4">

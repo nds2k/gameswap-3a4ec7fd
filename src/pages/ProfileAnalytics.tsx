@@ -167,7 +167,7 @@ const ProfileAnalytics = () => {
 
   if (loading || xpLoading) {
     return (
-      <MainLayout showSearch={false}>
+      <MainLayout >
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -176,7 +176,7 @@ const ProfileAnalytics = () => {
   }
 
   return (
-    <MainLayout showSearch={false}>
+    <MainLayout >
       <div className="max-w-2xl mx-auto pb-24 px-4">
 
         {/* Header */}
