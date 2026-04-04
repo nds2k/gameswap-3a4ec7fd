@@ -20,36 +20,40 @@ const GameCard = ({ game, isFav, onFavToggle, onClick }: {
       ) : (
         <div className="w-full h-full bg-muted flex items-center justify-center text-3xl">🎲</div>
       )}
-      {/* Type badge */}
-      <span className={`absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-        game.game_type === "sale" ? "bg-primary text-primary-foreground" : "bg-blue-500 text-white"
+      {/* Heart - top right */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onFavToggle(); }}
+        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-sm"
+      >
+        <Heart className={`h-4 w-4 ${isFav ? "fill-red-500 text-red-500" : "text-foreground"}`} />
+      </button>
+      {/* Type badge - bottom left */}
+      <span className={`absolute bottom-2 left-2 px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${
+        game.game_type === "sale" ? "bg-primary text-primary-foreground" : "bg-[hsl(210,80%,55%)] text-white"
       }`}>
         {game.game_type === "sale" ? "Vente" : "Échange"}
       </span>
-      {/* Heart */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onFavToggle(); }}
-        className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-background/70 backdrop-blur-sm flex items-center justify-center"
-      >
-        <Heart className={`h-3.5 w-3.5 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
-      </button>
       {game.is_boosted && (
-        <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-yellow-500 text-white text-[9px] font-bold flex items-center gap-0.5">
+        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-[hsl(45,100%,50%)] text-foreground text-[9px] font-bold flex items-center gap-0.5">
           <Zap className="h-2.5 w-2.5" /> Boost
         </div>
       )}
     </div>
-    <div className="p-2">
-      <h3 className="text-xs font-bold line-clamp-1">{game.title}</h3>
-      <div className="flex items-center justify-between mt-0.5">
-        <span className="text-[10px] text-muted-foreground">{game.condition || "—"}</span>
-        {game.game_type === "sale" && game.price != null && (
-          <span className="text-xs font-bold text-primary">{game.price}€</span>
+    <div className="p-2.5">
+      <h3 className="text-xs font-extrabold line-clamp-1 text-foreground">{game.title}</h3>
+      <div className="flex items-center justify-between mt-1">
+        {game.game_type === "sale" && game.price != null ? (
+          <span className="text-sm font-black text-primary">{game.price}€</span>
+        ) : (
+          <span className="text-[10px] text-muted-foreground">Échange</span>
         )}
       </div>
+      <p className="text-[10px] text-muted-foreground mt-0.5">
+        {game.condition && <span>{game.condition}</span>}
+      </p>
       {game.owner && (
-        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
-          {game.owner.full_name || "Vendeur"}
+        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1 uppercase tracking-wide font-semibold">
+          {game.owner.username || game.owner.full_name || "Vendeur"} <span className="font-normal">~2 km</span>
         </p>
       )}
     </div>
@@ -69,11 +73,11 @@ const HorizontalSection = ({ title, icon: Icon, games, onGameClick, isFavorite, 
     <div className="space-y-2">
       <div className="flex items-center gap-2 px-1">
         <Icon className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-bold">{title}</h2>
+        <h2 className="text-sm font-black uppercase tracking-wide">{title}</h2>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+      <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
         {games.map((g) => (
-          <div key={g.id} className="shrink-0 w-36">
+          <div key={g.id} className="shrink-0 w-40">
             <GameCard
               game={g}
               isFav={isFavorite(g.id)}
@@ -111,6 +115,17 @@ const Discover = () => {
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto px-4 py-3 space-y-5">
+        {/* Promo Banner */}
+        <div className="rounded-2xl overflow-hidden flex h-28">
+          <div className="flex-1 bg-[hsl(24,100%,50%)] flex flex-col justify-center px-4">
+            <p className="text-white text-xs font-bold uppercase tracking-wide">GameSwap</p>
+            <p className="text-white text-sm font-black mt-1 leading-tight">Découvrez nos astuces Jeux</p>
+          </div>
+          <div className="flex-1 bg-muted flex items-center justify-center text-4xl">
+            🎲🃏♟️
+          </div>
+        </div>
+
         {loading ? (
           <div className="space-y-5">
             {[1, 2, 3].map((i) => (
@@ -118,7 +133,7 @@ const Discover = () => {
                 <div className="h-4 w-32 bg-muted rounded animate-pulse" />
                 <div className="flex gap-2">
                   {[1, 2, 3].map((j) => (
-                    <div key={j} className="w-36 shrink-0">
+                    <div key={j} className="w-40 shrink-0">
                       <div className="aspect-[4/3] bg-muted rounded-xl animate-pulse" />
                     </div>
                   ))}
@@ -135,9 +150,9 @@ const Discover = () => {
             <HorizontalSection title="Récemment ajoutés" icon={Clock} games={recentGames} onGameClick={setSelectedGameId} isFavorite={isFavorite} toggleFavorite={toggleFavorite} />
 
             {/* All listings 2-col grid */}
-            <div className="space-y-2">
-              <h2 className="text-sm font-bold px-1">Toutes les annonces</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="space-y-3">
+              <h2 className="text-sm font-black uppercase tracking-wide px-1">Toutes les annonces</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {games.map((game) => (
                   <GameCard
                     key={game.id}

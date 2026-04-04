@@ -6,8 +6,8 @@
 
 @layer base {
   :root {
-    /* GameSwap Violet & Rose Theme */
-    --background: 270 20% 97%;
+    /* GameSwap – off-white/light grey base */
+    --background: 220 14% 97%;
     --foreground: 260 20% 10%;
 
     --card: 270 15% 98%;
