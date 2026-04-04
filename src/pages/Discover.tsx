@@ -53,7 +53,7 @@ const GameCard = ({ game, isFav, onFavToggle, onClick }: {
       </p>
       {game.owner && (
         <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1 uppercase tracking-wide font-semibold">
-          {game.owner.username || game.owner.full_name || "Vendeur"} <span className="font-normal">~2 km</span>
+          {game.owner.full_name || "Vendeur"} <span className="font-normal">~2 km</span>
         </p>
       )}
     </div>

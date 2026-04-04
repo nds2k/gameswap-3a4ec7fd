@@ -22,7 +22,7 @@ export const Header = () => {
       navigate("/auth");
       return;
     }
-    if (!isSeller) {
+    if (!isFullyOnboarded) {
       window.location.href = "https://gameswapp.com/become-seller";
       return;
     }
