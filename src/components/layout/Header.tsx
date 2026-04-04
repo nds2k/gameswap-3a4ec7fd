@@ -15,7 +15,7 @@ export const Header = () => {
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { unreadCount } = useNotifications();
-  const { isSeller } = useSellerStatus();
+  const { isFullyOnboarded } = useSellerStatus();
 
   const handlePublishClick = () => {
     if (!user) {
