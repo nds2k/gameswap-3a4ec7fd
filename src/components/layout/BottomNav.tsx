@@ -38,14 +38,14 @@ export const BottomNav = memo(() => {
               onClick={(e) => handleNavClick(e, item.path, item.requiresAuth)}
               className="flex flex-col items-center -mt-5"
             >
-              <div className={`w-13 h-13 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-200 ${
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-200 ${
                 isActive
                   ? "bg-primary text-primary-foreground scale-105"
                   : "bg-primary/90 text-primary-foreground hover:bg-primary"
               }`}>
-                <Icon className="h-5.5 w-5.5" />
+                <Icon className="h-6 w-6" />
               </div>
-              <span className="text-[9px] font-bold mt-0.5 text-primary">{item.label}</span>
+              <span className="text-[9px] font-semibold mt-1 text-primary">{item.label}</span>
             </Link>
           );
         }
@@ -55,12 +55,12 @@ export const BottomNav = memo(() => {
             key={item.path}
             to={item.path}
             onClick={(e) => handleNavClick(e, item.path, item.requiresAuth)}
-            className={`flex flex-col items-center gap-0.5 py-1 px-1.5 transition-colors duration-200 ${
+            className={`flex flex-col items-center gap-0.5 py-1.5 px-2 transition-colors duration-200 ${
               isActive ? "text-primary" : "text-muted-foreground"
             }`}
           >
             <Icon className={`h-5 w-5 ${isActive ? "scale-105" : ""}`} />
-            <span className="text-[9px] font-bold">{item.label}</span>
+            <span className="text-[9px] font-semibold">{item.label}</span>
           </Link>
         );
       })}
