@@ -199,23 +199,21 @@ const Auth = () => {
         return;
       }
 
-      // 2. Insérer le profil (upsert = idempotent)
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        user_id: user.id,
-        full_name: fullName,
-        username: username,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (profileError) {
-        console.error("Profile insert error:", profileError);
-        toast({
-          title: "Profil incomplet",
-          description: "Compte créé mais le profil n'a pas pu être sauvegardé.",
-          variant: "destructive",
-        });
-        await navigateWhenSessionReady(navigate);
-        return;
+      // 2. Upsert profile (trigger also creates it, this ensures username/fullName are set)
+      try {
+        await supabase.from("profiles").upsert(
+          {
+            user_id: user.id,
+            full_name: fullName,
+            username: username,
+            xp: 40,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+      } catch (profileError) {
+        // Non-blocking: the trigger already created the profile
+        console.warn("Profile upsert fallback (trigger should handle it):", profileError);
       }
 
       // 3. ✅ Attendre la session confirmée PUIS naviguer

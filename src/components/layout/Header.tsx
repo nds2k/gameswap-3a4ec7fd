@@ -1,14 +1,13 @@
-import { useState, useEffect } from "react";
-import { Plus, Bell, LogIn, Map, MessageCircle, Trophy, Search } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Plus, Bell, LogIn, Map, MessageCircle, Trophy, Search, ScanLine } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { PostGameModal } from "@/components/games/PostGameModal";
 import { NotificationsSidebar } from "@/components/notifications/NotificationsSidebar";
 import { useNotifications } from "@/hooks/useNotifications";
-import { Input } from "@/components/ui/input";
+import { useSellerStatus } from "@/hooks/useSellerStatus";
 
 export const Header = () => {
   const { user } = useAuth();
@@ -16,13 +15,23 @@ export const Header = () => {
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { unreadCount } = useNotifications();
+  const { checkStatus } = useSellerStatus();
 
-  const handlePublishClick = () => {
+  const handlePublishClick = async () => {
     if (!user) {
       navigate("/auth");
       return;
     }
-    setPostModalOpen(true);
+    try {
+      const status = await checkStatus();
+      if (status.hasAccount && status.onboardingComplete && status.chargesEnabled) {
+        setPostModalOpen(true);
+      } else {
+        window.location.href = "https://gameswapp.com/become-seller";
+      }
+    } catch {
+      setPostModalOpen(true);
+    }
   };
 
   return (
@@ -30,29 +39,29 @@ export const Header = () => {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="container flex items-center gap-2 h-14 px-3">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-1.5 shrink-0">
+          <button onClick={() => navigate("/")} className="shrink-0">
             <img src={logo} alt="GameSwap" className="h-8 w-8 rounded-xl" />
-          </Link>
+          </button>
 
           {/* Search bar */}
           <div
             className="flex-1 relative cursor-pointer min-w-0"
             onClick={() => navigate("/search")}
           >
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <div className="w-full h-9 rounded-xl bg-muted/50 border border-border/50 pl-9 pr-3 flex items-center text-xs text-muted-foreground truncate">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <div className="w-full h-8 rounded-full bg-muted/50 border border-border/50 pl-8 pr-3 flex items-center text-[11px] text-muted-foreground truncate">
               Rechercher un jeu...
             </div>
           </div>
 
           {/* Action icons */}
-          <div className="flex items-center gap-0.5 shrink-0">
+          <div className="flex items-center gap-0 shrink-0">
             {user && (
               <>
                 <button onClick={() => navigate("/map")} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground">
                   <Map className="h-4 w-4" />
                 </button>
-                <button onClick={() => navigate("/friends")} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground">
+                <button onClick={() => navigate("/friends?tab=messages")} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground">
                   <MessageCircle className="h-4 w-4" />
                 </button>
                 <button onClick={() => navigate("/profile-analytics")} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground">
@@ -73,13 +82,13 @@ export const Header = () => {
             )}
 
             {/* Publish */}
-            <Button variant="gameswap" size="sm" onClick={handlePublishClick} className="h-8 w-8 p-0 rounded-full">
+            <Button variant="gameswap" size="sm" onClick={handlePublishClick} className="h-8 w-8 p-0 rounded-full ml-0.5">
               <Plus className="h-4 w-4" />
             </Button>
 
             {/* Login if not authenticated */}
             {!user && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="h-8 gap-1 text-xs px-2">
+              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="h-8 gap-1 text-xs px-2 ml-1">
                 <LogIn className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Connexion</span>
               </Button>
