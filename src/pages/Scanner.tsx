@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Camera, ImageIcon, Loader2, X, ScanLine, AlertCircle } from "lucide-react";
+import { ArrowLeft, Camera, ImageIcon, Loader2, X, ScanLine, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Html5Qrcode } from "html5-qrcode";
 
 interface ScannedGame {
+  id?: string;
   title?: string;
   name?: string;
   publisher?: string | null;
@@ -22,7 +23,7 @@ interface ScannedGame {
   max_players?: number | null;
   min_age?: number | null;
   play_time?: string | null;
-  barcode: string;
+  barcode?: string;
   estimated_price?: number | null;
   confidence?: number;
 }
@@ -33,38 +34,35 @@ const Scanner = () => {
   const { toast } = useToast();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const aiFileInputRef = useRef<HTMLInputElement>(null);
 
   const [scanning, setScanning] = useState(false);
   const [looking, setLooking] = useState(false);
   const [scannedGame, setScannedGame] = useState<ScannedGame | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [cameraStarted, setCameraStarted] = useState(false);
+  const [mode, setMode] = useState<"choose" | "barcode" | "ai">("choose");
 
   const startScanner = useCallback(async () => {
     if (cameraStarted) return;
     try {
       const scanner = new Html5Qrcode("scanner-region");
       scannerRef.current = scanner;
-      
       await scanner.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 280, height: 150 }, aspectRatio: 1.777 },
         async (decodedText) => {
-          // Barcode detected
           scanner.stop().catch(() => {});
           setCameraStarted(false);
           setScanning(false);
           await lookupBarcode(decodedText);
         },
-        () => {} // ignore scan failures
+        () => {}
       );
       setCameraStarted(true);
       setScanning(true);
     } catch (err: any) {
-      console.error("Camera error:", err);
-      if (err?.toString?.().includes("NotAllowed")) {
-        setPermissionDenied(true);
-      }
+      if (err?.toString?.().includes("NotAllowed")) setPermissionDenied(true);
       toast({ title: "Erreur caméra", description: "Impossible d'accéder à la caméra", variant: "destructive" });
     }
   }, [cameraStarted]);
@@ -77,31 +75,26 @@ const Scanner = () => {
     }
   }, [cameraStarted]);
 
-  useEffect(() => {
-    return () => { stopScanner(); };
-  }, []);
+  useEffect(() => () => { stopScanner(); }, []);
 
   const lookupBarcode = async (barcode: string) => {
     setLooking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("barcode-lookup", {
-        body: { barcode },
-      });
+      const { data, error } = await supabase.functions.invoke("barcode-lookup", { body: { barcode } });
       if (error) throw error;
       if (data?.found && data.game) {
         setScannedGame({ ...data.game, barcode, confidence: data.confidence });
       } else {
-        toast({ title: "Jeu non trouvé", description: `Aucun résultat pour le code ${barcode}` });
-        setScannedGame(null);
+        toast({ title: "Jeu non trouvé", description: `Aucun résultat pour ${barcode}` });
       }
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Erreur de recherche", variant: "destructive" });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
       setLooking(false);
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBarcodeFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
@@ -113,6 +106,46 @@ const Scanner = () => {
     }
   };
 
+  const handleAIFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLooking(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke("ai-scanner", {
+        body: { imageBase64: base64, mimeType: file.type },
+      });
+      if (error) throw error;
+      if (data?.found && data.game) {
+        setScannedGame({ ...data.game, confidence: data.confidence });
+      } else {
+        toast({ title: "Jeu non reconnu", description: "L'IA n'a pas pu identifier ce jeu. Essayez une autre photo." });
+      }
+    } catch (err: any) {
+      toast({ title: "Erreur IA", description: err.message || "Erreur d'identification", variant: "destructive" });
+    } finally {
+      setLooking(false);
+    }
+  };
+
+  const handleAICamera = async () => {
+    // Use file input with capture attribute for camera
+    if (aiFileInputRef.current) {
+      aiFileInputRef.current.setAttribute("capture", "environment");
+      aiFileInputRef.current.click();
+      aiFileInputRef.current.removeAttribute("capture");
+    }
+  };
+
   const handleUseForPost = () => {
     if (!scannedGame) return;
     sessionStorage.setItem("scanned_game", JSON.stringify(scannedGame));
@@ -121,53 +154,104 @@ const Scanner = () => {
 
   const handleViewGame = () => {
     if (!scannedGame) return;
-    // If scanned game has an id from master_games, navigate to detail page
-    const gameId = (scannedGame as any).id;
-    if (gameId) {
-      navigate(`/games/${gameId}`);
-    } else {
-      toast({ title: "Page indisponible", description: "Ce jeu n'a pas encore de page détaillée" });
-    }
+    const gameId = scannedGame.id;
+    if (gameId) navigate(`/games/${gameId}`);
+    else toast({ title: "Page indisponible", description: "Ce jeu n'a pas encore de page détaillée" });
   };
 
   return (
-    <MainLayout >
+    <MainLayout>
       <div className="max-w-lg mx-auto px-4 pb-28">
         {/* Header */}
         <div className="flex items-center gap-3 pt-6 pb-4">
-          <Button variant="ghost" size="icon" onClick={() => { stopScanner(); navigate(-1); }}>
+          <Button variant="ghost" size="icon" onClick={() => { stopScanner(); setMode("choose"); if (mode === "choose") navigate(-1); }}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h1 className="text-xl font-bold">Scanner</h1>
-            <p className="text-xs text-muted-foreground">Scannez un code-barres de jeu de société</p>
+            <p className="text-xs text-muted-foreground">Identifiez un jeu par photo ou code-barres</p>
           </div>
         </div>
 
-        {/* Scanner area */}
-        {!scannedGame && (
+        {/* Loading overlay */}
+        {looking && (
+          <div className="flex flex-col items-center justify-center gap-4 py-20">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">{mode === "ai" ? "Identification IA en cours..." : "Recherche en cours..."}</p>
+          </div>
+        )}
+
+        {/* Mode selection */}
+        {mode === "choose" && !scannedGame && !looking && (
+          <div className="space-y-4 pt-4">
+            <button
+              onClick={() => setMode("ai")}
+              className="w-full p-6 rounded-2xl border border-border bg-card hover:bg-accent/50 transition-colors text-left space-y-2"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Identification IA</h3>
+                  <p className="text-xs text-muted-foreground">Prenez une photo du jeu, l'IA l'identifie</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setMode("barcode")}
+              className="w-full p-6 rounded-2xl border border-border bg-card hover:bg-accent/50 transition-colors text-left space-y-2"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center">
+                  <ScanLine className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Scanner code-barres</h3>
+                  <p className="text-xs text-muted-foreground">Scannez le code-barres du jeu</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* AI mode */}
+        {mode === "ai" && !scannedGame && !looking && (
+          <div className="space-y-4 pt-4">
+            <div className="rounded-2xl border border-border bg-card p-8 flex flex-col items-center gap-4">
+              <Sparkles className="h-12 w-12 text-primary/60" />
+              <p className="text-sm text-muted-foreground text-center">
+                Prenez une photo ou importez une image du jeu de société
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="gameswap" className="flex-1" onClick={handleAICamera}>
+                <Camera className="h-4 w-4 mr-2" />
+                Prendre photo
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => aiFileInputRef.current?.click()}>
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Galerie
+              </Button>
+            </div>
+            <input ref={aiFileInputRef} type="file" accept="image/*" onChange={handleAIFile} className="hidden" />
+          </div>
+        )}
+
+        {/* Barcode mode */}
+        {mode === "barcode" && !scannedGame && !looking && (
           <div className="space-y-4">
             <div className="relative rounded-2xl overflow-hidden border border-border bg-card aspect-video">
               <div id="scanner-region" className="w-full h-full" />
-              
-              {!scanning && !looking && (
+              {!scanning && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-card">
                   <ScanLine className="h-12 w-12 text-primary/60" />
                   <p className="text-sm text-muted-foreground text-center px-4">
-                    {permissionDenied 
-                      ? "Accès caméra refusé. Utilisez l'import photo."
-                      : "Appuyez sur le bouton pour scanner"}
+                    {permissionDenied ? "Accès caméra refusé. Utilisez l'import photo." : "Appuyez pour scanner"}
                   </p>
                 </div>
               )}
-
-              {looking && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card/90 backdrop-blur-sm">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Recherche en cours...</p>
-                </div>
-              )}
-
               {scanning && (
                 <div className="absolute top-3 right-3 z-10">
                   <Button variant="ghost" size="icon" onClick={stopScanner} className="bg-card/80 backdrop-blur-sm rounded-full">
@@ -176,44 +260,31 @@ const Scanner = () => {
                 </div>
               )}
             </div>
-
-            {/* Hidden scanner for file upload */}
             <div id="scanner-region-hidden" className="hidden" />
-
             <div className="flex gap-3">
-              <Button
-                variant="gameswap"
-                className="flex-1"
-                onClick={startScanner}
-                disabled={scanning || looking}
-              >
+              <Button variant="gameswap" className="flex-1" onClick={startScanner} disabled={scanning}>
                 <Camera className="h-4 w-4 mr-2" />
                 {scanning ? "Scan actif..." : "Scanner"}
               </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={looking}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => fileInputRef.current?.click()}>
                 <ImageIcon className="h-4 w-4 mr-2" />
                 Importer photo
               </Button>
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleBarcodeFile} className="hidden" />
           </div>
         )}
 
-        {/* Scanned result */}
-        {scannedGame && (
+        {/* Result */}
+        {scannedGame && !looking && (
           <div className="space-y-4 animate-fade-in">
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               {(scannedGame.cover_image_url || scannedGame.image_url) && (
-                <img src={scannedGame.cover_image_url || scannedGame.image_url!} alt={scannedGame.title || scannedGame.name} className="w-full h-48 object-cover" />
+                <img src={(scannedGame.cover_image_url || scannedGame.image_url)!} alt={scannedGame.title || scannedGame.name} className="w-full h-48 object-cover" />
               )}
               <div className="p-5 space-y-3">
                 <h2 className="text-xl font-bold">{scannedGame.title || scannedGame.name}</h2>
-                
+
                 {scannedGame.confidence != null && (
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
@@ -224,22 +295,14 @@ const Scanner = () => {
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                  {scannedGame.publisher && (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.publisher}</span>
-                  )}
-                  {(scannedGame.release_year || scannedGame.year) && (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.release_year || scannedGame.year}</span>
-                  )}
-                  {scannedGame.min_age && (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.min_age}+</span>
-                  )}
+                  {scannedGame.publisher && <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.publisher}</span>}
+                  {(scannedGame.release_year || scannedGame.year) && <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.release_year || scannedGame.year}</span>}
+                  {scannedGame.category && <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{scannedGame.category}</span>}
                 </div>
 
                 {(scannedGame.min_players || scannedGame.play_time) && (
                   <div className="flex gap-4 text-sm text-muted-foreground">
-                    {scannedGame.min_players && (
-                      <span>👥 {scannedGame.min_players}{scannedGame.max_players ? `-${scannedGame.max_players}` : ""} joueurs</span>
-                    )}
+                    {scannedGame.min_players && <span>👥 {scannedGame.min_players}{scannedGame.max_players ? `-${scannedGame.max_players}` : ""} joueurs</span>}
                     {scannedGame.play_time && <span>⏱ {scannedGame.play_time} min</span>}
                   </div>
                 )}
@@ -251,14 +314,12 @@ const Scanner = () => {
                   </div>
                 )}
 
-                {scannedGame.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-3">{scannedGame.description}</p>
-                )}
+                {scannedGame.description && <p className="text-sm text-muted-foreground line-clamp-3">{scannedGame.description}</p>}
               </div>
             </div>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => { setScannedGame(null); }}>
+              <Button variant="outline" className="flex-1" onClick={() => { setScannedGame(null); setMode("choose"); }}>
                 Nouveau scan
               </Button>
               <Button variant="gameswap" className="flex-1" onClick={handleViewGame}>
