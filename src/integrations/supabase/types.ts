@@ -1468,6 +1468,14 @@ export type Database = {
         Args: { _user1: string; _user2: string }
         Returns: boolean
       }
+      build_profile_username: {
+        Args: {
+          auth_user_id: string
+          desired_username: string
+          fallback_email: string
+        }
+        Returns: string
+      }
       clear_expired_boosts: { Args: never; Returns: undefined }
       get_friends_games: {
         Args: { user_uuid: string }
