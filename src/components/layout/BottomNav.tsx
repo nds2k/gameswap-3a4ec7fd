@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Compass, Users, ScanLine, Heart, Library, UserCircle } from "lucide-react";
+import { Compass, Users, ScanLine, Heart } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -13,8 +13,6 @@ export const BottomNav = memo(() => {
     { path: "/friends", icon: Users, label: "Amis", requiresAuth: true },
     { path: "/scanner", icon: ScanLine, label: "Scanner", requiresAuth: true, isCenter: true },
     { path: "/wishlist", icon: Heart, label: "Wishlist", requiresAuth: true },
-    { path: "/my-games", icon: Library, label: "Collection", requiresAuth: true },
-    { path: "/profile", icon: UserCircle, label: "Profil", requiresAuth: true },
   ];
 
   const handleNavClick = (e: React.MouseEvent, path: string, requiresAuth: boolean) => {
@@ -55,7 +53,7 @@ export const BottomNav = memo(() => {
             key={item.path}
             to={item.path}
             onClick={(e) => handleNavClick(e, item.path, item.requiresAuth)}
-            className={`flex flex-col items-center gap-0.5 py-1 px-1.5 transition-colors duration-200 ${
+            className={`flex flex-col items-center gap-0.5 py-1 px-3 transition-colors duration-200 ${
               isActive ? "text-primary" : "text-muted-foreground"
             }`}
           >
