@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Compass, Users, ScanLine, Heart } from "lucide-react";
+import { Compass, Users, ScanLine, Heart, User } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -13,6 +13,7 @@ export const BottomNav = memo(() => {
     { path: "/friends", icon: Users, label: "Amis", requiresAuth: true },
     { path: "/scanner", icon: ScanLine, label: "Scanner", requiresAuth: true, isCenter: true },
     { path: "/wishlist", icon: Heart, label: "Wishlist", requiresAuth: true },
+    { path: "/profile", icon: User, label: "Profil", requiresAuth: true },
   ];
 
   const handleNavClick = (e: React.MouseEvent, path: string, requiresAuth: boolean) => {
