@@ -142,7 +142,10 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
+
+    // Fetch fresh authenticated user directly from Supabase (don't rely on context)
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    if (authError || !authUser) {
       toast({ title: "Erreur", description: "Vous devez être connecté", variant: "destructive" });
       return;
     }
@@ -156,7 +159,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
       const uploadedUrls: string[] = [];
       for (const img of images) {
         const fileExt = img.file.name.split(".").pop();
-        const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const filePath = `${authUser.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
         const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, img.file);
         if (!uploadError) {
           const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
