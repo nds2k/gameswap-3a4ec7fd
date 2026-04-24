@@ -30,7 +30,7 @@ const getFriendlyError = (message: string): string => {
   if (message.includes("Email not confirmed"))
     return "Veuillez confirmer votre email avant de vous connecter.";
   if (message.includes("Password should be at least"))
-    return "Le mot de passe doit contenir au moins 6 caractères.";
+    return "Le mot de passe doit contenir au moins 8 caractères.";
   if (message.includes("duplicate key") && message.includes("username"))
     return "Ce pseudo est déjà pris. Choisissez-en un autre.";
   if (message.includes("duplicate key") && message.includes("email"))
@@ -38,20 +38,8 @@ const getFriendlyError = (message: string): string => {
   return "Une erreur inattendue s'est produite. Veuillez réessayer.";
 };
 
-/**
- * ✅ FIX DÉCONNEXION PRINCIPAL
- *
- * Problème : navigate("/") s'exécute immédiatement après signUp/signIn,
- * mais onAuthStateChange dans AuthContext n'a pas encore eu le temps de
- * mettre à jour user/session. La page d'accueil trouve user=null et
- * redirige vers /auth.
- *
- * Solution : on attend que la session soit confirmée avant de naviguer.
- * Timeout de sécurité à 3s pour ne pas bloquer indéfiniment.
- */
 const navigateWhenSessionReady = (navigate: ReturnType<typeof useNavigate>): Promise<void> => {
   return new Promise((resolve) => {
-    // Vérifier si la session est déjà disponible
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/");
@@ -59,7 +47,6 @@ const navigateWhenSessionReady = (navigate: ReturnType<typeof useNavigate>): Pro
         return;
       }
 
-      // Sinon, attendre le prochain événement SIGNED_IN
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if (event === "SIGNED_IN" && session) {
           subscription.unsubscribe();
@@ -68,7 +55,6 @@ const navigateWhenSessionReady = (navigate: ReturnType<typeof useNavigate>): Pro
         }
       });
 
-      // Timeout de sécurité : 3 secondes max
       setTimeout(() => {
         subscription.unsubscribe();
         navigate("/");
@@ -135,8 +121,8 @@ const Auth = () => {
       toast({ title: "Pseudo indisponible", description: "Ce pseudo est déjà pris. Choisissez-en un autre.", variant: "destructive" });
       return false;
     }
-    if (password.length < 6) {
-      toast({ title: "Mot de passe trop court", description: "Minimum 6 caractères.", variant: "destructive" });
+    if (password.length < 8) {
+      toast({ title: "Mot de passe trop court", description: "Minimum 8 caractères.", variant: "destructive" });
       return false;
     }
     return true;
@@ -179,7 +165,7 @@ const Auth = () => {
         }
       }
 
-      // 1. Créer le compte auth
+      // 1. Créer le compte auth — ✅ on passe fullName et username dans les metadata
       const { error: signUpError, user } = await signUpWithEmail(email, password, fullName, username);
 
       if (signUpError) {
@@ -199,17 +185,17 @@ const Auth = () => {
         return;
       }
 
-      // 2. Upsert profile (trigger also creates it, this ensures username/fullName are set)
+      // 2. ✅ FIX: use "id" not "user_id", and onConflict: "id"
       try {
         await supabase.from("profiles").upsert(
           {
-            user_id: user.id,
+            id: user.id,
             full_name: fullName,
             username: username,
             xp: 40,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "user_id" }
+          { onConflict: "id" }
         );
       } catch (profileError) {
         // Non-blocking: the trigger already created the profile
@@ -323,10 +309,10 @@ const Auth = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 6 caractères"
+              placeholder="Minimum 8 caractères"
               className="mt-1"
               required
-              minLength={6}
+              minLength={8}
             />
           </div>
 
