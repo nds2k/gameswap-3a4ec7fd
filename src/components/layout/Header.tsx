@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Bell, LogIn, User as UserIcon, Settings, CreditCard } from "lucide-react";
+import { Plus, Bell, LogIn, User as UserIcon, Settings, CreditCard, Map, MessageSquare, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/gameswap-logo.png";
 import { Button } from "@/components/ui/button";
