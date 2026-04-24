@@ -76,6 +76,30 @@ export const Header = () => {
           {/* Right: Notifications + Publish + Profile/Login */}
           <div className="flex items-center gap-1 shrink-0">
             <button
+              onClick={() => navigate("/map")}
+              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+              aria-label="Carte"
+            >
+              <Map className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              onClick={() => navigate("/forum")}
+              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+              aria-label="Forum"
+            >
+              <MessageSquare className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              onClick={() => {
+                if (!user) { navigate("/auth"); return; }
+                navigate("/xp-rewards");
+              }}
+              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+              aria-label="Récompenses"
+            >
+              <Trophy className="h-[18px] w-[18px]" />
+            </button>
+            <button
               onClick={() => {
                 if (!user) { navigate("/auth"); return; }
                 setNotificationsOpen(true);
