@@ -185,17 +185,17 @@ const Auth = () => {
         return;
       }
 
-      // 2. ✅ FIX: use "id" not "user_id", and onConflict: "id"
+      // 2. Upsert profile (trigger also creates it; this ensures username/fullName are set)
       try {
         await supabase.from("profiles").upsert(
           {
-            id: user.id,
+            user_id: user.id,
             full_name: fullName,
             username: username,
             xp: 40,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "id" }
+          { onConflict: "user_id" }
         );
       } catch (profileError) {
         // Non-blocking: the trigger already created the profile
