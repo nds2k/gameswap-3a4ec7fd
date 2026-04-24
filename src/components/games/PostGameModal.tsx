@@ -178,7 +178,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
       ].filter(Boolean).join("\n");
 
       const { data: gameData, error } = await supabase.from("games").insert({
-        owner_id: user.id,
+        owner_id: authUser.id,
         title: formData.title.trim(),
         description: fullDescription,
         price: formData.gameType === "sale" ? parseFloat(formData.price) || 0 : null,
@@ -210,9 +210,13 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
       setImages([]);
       setScannedImageUrl(null);
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error posting game:", error);
-      toast({ title: "Erreur", description: "Impossible de publier le jeu", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: error?.message || "Impossible de publier le jeu",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
