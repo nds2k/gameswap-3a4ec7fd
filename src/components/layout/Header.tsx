@@ -92,7 +92,7 @@ export const Header = () => {
             <button
               onClick={() => {
                 if (!user) { navigate("/auth"); return; }
-                navigate("/xp-rewards");
+                navigate("/profile/xp-rewards");
               }}
               className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
               aria-label="Récompenses"

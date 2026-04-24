@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -306,22 +305,8 @@ const MapPage = () => {
             
             <MapController center={mapCenter} zoom={mapZoom} />
 
-            {/* Clustered seller markers */}
-            <MarkerClusterGroup
-              chunkedLoading
-              iconCreateFunction={(cluster) => {
-                const count = cluster.getChildCount();
-                return L.divIcon({
-                  html: `<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center border-2 border-white shadow-lg text-white font-bold text-sm">${count}</div>`,
-                  className: "custom-cluster-marker",
-                  iconSize: L.point(40, 40),
-                });
-              }}
-              maxClusterRadius={60}
-              spiderfyOnMaxZoom
-              showCoverageOnHover={false}
-            >
-              {sellers.map((seller) => (
+            {/* Seller markers */}
+            {sellers.map((seller) => (
                 <Marker
                   key={seller.id}
                   position={[seller.location_lat, seller.location_lng]}
@@ -364,8 +349,7 @@ const MapPage = () => {
                     </div>
                   </Popup>
                 </Marker>
-              ))}
-            </MarkerClusterGroup>
+            ))}
 
             {/* User location marker */}
             {userLocation && (
