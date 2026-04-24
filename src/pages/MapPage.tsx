@@ -349,8 +349,7 @@ const MapPage = () => {
                     </div>
                   </Popup>
                 </Marker>
-              ))}
-            </MarkerClusterGroup>
+            ))}
 
             {/* User location marker */}
             {userLocation && (
