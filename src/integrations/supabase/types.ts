@@ -899,6 +899,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ad_free_until: string | null
           allow_friend_requests: boolean
           avatar_url: string | null
           created_at: string
@@ -921,6 +922,7 @@ export type Database = {
           xp: number
         }
         Insert: {
+          ad_free_until?: string | null
           allow_friend_requests?: boolean
           avatar_url?: string | null
           created_at?: string
@@ -943,6 +945,7 @@ export type Database = {
           xp?: number
         }
         Update: {
+          ad_free_until?: string | null
           allow_friend_requests?: boolean
           avatar_url?: string | null
           created_at?: string
