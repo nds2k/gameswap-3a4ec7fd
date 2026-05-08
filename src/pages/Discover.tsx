@@ -73,6 +73,7 @@ const Discover = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const isMobile = useIsMobile();
 
   return (
     <MainLayout>
