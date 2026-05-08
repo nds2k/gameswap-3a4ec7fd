@@ -54,6 +54,25 @@ const XPRewards = () => {
   const { xpState, loading, fetchXP } = useXP(user?.id);
   const { toast } = useToast();
   const { userBadges, loading: badgesLoading } = useBadges(user?.id);
+  const { isAdFree, adFreeUntil, refresh: refreshAdFree } = useAdFree();
+  const AD_FREE_COST = 5000;
+
+  const handleBuyAdFree = async () => {
+    if (!user || xp < AD_FREE_COST) return;
+    try {
+      const newXP = xp - AD_FREE_COST;
+      const baseDate = isAdFree && adFreeUntil ? adFreeUntil : new Date();
+      const until = new Date(baseDate);
+      until.setMonth(until.getMonth() + 1);
+      await supabase.from("profiles").update({ xp: newXP, ad_free_until: until.toISOString() } as any).eq("user_id", user.id);
+      await supabase.from("xp_transactions").insert({ user_id: user.id, amount: -AD_FREE_COST, reason: "Ad-free 1 mois" });
+      await fetchXP();
+      await refreshAdFree();
+      toast({ title: "Pubs désactivées !", description: `Profitez de l'app sans pub jusqu'au ${until.toLocaleDateString("fr-FR")}.` });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible d'activer", variant: "destructive" });
+    }
+  };
 
   const [animatedXP, setAnimatedXP] = useState(0);
   const [animatedProgress, setAnimatedProgress] = useState(0);
