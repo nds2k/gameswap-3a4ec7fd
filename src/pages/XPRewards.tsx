@@ -242,6 +242,29 @@ const XPRewards = () => {
           </div>
         )}
 
+        {/* Ad-free purchase */}
+        <div className="mb-6 rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center text-xl">🚫</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold font-nunito">Supprimer les pubs pendant 1 mois</p>
+              {isAdFree && adFreeUntil ? (
+                <p className="text-xs text-emerald-400">Pubs désactivées jusqu'au {adFreeUntil.toLocaleDateString("fr-FR")}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Profitez de GameSwap sans publicités</p>
+              )}
+            </div>
+          </div>
+          <Button
+            onClick={handleBuyAdFree}
+            disabled={xp < AD_FREE_COST}
+            className="w-full"
+          >
+            <Gem className="h-4 w-4 mr-1" />
+            {isAdFree ? "Prolonger d'1 mois" : "Activer"} — {AD_FREE_COST.toLocaleString()} XP
+          </Button>
+        </div>
+
         {/* Section title */}
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="h-4 w-4 text-primary" />
