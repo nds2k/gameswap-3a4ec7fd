@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useAdFree } from "@/hooks/useAdFree";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useConsent } from "@/hooks/useConsent";
 
 declare global {
   interface Window {
@@ -18,20 +19,23 @@ interface AdBannerProps {
 export const AdBanner = ({ slot, format = "auto", variant = "auto", className = "" }: AdBannerProps) => {
   const { isAdFree, loading } = useAdFree();
   const isMobile = useIsMobile();
+  const { adsAllowed, personalizedAds } = useConsent();
   const pushed = useRef(false);
 
   useEffect(() => {
-    if (loading || isAdFree) return;
+    if (loading || isAdFree || !adsAllowed) return;
     if (pushed.current) return;
     try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      (window.adsbygoogle = window.adsbygoogle || []).push(
+        personalizedAds ? {} : { params: { npa: "1" } }
+      );
       pushed.current = true;
     } catch (e) {
       console.error("AdSense error:", e);
     }
-  }, [loading, isAdFree]);
+  }, [loading, isAdFree, adsAllowed, personalizedAds]);
 
-  if (loading || isAdFree) return null;
+  if (loading || isAdFree || !adsAllowed) return null;
 
   const useMobileSize = variant === "mobile" || (variant === "auto" && isMobile);
   const useSidebarSize = variant === "sidebar";
@@ -50,6 +54,7 @@ export const AdBanner = ({ slot, format = "auto", variant = "auto", className = 
       data-ad-slot={slot}
       data-ad-format={useSidebarSize || useMobileSize ? undefined : format}
       data-full-width-responsive={useSidebarSize || useMobileSize ? undefined : "true"}
+      data-npa={personalizedAds ? undefined : "1"}
     />
   );
 };
