@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { TrendingUp, Clock, Zap, Sparkles, Heart, Search, SlidersHorizontal, ScanLine, MapPin } from "lucide-react";
@@ -6,6 +6,8 @@ import { useGames, type Game } from "@/hooks/useGames";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
+import { AdBanner } from "@/components/ads/AdBanner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const GameCard = ({ game, isFav, onFavToggle, onClick }: {
   game: Game;
