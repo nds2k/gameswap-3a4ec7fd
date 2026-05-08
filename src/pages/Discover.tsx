@@ -145,7 +145,7 @@ const Discover = () => {
                   </div>
                   {isMobile && chunk.length === 6 && (
                     <div className="flex justify-center my-2">
-                      <AdBanner slot={`mobile-${chunkIdx}`} variant="mobile" />
+                      <AdBanner slot="2638028398" />
                     </div>
                   )}
                 </Fragment>
