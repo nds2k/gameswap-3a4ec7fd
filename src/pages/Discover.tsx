@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { TrendingUp, Clock, Zap, Sparkles, Heart, Search, SlidersHorizontal, ScanLine, MapPin } from "lucide-react";
@@ -6,6 +6,8 @@ import { useGames, type Game } from "@/hooks/useGames";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
+import { AdBanner } from "@/components/ads/AdBanner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const GameCard = ({ game, isFav, onFavToggle, onClick }: {
   game: Game;
@@ -71,6 +73,7 @@ const Discover = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const isMobile = useIsMobile();
 
   return (
     <MainLayout>
@@ -124,17 +127,31 @@ const Discover = () => {
             <p className="text-sm text-muted-foreground">Soyez le premier à publier un jeu !</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {games.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                isFav={isFavorite(game.id)}
-                onFavToggle={() => toggleFavorite(game.id)}
-                onClick={() => setSelectedGameId(game.id)}
-              />
-            ))}
-          </div>
+          <>
+            {Array.from({ length: Math.ceil(games.length / 6) }).map((_, chunkIdx) => {
+              const chunk = games.slice(chunkIdx * 6, chunkIdx * 6 + 6);
+              return (
+                <Fragment key={chunkIdx}>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {chunk.map((game) => (
+                      <GameCard
+                        key={game.id}
+                        game={game}
+                        isFav={isFavorite(game.id)}
+                        onFavToggle={() => toggleFavorite(game.id)}
+                        onClick={() => setSelectedGameId(game.id)}
+                      />
+                    ))}
+                  </div>
+                  {isMobile && chunk.length === 6 && (
+                    <div className="flex justify-center my-2">
+                      <AdBanner slot={`mobile-${chunkIdx}`} variant="mobile" />
+                    </div>
+                  )}
+                </Fragment>
+              );
+            })}
+          </>
         )}
       </div>
 

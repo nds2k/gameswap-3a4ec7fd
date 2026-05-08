@@ -6,6 +6,7 @@ import { useXP } from "@/hooks/useXP";
 import { supabase } from "@/integrations/supabase/client";
 import { useBadges } from "@/hooks/useBadges";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { useAdFree } from "@/hooks/useAdFree";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Gem, Lock, Sparkles, Check, Eye, Award } from "lucide-react";
 import { RANKS } from "@/lib/xpSystem";
@@ -53,6 +54,25 @@ const XPRewards = () => {
   const { xpState, loading, fetchXP } = useXP(user?.id);
   const { toast } = useToast();
   const { userBadges, loading: badgesLoading } = useBadges(user?.id);
+  const { isAdFree, adFreeUntil, refresh: refreshAdFree } = useAdFree();
+  const AD_FREE_COST = 5000;
+
+  const handleBuyAdFree = async () => {
+    if (!user || xp < AD_FREE_COST) return;
+    try {
+      const newXP = xp - AD_FREE_COST;
+      const baseDate = isAdFree && adFreeUntil ? adFreeUntil : new Date();
+      const until = new Date(baseDate);
+      until.setMonth(until.getMonth() + 1);
+      await supabase.from("profiles").update({ xp: newXP, ad_free_until: until.toISOString() } as any).eq("user_id", user.id);
+      await supabase.from("xp_transactions").insert({ user_id: user.id, amount: -AD_FREE_COST, reason: "Ad-free 1 mois" });
+      await fetchXP();
+      await refreshAdFree();
+      toast({ title: "Pubs désactivées !", description: `Profitez de l'app sans pub jusqu'au ${until.toLocaleDateString("fr-FR")}.` });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible d'activer", variant: "destructive" });
+    }
+  };
 
   const [animatedXP, setAnimatedXP] = useState(0);
   const [animatedProgress, setAnimatedProgress] = useState(0);
@@ -221,6 +241,29 @@ const XPRewards = () => {
             </div>
           </div>
         )}
+
+        {/* Ad-free purchase */}
+        <div className="mb-6 rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center text-xl">🚫</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold font-nunito">Supprimer les pubs pendant 1 mois</p>
+              {isAdFree && adFreeUntil ? (
+                <p className="text-xs text-emerald-400">Pubs désactivées jusqu'au {adFreeUntil.toLocaleDateString("fr-FR")}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Profitez de GameSwap sans publicités</p>
+              )}
+            </div>
+          </div>
+          <Button
+            onClick={handleBuyAdFree}
+            disabled={xp < AD_FREE_COST}
+            className="w-full"
+          >
+            <Gem className="h-4 w-4 mr-1" />
+            {isAdFree ? "Prolonger d'1 mois" : "Activer"} — {AD_FREE_COST.toLocaleString()} XP
+          </Button>
+        </div>
 
         {/* Section title */}
         <div className="flex items-center gap-2 mb-4">
