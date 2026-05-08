@@ -6,6 +6,7 @@ import { useXP } from "@/hooks/useXP";
 import { supabase } from "@/integrations/supabase/client";
 import { useBadges } from "@/hooks/useBadges";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { useAdFree } from "@/hooks/useAdFree";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Gem, Lock, Sparkles, Check, Eye, Award } from "lucide-react";
 import { RANKS } from "@/lib/xpSystem";
