@@ -16,16 +16,21 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
       {!isMobile && (
         <>
           <aside className="hidden lg:block fixed left-2 top-24 z-10 w-[160px]">
-            <AdBanner slot="1111111111" variant="sidebar" />
+            <AdBanner slot="8614839849" />
           </aside>
           <aside className="hidden lg:block fixed right-2 top-24 z-10 w-[160px]">
-            <AdBanner slot="2222222222" variant="sidebar" />
+            <AdBanner slot="8614839849" />
           </aside>
         </>
       )}
       <main className="page-container">
         {children}
       </main>
+      {isMobile && (
+        <div className="fixed bottom-16 left-0 right-0 z-40 bg-background border-t border-border/50">
+          <AdBanner slot="7301758172" />
+        </div>
+      )}
       <BottomNav />
     </div>
   );
