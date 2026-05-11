@@ -40,7 +40,7 @@ export const PrivateRoomChat = () => {
       const { data } = await supabase
         .from("profiles")
         .select("full_name, username")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .single();
       if (data) {
         setDisplayName(data.full_name || data.username || "Anonymous");

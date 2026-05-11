@@ -59,11 +59,11 @@ export const useGames = () => {
         if (!profilesCache || now - profilesCacheTime > CACHE_TTL) {
           const { data: profiles } = await supabase
             .from("profiles")
-            .select("user_id, full_name, avatar_url")
-            .in("user_id", ownerIds);
+            .select("id, full_name, avatar_url")
+            .in("id", ownerIds);
 
           profilesCache = new Map(
-            (profiles || []).map((p) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+            (profiles || []).map((p) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }])
           );
           profilesCacheTime = now;
         }

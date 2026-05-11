@@ -27,7 +27,7 @@ export const useXP = (targetUserId?: string) => {
       const { data } = await supabase
         .from("profiles")
         .select("xp")
-        .eq("user_id", userId)
+        .eq("id", userId)
         .single();
 
       const xp = data?.xp ?? 0;
@@ -56,7 +56,7 @@ export const useXP = (targetUserId?: string) => {
       const { data: profile } = await supabase
         .from("profiles")
         .select("xp")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .single();
 
       const currentXP = profile?.xp ?? 0;
@@ -65,7 +65,7 @@ export const useXP = (targetUserId?: string) => {
       await supabase
         .from("profiles")
         .update({ xp: newXP })
-        .eq("user_id", user.id);
+        .eq("id", user.id);
 
       // Log XP transaction
       await supabase.from("xp_transactions").insert({
@@ -101,7 +101,7 @@ export const useXP = (targetUserId?: string) => {
       await supabase
         .from("profiles")
         .update({ xp: xpState.xp - cost })
-        .eq("user_id", user.id);
+        .eq("id", user.id);
 
       // Log deduction
       await supabase.from("xp_transactions").insert({
@@ -123,7 +123,7 @@ export const useXP = (targetUserId?: string) => {
           boost_type: `XP_${boostType}`,
         })
         .eq("id", gameId)
-        .eq("owner_id", user.id);
+        .eq("user_id", user.id);
 
       await fetchXP();
 

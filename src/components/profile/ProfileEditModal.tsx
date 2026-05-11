@@ -110,7 +110,7 @@ export const ProfileEditModal = ({ open, onOpenChange, onSuccess, currentProfile
         updates.last_username_change = new Date().toISOString();
       }
 
-      const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);;
+      const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);
       if (error) throw error;
 
       toast({ title: "Profil mis à jour" });

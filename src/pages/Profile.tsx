@@ -23,7 +23,6 @@ import {
 
 interface ProfileData {
   id: string;
-  user_id: string;
   full_name: string | null;
   username: string | null;
   avatar_url: string | null;
@@ -36,7 +35,7 @@ interface Game {
   title: string;
   image_url: string | null;
   price: number | null;
-  game_type: string;
+  listing_type: string;
   created_at: string;
 }
 
@@ -89,8 +88,8 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, user_id, full_name, username, avatar_url, selected_badge_id, last_username_change")
-        .eq("user_id", user.id)
+        .select("id, full_name, username, avatar_url, selected_badge_id, last_username_change")
+        .eq("id", user.id)
         .single();
       if (error && error.code !== "PGRST116") throw error;
       if (data) setProfile(data as ProfileData);
@@ -106,8 +105,8 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from("games")
-        .select("id, title, image_url, price, game_type, created_at")
-        .eq("owner_id", user.id)
+        .select("id, title, price, listing_type, created_at")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       setGames(data || []);
@@ -136,7 +135,7 @@ const Profile = () => {
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
       const newAvatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-      await supabase.from("profiles").update({ avatar_url: newAvatarUrl }).eq("user_id", user.id);
+      await supabase.from("profiles").update({ avatar_url: newAvatarUrl }).eq("id", user.id);
       setProfile((prev) => prev ? { ...prev, avatar_url: newAvatarUrl } : null);
       toast({ title: "Photo mise à jour" });
     } catch {
@@ -150,7 +149,7 @@ const Profile = () => {
     if (!user || !deleteGameId) return;
     setDeleting(true);
     try {
-      const { error } = await supabase.from("games").delete().eq("id", deleteGameId).eq("owner_id", user.id);
+      const { error } = await supabase.from("games").delete().eq("id", deleteGameId).eq("user_id", user.id);
       if (error) throw error;
       setGames((prev) => prev.filter((g) => g.id !== deleteGameId));
       toast({ title: "Annonce supprimée" });
@@ -332,12 +331,12 @@ const Profile = () => {
                   </button>
                   <div className="p-3" onClick={() => setSelectedGameId(game.id)}>
                     <h3 className="font-medium text-sm truncate">{game.title}</h3>
-                    {game.game_type === "sale" && game.price != null && (
+                    {game.listing_type === "sale" && game.price != null && (
                       <p className="text-primary font-semibold text-sm">{game.price}€</p>
                     )}
-                    {game.game_type !== "sale" && (
+                    {game.listing_type !== "sale" && (
                       <span className="text-xs text-muted-foreground">
-                        {game.game_type === "trade" ? "Échange" : "Présentation"}
+                        {game.listing_type === "trade" ? "Échange" : "Présentation"}
                       </span>
                     )}
                   </div>

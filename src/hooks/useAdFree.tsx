@@ -16,7 +16,7 @@ export const useAdFree = () => {
     const { data } = await supabase
       .from("profiles")
       .select("ad_free_until")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .maybeSingle();
     const v = (data as any)?.ad_free_until;
     setAdFreeUntil(v ? new Date(v) : null);

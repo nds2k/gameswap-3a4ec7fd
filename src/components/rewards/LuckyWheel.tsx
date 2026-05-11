@@ -127,7 +127,7 @@ export const LuckyWheel = ({ xp, onRewardClaimed }: LuckyWheelProps) => {
 
       // Deduct XP
       const newXP = xp - SPIN_COST;
-      await supabase.from("profiles").update({ xp: newXP, last_wheel_spin: new Date().toISOString() }).eq("user_id", user.id);
+      await supabase.from("profiles").update({ xp: newXP, last_wheel_spin: new Date().toISOString() }).eq("id", user.id);
       await supabase.from("xp_transactions").insert({ user_id: user.id, amount: -SPIN_COST, reason: "Lucky Wheel spin" });
 
       // Award XP-based rewards
@@ -137,7 +137,7 @@ export const LuckyWheel = ({ xp, onRewardClaimed }: LuckyWheelProps) => {
       if (won.rewardType === "xp_250") xpGain = 250;
 
       if (xpGain > 0) {
-        await supabase.from("profiles").update({ xp: newXP + xpGain }).eq("user_id", user.id);
+        await supabase.from("profiles").update({ xp: newXP + xpGain }).eq("id", user.id);
         await supabase.from("xp_transactions").insert({ user_id: user.id, amount: xpGain, reason: `Lucky Wheel: ${won.label}` });
       }
 

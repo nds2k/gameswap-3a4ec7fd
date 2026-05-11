@@ -27,7 +27,7 @@ export const useChatPresence = (conversationId: string | undefined) => {
       const { data } = await supabase
         .from("profiles")
         .select("full_name, avatar_url")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .single();
       if (data) setMyProfile(data);
     };

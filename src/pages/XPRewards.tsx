@@ -64,7 +64,7 @@ const XPRewards = () => {
       const baseDate = isAdFree && adFreeUntil ? adFreeUntil : new Date();
       const until = new Date(baseDate);
       until.setMonth(until.getMonth() + 1);
-      await supabase.from("profiles").update({ xp: newXP, ad_free_until: until.toISOString() } as any).eq("user_id", user.id);
+      await supabase.from("profiles").update({ xp: newXP, ad_free_until: until.toISOString() } as any).eq("id", user.id);
       await supabase.from("xp_transactions").insert({ user_id: user.id, amount: -AD_FREE_COST, reason: "Ad-free 1 mois" });
       await fetchXP();
       await refreshAdFree();
@@ -121,7 +121,7 @@ const XPRewards = () => {
     setTappedId(reward.id);
     try {
       const newXP = xp - reward.cost;
-      await supabase.from("profiles").update({ xp: newXP }).eq("user_id", user.id);
+      await supabase.from("profiles").update({ xp: newXP }).eq("id", user.id);
       await supabase.from("xp_transactions").insert({ user_id: user.id, amount: -reward.cost, reason: `Échange XP: ${reward.id}` });
       await supabase.from("user_rewards").insert({
         user_id: user.id,

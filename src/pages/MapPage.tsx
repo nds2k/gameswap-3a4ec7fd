@@ -166,7 +166,7 @@ const MapPage = () => {
             location_lat: newLocation[0],
             location_lng: newLocation[1],
           })
-          .eq("user_id", user.id);
+          .eq("id", user.id);
       }
     } else {
       setLocationError("denied");
@@ -194,7 +194,7 @@ const MapPage = () => {
       const { data: myConvos } = await supabase
         .from("conversation_participants")
         .select("conversation_id")
-        .eq("user_id", user.id);
+        .eq("id", user.id);
 
       const { data: theirConvos } = await supabase
         .from("conversation_participants")

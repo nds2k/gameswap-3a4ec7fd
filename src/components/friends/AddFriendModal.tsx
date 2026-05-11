@@ -68,12 +68,12 @@ export const AddFriendModal = ({
           const userIds = filtered.map(p => p.user_id);
           const { data: settingsData } = await supabase
             .from("profiles")
-            .select("user_id, allow_friend_requests")
-            .in("user_id", userIds);
+            .select("id, allow_friend_requests")
+            .in("id", userIds);
           
           const settingsMap = new Map<string, boolean>();
           settingsData?.forEach(s => {
-            settingsMap.set(s.user_id, s.allow_friend_requests ?? true);
+            settingsMap.set(s.id, s.allow_friend_requests ?? true);
           });
           setProfileSettings(settingsMap);
         }

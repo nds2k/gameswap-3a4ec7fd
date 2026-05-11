@@ -49,14 +49,14 @@ export const useEncryption = () => {
         const { data: profile } = await supabase
           .from("profiles")
           .select("public_key")
-          .eq("user_id", user.id)
+          .eq("id", user.id)
           .single();
 
         if (!profile?.public_key || profile.public_key !== publicKeyString) {
           await supabase
             .from("profiles")
             .update({ public_key: publicKeyString })
-            .eq("user_id", user.id);
+            .eq("id", user.id);
         }
 
         setIsInitialized(true);

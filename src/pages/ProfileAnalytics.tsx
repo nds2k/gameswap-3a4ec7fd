@@ -77,7 +77,7 @@ const ProfileAnalytics = () => {
         supabase
           .from("xp_transactions")
           .select("amount, reason, created_at")
-          .eq("user_id", user.id)
+          .eq("id", user.id)
           .order("created_at", { ascending: true })
           .limit(100),
         supabase

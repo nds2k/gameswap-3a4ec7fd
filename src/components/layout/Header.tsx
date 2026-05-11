@@ -35,7 +35,7 @@ export const Header = () => {
     supabase
       .from("profiles")
       .select("avatar_url")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .maybeSingle()
       .then(({ data }) => setAvatarUrl(data?.avatar_url ?? null));
   }, [user]);
