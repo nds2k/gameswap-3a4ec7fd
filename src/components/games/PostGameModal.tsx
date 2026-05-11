@@ -48,7 +48,6 @@ const GAME_CATEGORIES = [
   { value: "other", labelFr: "Autre" },
 ];
 
-// Map BGG/scanned categories to internal categories
 const mapToInternalCategory = (cat?: string | null): string => {
   if (!cat) return "";
   const lower = cat.toLowerCase();
@@ -88,7 +87,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
     condition: "", category: "", players: "", playtime: "", age: "",
   });
 
-  // Check for scanned game data on open (supports both old and new format)
   useEffect(() => {
     if (!open) return;
     const raw = sessionStorage.getItem("scanned_game");
@@ -96,7 +94,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
     try {
       const scanned = JSON.parse(raw);
       sessionStorage.removeItem("scanned_game");
-      // Support both old (name) and new (title) format from master_games
       const title = scanned.title || scanned.name || "";
       const coverImage = scanned.cover_image_url || scanned.image_url || null;
       setFormData((f) => ({
@@ -143,7 +140,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Fetch fresh authenticated user directly from Supabase (don't rely on context)
     const { data: { session } } = await supabase.auth.getSession();
     const authUser = session?.user;
     if (!authUser) {
@@ -168,9 +164,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         }
       }
 
-      // Use scanned image as fallback if no uploaded images
-      const mainImage = uploadedUrls[0] || scannedImageUrl || null;
-
       const fullDescription = [
         formData.description,
         formData.players && `Joueurs: ${formData.players}`,
@@ -186,7 +179,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         listing_type: formData.gameType,
         condition: formData.condition || null,
         category: formData.category || null,
-        image_url: mainImage,
         status: "available",
       }).select().single();
 
@@ -234,7 +226,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Images + Scan */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Photos (max 5)</Label>
@@ -244,7 +235,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
                 </Button>
               </div>
 
-              {/* Scanned image preview */}
               {scannedImageUrl && images.length === 0 && (
                 <div className="relative aspect-video rounded-xl overflow-hidden border border-primary/20 bg-muted">
                   <img src={scannedImageUrl} alt="Scanned" className="w-full h-full object-contain" />
@@ -281,13 +271,11 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
               <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageSelect} className="hidden" />
             </div>
 
-            {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title">Nom du jeu *</Label>
               <Input id="title" value={formData.title} onChange={(e) => setFormData((f) => ({ ...f, title: e.target.value }))} placeholder="Ex: Catan, Ticket to Ride..." className={hasScannedData ? "border-primary/30 bg-primary/5" : ""} />
             </div>
 
-            {/* Category */}
             <div className="space-y-2">
               <Label>Catégorie *</Label>
               <Select value={formData.category} onValueChange={(v) => setFormData((f) => ({ ...f, category: v }))}>
@@ -300,7 +288,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
               </Select>
             </div>
 
-            {/* Type & Price */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Type d'annonce</Label>
@@ -321,7 +308,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
               )}
             </div>
 
-            {/* Game Info */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="players">Joueurs</Label>
@@ -337,7 +323,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
               </div>
             </div>
 
-            {/* Condition */}
             <div className="space-y-2">
               <Label>État</Label>
               <Select value={formData.condition} onValueChange={(v) => setFormData((f) => ({ ...f, condition: v }))}>
@@ -352,13 +337,11 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
               </Select>
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea id="description" value={formData.description} onChange={(e) => setFormData((f) => ({ ...f, description: e.target.value }))} placeholder="Décrivez votre jeu, son état, si des pièces manquent..." rows={4} />
             </div>
 
-            {/* Boost CTA */}
             <div className="flex items-center gap-3 p-4 rounded-2xl border border-primary/20 bg-primary/5">
               <Rocket className="h-5 w-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
@@ -371,7 +354,6 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
               </Button>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Annuler</Button>
               <Button type="submit" variant="gameswap" className="flex-1" disabled={loading}>
