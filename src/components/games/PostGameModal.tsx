@@ -176,7 +176,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         title: formData.title.trim(),
         description: fullDescription,
         price: formData.gameType === "sale" ? parseFloat(formData.price) || 0 : null,
-        listing_type: formData.gameType,
+        listing_type: formData.gameType === "sale" ? "vente" : formData.gameType === "trade" ? "echange" : "don",
         condition: formData.condition || null,
         category: formData.category || null,
         status: "available",
