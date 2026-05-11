@@ -179,7 +179,7 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
         listing_type: formData.gameType === "sale" ? "vente" : formData.gameType === "trade" ? "echange" : "don",
         condition: formData.condition || null,
         category: formData.category || null,
-        status: "available",
+        status: "active",
       }).select().single();
 
       if (error) throw error;
