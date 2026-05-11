@@ -33,7 +33,6 @@ interface ProfileData {
 interface Game {
   id: string;
   title: string;
-  image_url: string | null;
   price: number | null;
   listing_type: string;
   created_at: string;
@@ -331,12 +330,12 @@ const Profile = () => {
                   </button>
                   <div className="p-3" onClick={() => setSelectedGameId(game.id)}>
                     <h3 className="font-medium text-sm truncate">{game.title}</h3>
-                    {game.listing_type === "sale" && game.price != null && (
+                    {game.listing_type === "vente" && game.price != null && (
                       <p className="text-primary font-semibold text-sm">{game.price}€</p>
                     )}
-                    {game.listing_type !== "sale" && (
+                    {game.listing_type!== "vente" && (
                       <span className="text-xs text-muted-foreground">
-                        {game.listing_type === "trade" ? "Échange" : "Présentation"}
+                        {game.listing_type === "echange"? "Échange" : "Présentation"}
                       </span>
                     )}
                   </div>
