@@ -12,10 +12,7 @@ export interface Game {
   user_id: string;
   created_at: string;
   status: string | null;
-  view_count: number | null;
   is_boosted: boolean | null;
-  boost_expires_at: string | null;
-  boost_type: string | null;
   owner?: {
     full_name: string | null;
     avatar_url: string | null;
@@ -52,7 +49,23 @@ export const useGames = () => {
       if (!isMounted.current) return;
 
       if (gamesData && gamesData.length > 0) {
+        const gameIds = gamesData.map((g) => g.id);
         const ownerIds = [...new Set(gamesData.map((g) => g.user_id))];
+
+        // Fetch first image for each game from game_images table
+        const { data: imagesData } = await supabase
+          .from("game_images")
+          .select("game_id, image_url, display_order")
+          .in("game_id", gameIds)
+          .order("display_order", { ascending: true });
+
+        // Build a map of game_id -> first image_url
+        const imagesMap = new Map<string, string>();
+        (imagesData || []).forEach((img) => {
+          if (!imagesMap.has(img.game_id)) {
+            imagesMap.set(img.game_id, img.image_url);
+          }
+        });
 
         // Use cache if fresh enough
         const now = Date.now();
@@ -72,6 +85,7 @@ export const useGames = () => {
 
         const gamesWithOwners = gamesData.map((game) => ({
           ...game,
+          image_url: imagesMap.get(game.id) || null,
           owner: profilesCache?.get(game.user_id) || null,
         }));
 
