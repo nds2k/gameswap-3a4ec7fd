@@ -6,10 +6,10 @@ export interface Game {
   title: string;
   description: string | null;
   price: number | null;
-  game_type: string;
+  listing_type: string;
   condition: string | null;
   image_url: string | null;
-  owner_id: string;
+  user_id: string;
   created_at: string;
   status: string | null;
   view_count: number | null;
@@ -43,7 +43,7 @@ export const useGames = () => {
       const { data: gamesData, error } = await supabase
         .from("games")
         .select("*")
-        .eq("status", "available")
+        .eq("status", "active")
         .order("is_boosted", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(50);
@@ -52,7 +52,7 @@ export const useGames = () => {
       if (!isMounted.current) return;
 
       if (gamesData && gamesData.length > 0) {
-        const ownerIds = [...new Set(gamesData.map((g) => g.owner_id))];
+        const ownerIds = [...new Set(gamesData.map((g) => g.user_id))];
 
         // Use cache if fresh enough
         const now = Date.now();
@@ -72,7 +72,7 @@ export const useGames = () => {
 
         const gamesWithOwners = gamesData.map((game) => ({
           ...game,
-          owner: profilesCache?.get(game.owner_id) || null,
+          owner: profilesCache?.get(game.user_id) || null,
         }));
 
         setGames(gamesWithOwners);
