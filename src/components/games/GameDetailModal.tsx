@@ -20,10 +20,10 @@ interface Game {
   title: string;
   description: string | null;
   price: number | null;
-  game_type: string;
+  listing_type: string;
   condition: string | null;
   image_url: string | null;
-  owner_id: string;
+  user_id: string;
   created_at: string;
   view_count: number | null;
   status: string | null;
@@ -55,9 +55,9 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
   const [gameImages, setGameImages] = useState<string[]>([]);
   const [tradeLoading, setTradeLoading] = useState(false);
 
-  const canEdit = game && user?.id === game.owner_id && 
+  const canEdit = game && user?.id === game.user_id && 
     (new Date().getTime() - new Date(game.created_at).getTime()) <= 30 * 24 * 60 * 60 * 1000;
-  const editExpired = game && user?.id === game.owner_id && !canEdit;
+  const editExpired = game && user?.id === game.user_id && !canEdit;
 
   useEffect(() => {
     if (!gameId || !open) return;
@@ -93,9 +93,9 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
         }
         setGameImages(allImages);
 
-        if (gameData.owner_id) {
+        if (gameData.user_id) {
           const { data: allProfiles } = await supabase.rpc("get_public_profiles");
-          const ownerProfile = (allProfiles || []).find((p: any) => p.user_id === gameData.owner_id);
+          const ownerProfile = (allProfiles || []).find((p: any) => p.user_id === gameData.user_id);
           if (ownerProfile) {
             setOwner({ full_name: ownerProfile.full_name, avatar_url: ownerProfile.avatar_url });
           }
@@ -120,10 +120,10 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
       toast({ title: "Connexion requise", description: "Connectez-vous pour contacter le vendeur", variant: "destructive" });
       return;
     }
-    if (!game || game.owner_id === user.id) return;
+    if (!game || game.user_id === user.id) return;
     setChatLoading(true);
     try {
-      const conversationId = await createConversation(game.owner_id);
+      const conversationId = await createConversation(game.user_id);
       if (conversationId) {
         onOpenChange(false);
         navigate("/messages");
@@ -139,7 +139,7 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
   const handleStartTrade = async () => {
     if (!user || !game) return;
     setTradeLoading(true);
-    await createTrade(game.id, game.owner_id);
+    await createTrade(game.id, game.user_id);
     setTradeLoading(false);
   };
 
@@ -187,14 +187,14 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
               <div className="absolute top-3 left-4 z-10">
                 <span
                   className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
-                    game.game_type === "sale"
+                    game.listing_type === "sale"
                       ? "bg-primary text-primary-foreground"
-                      : game.game_type === "trade"
+                      : game.listing_type === "trade"
                       ? "bg-blue-500 text-white"
                       : "bg-purple-500 text-white"
                   }`}
                 >
-                  {game.game_type === "sale" ? "Vente" : game.game_type === "trade" ? "Échange" : "Présentation"}
+                  {game.listing_type === "sale" ? "Vente" : game.listing_type === "trade" ? "Échange" : "Présentation"}
                 </span>
               </div>
 
@@ -220,7 +220,7 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                   <h2 className="text-2xl font-bold">{game.title}</h2>
                   {game.condition && <p className="text-muted-foreground mt-1">{game.condition}</p>}
                 </div>
-                {game.game_type === "sale" && game.price != null && (
+                {game.listing_type === "sale" && game.price != null && (
                   <span className="text-2xl font-bold text-primary">{game.price}€</span>
                 )}
               </div>
@@ -264,7 +264,7 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                 <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl">
                   <div 
                     className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => { onOpenChange(false); navigate(`/user/${game.owner_id}`); }}
+                    onClick={() => { onOpenChange(false); navigate(`/user/${game.user_id}`); }}
                   >
                     {owner?.avatar_url ? (
                       <img src={owner.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover" />
@@ -276,12 +276,12 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-semibold">{owner?.full_name || "Vendeur"}</p>
-                        <UserReputation userId={game.owner_id} compact />
+                        <UserReputation userId={game.user_id} compact />
                       </div>
                       <p className="text-sm text-muted-foreground">Voir le profil</p>
                     </div>
                   </div>
-                  {game.owner_id !== user?.id && (
+                  {game.user_id !== user?.id && (
                     <Button variant="gameswap" onClick={handleStartChat} disabled={chatLoading}>
                       {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
                         <><MessageCircle className="h-4 w-4 mr-2" />Contacter</>
@@ -292,7 +292,7 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
               </div>
 
               {/* Trade button for trade-type listings */}
-              {game.game_type === "trade" && game.owner_id !== user?.id && user && (
+              {game.listing_type === "trade" && game.user_id !== user?.id && user && (
                 <Button variant="gameswap" size="lg" className="w-full" onClick={handleStartTrade} disabled={tradeLoading}>
                   {tradeLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Star className="h-4 w-4 mr-2" />}
                   Proposer un échange
@@ -300,7 +300,7 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
               )}
 
               {/* Sell button */}
-              {game.owner_id === user?.id && game.game_type === "sale" && game.status !== "sold" && (
+              {game.user_id === user?.id && game.listing_type === "sale" && game.status !== "sold" && (
                 <Button variant="gameswap" size="lg" className="w-full mt-3" onClick={handleSellClick} disabled={sellerCheckLoading}>
                   {sellerCheckLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CreditCard className="h-4 w-4 mr-2" />}
                   Vendre ce jeu

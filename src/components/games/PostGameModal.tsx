@@ -144,8 +144,9 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
     e.preventDefault();
 
     // Fetch fresh authenticated user directly from Supabase (don't rely on context)
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-    if (authError || !authUser) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const authUser = session?.user;
+    if (!authUser) {
       toast({ title: "Erreur", description: "Vous devez être connecté", variant: "destructive" });
       return;
     }
@@ -178,11 +179,11 @@ export const PostGameModal = ({ open, onOpenChange, onSuccess }: PostGameModalPr
       ].filter(Boolean).join("\n");
 
       const { data: gameData, error } = await supabase.from("games").insert({
-        owner_id: authUser.id,
+        user_id: authUser.id,
         title: formData.title.trim(),
         description: fullDescription,
         price: formData.gameType === "sale" ? parseFloat(formData.price) || 0 : null,
-        game_type: formData.gameType,
+        listing_type: formData.gameType,
         condition: formData.condition || null,
         category: formData.category || null,
         image_url: mainImage,
