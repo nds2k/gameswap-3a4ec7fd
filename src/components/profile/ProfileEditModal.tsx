@@ -74,7 +74,7 @@ export const ProfileEditModal = ({ open, onOpenChange, onSuccess, currentProfile
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
       const newUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-      await supabase.from("profiles").update({ avatar_url: newUrl }).eq("user_id", user.id);
+      await supabase.from("profiles").update({ avatar_url: newUrl }).eq("id", user.id);
       setAvatarUrl(newUrl);
       toast({ title: "Photo mise à jour" });
     } catch {
@@ -110,7 +110,7 @@ export const ProfileEditModal = ({ open, onOpenChange, onSuccess, currentProfile
         updates.last_username_change = new Date().toISOString();
       }
 
-      const { error } = await supabase.from("profiles").update(updates).eq("user_id", user.id);
+      const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);;
       if (error) throw error;
 
       toast({ title: "Profil mis à jour" });
