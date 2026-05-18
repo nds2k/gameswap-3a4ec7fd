@@ -23,12 +23,15 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           </aside>
         </>
       )}
-      <main className="page-container">
+      <main className="page-container pb-32">
         {children}
       </main>
+      {/* Mobile sticky bottom ad — fixed above bottom nav, never moves */}
       {isMobile && (
-        <div className="fixed bottom-16 left-0 right-0 z-40 bg-background border-t border-border/50">
-          <AdBanner slot="7301758172" />
+        <div className="fixed bottom-16 left-0 right-0 z-40 bg-background border-t border-border/50 pointer-events-none">
+          <div className="pointer-events-auto">
+            <AdBanner slot="7301758172" className="w-full" />
+          </div>
         </div>
       )}
       <BottomNav />

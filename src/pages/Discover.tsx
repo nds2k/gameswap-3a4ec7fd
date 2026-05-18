@@ -1,13 +1,15 @@
 import { useState, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { TrendingUp, Clock, Zap, Sparkles, Heart, Search, SlidersHorizontal, ScanLine, MapPin } from "lucide-react";
+import { Zap, Heart, Search, SlidersHorizontal, ScanLine, MapPin } from "lucide-react";
 import { useGames, type Game } from "@/hooks/useGames";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 import { AdBanner } from "@/components/ads/AdBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSearchHistory } from "@/hooks/useSearchHistory";
+import { RecentlyViewed } from "@/components/discover/RecentlyViewed";
 
 const GameCard = ({ game, isFav, onFavToggle, onClick }: {
   game: Game;
@@ -22,13 +24,11 @@ const GameCard = ({ game, isFav, onFavToggle, onClick }: {
       ) : (
         <div className="w-full h-full bg-muted flex items-center justify-center text-3xl">🎲</div>
       )}
-      {/* Type badge */}
       <span className={`absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold ${
         game.listing_type === "vente" ? "bg-primary text-primary-foreground" : "bg-blue-500 text-white"
       }`}>
-        {game.listing_type === "vente" ? "Vente" : "Échange"}
+        {game.listing_type === "vente" ? "Vente" : game.listing_type === "echange" ? "Échange" : "Présentation"}
       </span>
-      {/* Heart */}
       <button
         onClick={(e) => { e.stopPropagation(); onFavToggle(); }}
         className="absolute top-2 right-2 w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center"
@@ -52,9 +52,13 @@ const GameCard = ({ game, isFav, onFavToggle, onClick }: {
       {game.owner && (
         <div className="flex items-center justify-between mt-1">
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center">
-              <span className="text-[8px] font-bold text-primary">{game.owner.full_name?.[0]?.toUpperCase() || "?"}</span>
-            </div>
+            {game.owner.avatar_url ? (
+              <img src={game.owner.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+            ) : (
+              <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-[8px] font-bold text-primary">{game.owner.full_name?.[0]?.toUpperCase() || "?"}</span>
+              </div>
+            )}
             <span className="text-[10px] text-muted-foreground">{game.owner.full_name || "Vendeur"}</span>
           </div>
           <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
@@ -72,18 +76,31 @@ const Discover = () => {
   const { games, loading } = useGames();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const isMobile = useIsMobile();
+  const { history, addToHistory, clearHistory } = useSearchHistory();
+
+  const handleGameClick = (game: Game) => {
+    addToHistory({
+      id: game.id,
+      title: game.title,
+      image_url: game.image_url,
+      listing_type: game.listing_type,
+      price: game.price,
+      viewed_at: Date.now(),
+    });
+    setSelectedGameId(game.id);
+  };
+
+  const handleHistoryClick = (item: { id: string }) => {
+    setSelectedGameId(item.id);
+  };
 
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto px-3 py-2 space-y-3">
         {/* Search bar + scanner */}
         <div className="flex items-center gap-2">
-          <div
-            className="flex-1 relative cursor-pointer"
-            onClick={() => navigate("/search")}
-          >
+          <div className="flex-1 relative cursor-pointer" onClick={() => navigate("/search")}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <div className="w-full h-10 rounded-xl bg-muted/50 border border-border/50 pl-9 pr-3 flex items-center text-xs text-muted-foreground">
               Rechercher un jeu...
@@ -97,9 +114,16 @@ const Discover = () => {
           </button>
         </div>
 
+        {/* Recently viewed horizontal scroll */}
+        <RecentlyViewed
+          history={history}
+          onSelect={handleHistoryClick}
+          onClear={clearHistory}
+        />
+
         {/* Filters */}
         <button
-          onClick={() => setShowFilters(!showFilters)}
+          onClick={() => {}}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/50 text-xs text-muted-foreground hover:bg-muted transition-colors"
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -139,7 +163,7 @@ const Discover = () => {
                         game={game}
                         isFav={isFavorite(game.id)}
                         onFavToggle={() => toggleFavorite(game.id)}
-                        onClick={() => setSelectedGameId(game.id)}
+                        onClick={() => handleGameClick(game)}
                       />
                     ))}
                   </div>
