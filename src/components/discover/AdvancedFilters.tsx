@@ -32,8 +32,8 @@ const CONDITIONS = [
 
 const TYPE_FILTERS = [
   { id: "all", label: "Tous" },
-  { id: "sale", label: "Vente" },
-  { id: "trade", label: "Échange" },
+  { id: "vente", label: "Vente" },
+  { id: "echange", label: "Échange" },
 ];
 
 export interface AdvancedFilterState {

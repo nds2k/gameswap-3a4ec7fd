@@ -23,7 +23,7 @@ export const GameGrid = ({ searchQuery, filter, advancedFilters }: GameGridProps
     const query = searchQuery.toLowerCase();
     const filtered = games.filter((game) => {
       const matchesSearch = game.title.toLowerCase().includes(query);
-      const matchesFilter = filter === "all" || game.game_type === filter;
+      const matchesFilter = filter === "all" || game.listing_type === filter;
       if (!matchesSearch || !matchesFilter) return false;
 
       if (advancedFilters) {
@@ -196,12 +196,12 @@ const GameCard = memo(({ game, onClick, isAuthenticated }: GameCardProps) => {
         <div className="absolute bottom-2 left-2">
           <span
             className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-              game.game_type === "sale"
+              game.listing_type === "vente"
                 ? "bg-primary text-primary-foreground"
                 : "bg-blue-500 text-white"
             }`}
           >
-            {game.game_type === "sale" ? "Vente" : "Échange"}
+            {game.listing_type === "vente" ? "Vente" : "Échange"}
           </span>
         </div>
       </div>
@@ -210,7 +210,7 @@ const GameCard = memo(({ game, onClick, isAuthenticated }: GameCardProps) => {
       <div className="p-2.5 sm:p-3">
         <div className="flex items-start justify-between gap-1.5 mb-1">
           <h3 className="font-bold text-xs sm:text-sm line-clamp-1">{game.title}</h3>
-          {game.game_type === "sale" && game.price != null && (
+          {game.listing_type === "vente" && game.price != null && (
             <span className="font-bold text-primary shrink-0 text-xs sm:text-sm">{game.price}€</span>
           )}
         </div>

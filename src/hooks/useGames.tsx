@@ -3,106 +3,106 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Game {
   id: string;
-  title: string;
-  description: string | null;
-  price: number | null;
-  listing_type: string;
-  condition: string | null;
-  image_url: string | null;
-  user_id: string;
-  created_at: string;
-  status: string | null;
-  is_boosted: boolean | null;
-  owner?: {
-    full_name: string | null;
-    avatar_url: string | null;
-  };
-}
+    title: string;
+      description: string | null;
+        price: number | null;
+          listing_type: string;
+            condition: string | null;
+              image_url: string | null;
+                user_id: string;
+                  created_at: string;
+                    status: string | null;
+                      is_boosted: boolean | null;
+                        owner?: {
+                            full_name: string | null;
+                                avatar_url: string | null;
+                                  };
+                                  }
 
-// Cache profiles to avoid refetching on every game list load
-let profilesCache: Map<string, { full_name: string | null; avatar_url: string | null }> | null = null;
-let profilesCacheTime = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+                                  // Cache profiles to avoid refetching on every game list load
+                                  let profilesCache: Map<string, { full_name: string | null; avatar_url: string | null }> | null = null;
+                                  let profilesCacheTime = 0;
+                                  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-export const useGames = () => {
-  const [games, setGames] = useState<Game[]>([]);
-  const [loading, setLoading] = useState(true);
-  const isMounted = useRef(true);
+                                  export const useGames = () => {
+                                    const [games, setGames] = useState<Game[]>([]);
+                                      const [loading, setLoading] = useState(true);
+                                        const isMounted = useRef(true);
 
-  useEffect(() => {
-    isMounted.current = true;
-    return () => { isMounted.current = false; };
-  }, []);
+                                          useEffect(() => {
+                                              isMounted.current = true;
+                                                  return () => { isMounted.current = false; };
+                                                    }, []);
 
-  const fetchGames = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data: gamesData, error } = await supabase
-        .from("games")
-        .select("*")
-        .eq("status", "active")
-        .order("is_boosted", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(50);
+                                                      const fetchGames = useCallback(async () => {
+                                                          setLoading(true);
+                                                              try {
+                                                                    const { data: gamesData, error } = await supabase
+                                                                            .from("games")
+                                                                                    .select("*")
+                                                                                            .eq("status", "active")
+                                                                                                    .order("is_boosted", { ascending: false })
+                                                                                                            .order("created_at", { ascending: false })
+                                                                                                                    .limit(50);
 
-      if (error) throw error;
-      if (!isMounted.current) return;
+                                                                                                                          if (error) throw error;
+                                                                                                                                if (!isMounted.current) return;
 
-      if (gamesData && gamesData.length > 0) {
-        const gameIds = gamesData.map((g) => g.id);
-        const ownerIds = [...new Set(gamesData.map((g) => g.user_id))];
+                                                                                                                                      if (gamesData && gamesData.length > 0) {
+                                                                                                                                              const gameIds = gamesData.map((g) => g.id);
+                                                                                                                                                      const ownerIds = [...new Set(gamesData.map((g) => g.user_id))];
 
-        // Fetch first image for each game from game_images table
-        const { data: imagesData } = await supabase
-          .from("game_images")
-          .select("game_id, image_url, display_order")
-          .in("game_id", gameIds)
-          .order("display_order", { ascending: true });
+                                                                                                                                                              // Fetch first image for each game from game_images table
+                                                                                                                                                                      const { data: imagesData } = await supabase
+                                                                                                                                                                                .from("game_images")
+                                                                                                                                                                                          .select("game_id, image_url, display_order")
+                                                                                                                                                                                                    .in("game_id", gameIds)
+                                                                                                                                                                                                              .order("display_order", { ascending: true });
 
-        // Build a map of game_id -> first image_url
-        const imagesMap = new Map<string, string>();
-        (imagesData || []).forEach((img) => {
-          if (!imagesMap.has(img.game_id)) {
-            imagesMap.set(img.game_id, img.image_url);
-          }
-        });
+                                                                                                                                                                                                                      // Build a map of game_id -> first image_url
+                                                                                                                                                                                                                              const imagesMap = new Map<string, string>();
+                                                                                                                                                                                                                                      (imagesData || []).forEach((img) => {
+                                                                                                                                                                                                                                                if (!imagesMap.has(img.game_id)) {
+                                                                                                                                                                                                                                                            imagesMap.set(img.game_id, img.image_url);
+                                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                                                              });
 
-        // Use cache if fresh enough
-        const now = Date.now();
-        if (!profilesCache || now - profilesCacheTime > CACHE_TTL) {
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, full_name, avatar_url")
-            .in("id", ownerIds);
+                                                                                                                                                                                                                                                                                      // Use cache if fresh enough
+                                                                                                                                                                                                                                                                                              const now = Date.now();
+                                                                                                                                                                                                                                                                                                      if (!profilesCache || now - profilesCacheTime > CACHE_TTL) {
+                                                                                                                                                                                                                                                                                                                const { data: profiles } = await supabase
+                                                                                                                                                                                                                                                                                                                            .from("profiles")
+                                                                                                                                                                                                                                                                                                                                        .select("id, full_name, avatar_url")
+                                                                                                                                                                                                                                                                                                                                                    .in("id", ownerIds);
 
-          profilesCache = new Map(
-            (profiles || []).map((p) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }])
-          );
-          profilesCacheTime = now;
-        }
+                                                                                                                                                                                                                                                                                                                                                              profilesCache = new Map(
+                                                                                                                                                                                                                                                                                                                                                                          (profiles || []).map((p) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+                                                                                                                                                                                                                                                                                                                                                                                    );
+                                                                                                                                                                                                                                                                                                                                                                                              profilesCacheTime = now;
+                                                                                                                                                                                                                                                                                                                                                                                                      }
 
-        if (!isMounted.current) return;
+                                                                                                                                                                                                                                                                                                                                                                                                              if (!isMounted.current) return;
 
-        const gamesWithOwners = gamesData.map((game) => ({
-          ...game,
-          image_url: imagesMap.get(game.id) || null,
-          owner: profilesCache?.get(game.user_id) || null,
-        }));
+                                                                                                                                                                                                                                                                                                                                                                                                                      const gamesWithOwners = gamesData.map((game) => ({
+                                                                                                                                                                                                                                                                                                                                                                                                                                ...game,
+                                                                                                                                                                                                                                                                                                                                                                                                                                          image_url: imagesMap.get(game.id) || null,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    owner: profilesCache?.get(game.user_id) || null,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            }));
 
-        setGames(gamesWithOwners);
-      } else {
-        setGames([]);
-      }
-    } catch (error) {
-      console.error("Error fetching games:", error);
-    } finally {
-      if (isMounted.current) setLoading(false);
-    }
-  }, []);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    setGames(gamesWithOwners);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          } else {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  setGames([]);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            } catch (error) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  console.error("Error fetching games:", error);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      } finally {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if (isMounted.current) setLoading(false);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  }, []);
 
-  useEffect(() => {
-    fetchGames();
-  }, [fetchGames]);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    useEffect(() => {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        fetchGames();
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          }, [fetchGames]);
 
-  return { games, loading, refetch: fetchGames };
-};
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            return { games, loading, refetch: fetchGames };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            };

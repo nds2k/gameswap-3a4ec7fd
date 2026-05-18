@@ -10,8 +10,8 @@ export const FilterTabs = ({ activeFilter, onFilterChange }: FilterTabsProps) =>
 
   const filters = [
     { id: "all", labelKey: "discover.all" },
-    { id: "sale", labelKey: "discover.sale" },
-    { id: "trade", labelKey: "discover.trade" },
+    { id: "vente", labelKey: "discover.sale" },
+    { id: "echange", labelKey: "discover.trade" },
   ];
 
   return (
