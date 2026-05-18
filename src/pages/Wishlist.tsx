@@ -21,7 +21,7 @@ interface WishlistGame {
     title: string;
     price: number | null;
     image_url: string | null;
-    game_type: string;
+    listing_type: string;
   } | null;
 }
 
@@ -69,7 +69,7 @@ const Wishlist = () => {
             title,
             price,
             image_url,
-            game_type
+            listing_type
           )
         `)
         .eq("user_id", user.id)
@@ -332,7 +332,7 @@ const Wishlist = () => {
                   className="flex-1 min-w-0 cursor-pointer"
                 >
                   <h3 className="font-bold text-lg">{item.game?.title || "Deleted game"}</h3>
-                  {item.game?.game_type === "sale" && item.game?.price != null && (
+                  {item.game?.listing_type === "vente" && item.game?.price != null && (
                     <p className="text-primary font-semibold">{item.game.price}€</p>
                   )}
                   {item.list_name && (

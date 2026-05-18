@@ -4,11 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 interface RecommendedGame {
   id: string;
   title: string;
-  image_url: string | null;
-  price: number | null;
-  game_type: string;
+    price: number | null;
+  listing_type: string;
   category: string | null;
-  owner_id: string;
+  user_id: string;
   owner?: { full_name: string | null; avatar_url: string | null };
 }
 
@@ -57,9 +56,9 @@ export const useRecommendations = (userId: string | undefined) => {
       // Get games matching user interests, excluding own games
       let query = supabase
         .from("games")
-        .select("id, title, image_url, price, game_type, category, owner_id")
-        .eq("status", "available")
-        .neq("owner_id", userId)
+        .select("id, title, price, listing_type, category, user_id")
+        .eq("status", "active")
+        .neq("user_id", userId)
         .limit(20);
 
       if (topCategories.length > 0) {
@@ -80,9 +79,9 @@ export const useRecommendations = (userId: string | undefined) => {
         // Fallback: recent popular games
         const { data: fallback } = await supabase
           .from("games")
-          .select("id, title, image_url, price, game_type, category, owner_id")
-          .eq("status", "available")
-          .neq("owner_id", userId)
+          .select("id, title, price, listing_type, category, user_id")
+          .eq("status", "active")
+          .neq("user_id", userId)
           .order("view_count", { ascending: false })
           .limit(10);
         setRecommendations(fallback || []);

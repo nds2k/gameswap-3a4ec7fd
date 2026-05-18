@@ -24,9 +24,9 @@ const GameCard = ({ game, isFav, onFavToggle, onClick }: {
       )}
       {/* Type badge */}
       <span className={`absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold ${
-        game.game_type === "sale" ? "bg-primary text-primary-foreground" : "bg-blue-500 text-white"
+        game.listing_type === "vente" ? "bg-primary text-primary-foreground" : "bg-blue-500 text-white"
       }`}>
-        {game.game_type === "sale" ? "Vente" : "Échange"}
+        {game.listing_type === "vente" ? "Vente" : "Échange"}
       </span>
       {/* Heart */}
       <button
@@ -44,7 +44,7 @@ const GameCard = ({ game, isFav, onFavToggle, onClick }: {
     <div className="p-2.5">
       <div className="flex items-start justify-between gap-1">
         <h3 className="text-xs font-bold line-clamp-1 flex-1">{game.title}</h3>
-        {game.game_type === "sale" && game.price != null && (
+        {game.listing_type === "vente" && game.price != null && (
           <span className="text-xs font-bold text-primary shrink-0">{game.price}€</span>
         )}
       </div>

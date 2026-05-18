@@ -26,9 +26,8 @@ interface PublicProfile {
 interface Game {
   id: string;
   title: string;
-  image_url: string | null;
   price: number | null;
-  game_type: string;
+  listing_type: string;
   created_at: string;
 }
 
@@ -95,8 +94,8 @@ const UserProfile = () => {
     try {
       const { data, error } = await supabase
         .from("games")
-        .select("id, title, image_url, price, game_type, created_at")
-        .eq("owner_id", userId)
+        .select("id, title, price, listing_type, created_at")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -420,12 +419,12 @@ const UserProfile = () => {
                   </div>
                   <div className="p-3">
                     <h3 className="font-medium text-sm truncate">{game.title}</h3>
-                    {game.game_type === "sale" && game.price != null && (
+                    {game.listing_type === "vente" && game.price != null && (
                       <p className="text-primary font-semibold text-sm">{game.price}€</p>
                     )}
-                    {game.game_type !== "sale" && (
+                    {game.listing_type !== "vente" && (
                       <span className="text-xs text-muted-foreground">
-                        {game.game_type === "trade" ? "Échange" : "Présentation"}
+                        {game.listing_type === "echange" ? "Échange" : "Présentation"}
                       </span>
                     )}
                   </div>

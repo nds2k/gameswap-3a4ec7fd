@@ -60,7 +60,7 @@ export const FriendsGames = ({ games, loading }: FriendsGamesProps) => {
                 </div>
               )}
               <Badge className="absolute top-2 right-2 bg-background/90 text-foreground">
-                {gameTypeLabels[game.game_type] || game.game_type}
+                {gameTypeLabels[game.listing_type] || game.listing_type}
               </Badge>
             </div>
             <div className="p-4">

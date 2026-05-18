@@ -89,8 +89,8 @@ const GameDetailPage = () => {
             }
           });
 
-        const listingsPromise = supabase.from("games").select("id, title, price, game_type, image_url, condition, status")
-          .eq("status", "available")
+        const listingsPromise = supabase.from("games").select("id, title, price, listing_type, condition, status")
+          .eq("status", "active")
           .ilike("title", `%${gameData.title.substring(0, 20)}%`)
           .limit(6)
           .then(({ data }) => setListings(data || []));

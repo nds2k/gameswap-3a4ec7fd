@@ -616,14 +616,14 @@ export type Database = {
           condition: string | null
           created_at: string
           description: string | null
-          game_type: string
+          listing_type: string
           id: string
           image_url: string | null
           is_boosted: boolean
           location_lat: number | null
           location_lng: number | null
           looking_for_tags: string[] | null
-          owner_id: string
+          user_id: string
           price: number | null
           status: string | null
           title: string
@@ -637,14 +637,14 @@ export type Database = {
           condition?: string | null
           created_at?: string
           description?: string | null
-          game_type: string
+          listing_type: string
           id?: string
           image_url?: string | null
           is_boosted?: boolean
           location_lat?: number | null
           location_lng?: number | null
           looking_for_tags?: string[] | null
-          owner_id: string
+          user_id: string
           price?: number | null
           status?: string | null
           title: string
@@ -658,14 +658,14 @@ export type Database = {
           condition?: string | null
           created_at?: string
           description?: string | null
-          game_type?: string
+          listing_type?: string
           id?: string
           image_url?: string | null
           is_boosted?: boolean
           location_lat?: number | null
           location_lng?: number | null
           looking_for_tags?: string[] | null
-          owner_id?: string
+          user_id?: string
           price?: number | null
           status?: string | null
           title?: string
@@ -1486,12 +1486,12 @@ export type Database = {
           condition: string
           created_at: string
           description: string
-          game_type: string
+          listing_type: string
           id: string
           image_url: string
           owner_avatar_url: string
           owner_full_name: string
-          owner_id: string
+          user_id: string
           owner_username: string
           price: number
           status: string

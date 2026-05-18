@@ -110,8 +110,8 @@ const MapPage = () => {
           const { count } = await supabase
             .from("games")
             .select("*", { count: "exact", head: true })
-            .eq("owner_id", profile.user_id)
-            .eq("status", "available");
+            .eq("user_id", profile.id)
+            .eq("status", "active");
 
           return {
             ...profile,

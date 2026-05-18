@@ -29,11 +29,11 @@ export interface FriendGame {
   description: string | null;
   image_url: string | null;
   price: number | null;
-  game_type: string;
+  listing_type: string;
   condition: string | null;
   status: string | null;
   created_at: string;
-  owner_id: string;
+  user_id: string;
   owner_username: string | null;
   owner_full_name: string | null;
   owner_avatar_url: string | null;

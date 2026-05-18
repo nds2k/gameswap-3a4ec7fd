@@ -58,9 +58,9 @@ export const SendPaymentRequestModal = ({
         const { data: gamesData } = await supabase
           .from("games")
           .select("id, title, price, image_url")
-          .eq("owner_id", user.id)
-          .eq("game_type", "sale")
-          .eq("status", "available")
+          .eq("user_id", user.id)
+          .eq("listing_type", "vente")
+          .eq("status", "active")
           .not("price", "is", null);
 
         setGames((gamesData || []) as GameOption[]);

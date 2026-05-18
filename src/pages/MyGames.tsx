@@ -24,7 +24,7 @@ interface MyGame {
   id: string;
   title: string;
   price: number | null;
-  game_type: string;
+  listing_type: string;
   image_url: string | null;
   status: string;
   view_count: number;
@@ -53,7 +53,7 @@ const MyGames = () => {
       const { data, error } = await supabase
         .from("games")
         .select("*")
-        .eq("owner_id", user.id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -118,7 +118,7 @@ const MyGames = () => {
         .from("games")
         .delete()
         .eq("id", deleteGameId)
-        .eq("owner_id", user.id);
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
@@ -141,13 +141,13 @@ const MyGames = () => {
   };
 
   const toggleGameStatus = async (game: MyGame) => {
-    const newStatus = game.status === "available" ? "hidden" : "available";
+    const newStatus = game.status === "active" ? "hidden" : "active";
     try {
       const { error } = await supabase
         .from("games")
         .update({ status: newStatus })
         .eq("id", game.id)
-        .eq("owner_id", user?.id);
+        .eq("user_id", user?.id);
 
       if (error) throw error;
 
@@ -159,7 +159,7 @@ const MyGames = () => {
     }
   };
 
-  const activeGames = games.filter((g) => g.status === "available");
+  const activeGames = games.filter((g) => g.status === "active");
   const soldGames = games.filter((g) => g.status === "sold");
   const hiddenGames = games.filter((g) => g.status === "hidden");
 
@@ -325,7 +325,7 @@ interface GameItemProps {
 }
 
 const GameItem = ({ game, onSellClick, onToggleStatus, onDelete }: GameItemProps) => {
-  const canSell = game.game_type === "sale" && game.status === "available";
+  const canSell = game.listing_type === "vente" && game.status === "active";
   const isHidden = game.status === "hidden";
   const isSold = game.status === "sold";
 
@@ -335,7 +335,7 @@ const GameItem = ({ game, onSellClick, onToggleStatus, onDelete }: GameItemProps
     presentation: { label: "Présentation", className: "bg-purple-500/10 text-purple-500" },
   };
 
-  const typeInfo = typeLabels[game.game_type] || typeLabels.presentation;
+  const typeInfo = typeLabels[game.listing_type] || typeLabels.presentation;
 
   return (
     <div className="bg-card rounded-2xl border border-border p-4 flex gap-4 items-center">
@@ -361,7 +361,7 @@ const GameItem = ({ game, onSellClick, onToggleStatus, onDelete }: GameItemProps
             </span>
           )}
         </div>
-        {game.game_type === "sale" && game.price && (
+        {game.listing_type === "vente" && game.price && (
           <p className="text-primary font-semibold">{game.price}€</p>
         )}
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
