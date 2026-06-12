@@ -231,9 +231,6 @@ const Forum = () => {
 
     setSendingReply(true);
     try {
-        setSendingReply(false);
-        return;
-      }
 
       const { error } = await supabase.from("forum_replies").insert({
         post_id: selectedPost.id,
