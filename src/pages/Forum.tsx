@@ -195,33 +195,11 @@ const Forum = () => {
 
     setCreatingPost(true);
     try {
-      const { data: moderationData, error: moderationError } = await supabase.functions.invoke(
-        "moderate-forum-content",
-        {
-          body: { title: newPostTitle, content: newPostContent },
-        }
-      );
-
-      if (moderationError) throw moderationError;
-
-      const moderationStatus = moderationData?.approved ? "approved" : "rejected";
-
-      if (!moderationData?.approved) {
-        toast({
-          title: t("forum.contentNotAllowed"),
-          description: moderationData?.reason || t("forum.inappropriateContent"),
-          variant: "destructive",
-        });
-        setCreatingPost(false);
-        return;
-      }
-
       const { error } = await supabase.from("forum_posts").insert({
         title: newPostTitle.trim(),
         content: newPostContent.trim(),
         category: newPostCategory,
         author_id: user.id,
-        moderation_status: moderationStatus,
       });
 
       if (error) throw error;
@@ -253,21 +231,6 @@ const Forum = () => {
 
     setSendingReply(true);
     try {
-      const { data: moderationData, error: moderationError } = await supabase.functions.invoke(
-        "moderate-forum-content",
-        {
-          body: { content: newReply },
-        }
-      );
-
-      if (moderationError) throw moderationError;
-
-      if (!moderationData?.approved) {
-        toast({
-          title: t("forum.contentNotAllowed"),
-          description: moderationData?.reason || t("forum.inappropriateContent"),
-          variant: "destructive",
-        });
         setSendingReply(false);
         return;
       }
@@ -275,8 +238,7 @@ const Forum = () => {
       const { error } = await supabase.from("forum_replies").insert({
         post_id: selectedPost.id,
         content: newReply.trim(),
-        author_id: user.id,
-        moderation_status: "approved",
+        author_id: user.id
       });
 
       if (error) throw error;

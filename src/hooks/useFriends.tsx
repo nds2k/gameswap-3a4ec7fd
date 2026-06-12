@@ -69,13 +69,16 @@ export const useFriends = () => {
       userIds.delete(user.id);
 
       // Fetch profiles using the secure function
-      const { data: profiles } = await supabase.rpc("get_public_profiles");
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url, username")
+        .in("id", Array.from(userIds));
 
       const profileMap = new Map<string, FriendProfile>();
       profiles?.forEach((p) => {
-        profileMap.set(p.user_id, {
+        profileMap.set(p.id, {
           id: p.id,
-          user_id: p.user_id,
+          user_id: p.id,
           full_name: p.full_name,
           username: p.username,
           avatar_url: p.avatar_url,
@@ -123,9 +126,29 @@ export const useFriends = () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase.rpc("get_friends_games", {
-        user_uuid: user.id,
-      });
+      // Get friend IDs first
+      const { data: friendships } = await supabase
+        .from("friendships")
+        .select("requester_id, addressee_id")
+        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+        .eq("status", "accepted");
+
+      const friendIds = (friendships || []).map((f: any) =>
+        f.requester_id === user.id ? f.addressee_id : f.requester_id
+      );
+
+      if (friendIds.length === 0) {
+        setFriendsGames([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("games")
+        .select("id, title, price, listing_type, condition, user_id, created_at")
+        .in("user_id", friendIds)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(20);
 
       if (error) throw error;
       setFriendsGames(data || []);

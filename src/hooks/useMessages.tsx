@@ -293,12 +293,13 @@ export const useMessages = () => {
 
     // Get sender profiles using RPC for visibility
     const senderIds = [...new Set(messagesData.map((m) => m.sender_id))];
-    const { data: profilesData } = await supabase.rpc("get_public_profiles");
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .in("id", senderIds);
 
     const profilesMap = new Map(
-      (profilesData || [])
-        .filter((p: any) => senderIds.includes(p.user_id))
-        .map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+      (profilesData || []).map((p: any) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }])
     );
 
     const messagesWithSender = messagesData.map((msg) => ({
