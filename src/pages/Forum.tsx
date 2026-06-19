@@ -30,11 +30,10 @@ interface ForumPost {
   title: string;
   content: string;
   category: string;
-  author_id: string;
+  user_id: string;
   created_at: string;
   likes_count: number;
   comments_count: number;
-  : string;
   author?: {
     full_name: string | null;
     avatar_url: string | null;
@@ -45,7 +44,7 @@ interface ForumPost {
 interface ForumReply {
   id: string;
   content: string;
-  author_id: string;
+  user_id: string;
   created_at: string;
   author?: {
     full_name: string | null;
