@@ -96,7 +96,6 @@ const Forum = () => {
   const [deleteReplyId, setDeleteReplyId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   
-  // Report state
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportContentType, setReportContentType] = useState<"post" | "reply">("post");
   const [reportContentId, setReportContentId] = useState<string | null>(null);
@@ -114,7 +113,6 @@ const Forum = () => {
       let query = supabase
         .from("forum_posts")
         .select("*")
-        .eq("", "approved")
         .order("created_at", { ascending: false });
 
       if (filterCategory !== "all") {
@@ -127,8 +125,8 @@ const Forum = () => {
 
       if (postsData && postsData.length > 0) {
         const authorIds = [...new Set(postsData.map((p) => p.user_id))];
-        const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
-        const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.user_id));
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username").in("id", authorIds);
+        const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.id));
 
         let userLikes: string[] = [];
         if (user) {
@@ -141,7 +139,7 @@ const Forum = () => {
 
         const postsWithAuthors = postsData.map((post) => ({
           ...post,
-          author: filteredProfiles?.find((p: any) => p.user_id === post.user_id) || null,
+          author: filteredProfiles?.find((p: any) => p.id === post.user_id) || null,
           user_has_liked: userLikes.includes(post.id),
         }));
 
@@ -163,19 +161,18 @@ const Forum = () => {
         .from("forum_replies")
         .select("*")
         .eq("post_id", postId)
-        .eq("", "approved")
         .order("created_at", { ascending: true });
 
       if (error) throw error;
 
       if (repliesData && repliesData.length > 0) {
         const authorIds = [...new Set(repliesData.map((r) => r.user_id))];
-        const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
-        const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.user_id));
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username").in("id", authorIds);
+        const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.id));
 
         const repliesWithAuthors = repliesData.map((reply) => ({
           ...reply,
-          author: filteredProfiles?.find((p: any) => p.user_id === reply.user_id) || null,
+          author: filteredProfiles?.find((p: any) => p.id === reply.user_id) || null,
         }));
 
         setReplies(repliesWithAuthors);
@@ -194,33 +191,11 @@ const Forum = () => {
 
     setCreatingPost(true);
     try {
-      const { data: moderationData, error: moderationError } = await supabase.functions.invoke(
-        "moderate-forum-content",
-        {
-          body: { title: newPostTitle, content: newPostContent },
-        }
-      );
-
-      if (moderationError) throw moderationError;
-
-      const moderationStatus = moderationData?.approved ? "approved" : "rejected";
-
-      if (!moderationData?.approved) {
-        toast({
-          title: t("forum.contentNotAllowed"),
-          description: moderationData?.reason || t("forum.inappropriateContent"),
-          variant: "destructive",
-        });
-        setCreatingPost(false);
-        return;
-      }
-
       const { error } = await supabase.from("forum_posts").insert({
         title: newPostTitle.trim(),
         content: newPostContent.trim(),
         category: newPostCategory,
         user_id: user.id,
-        : moderationStatus,
       });
 
       if (error) throw error;
@@ -252,30 +227,10 @@ const Forum = () => {
 
     setSendingReply(true);
     try {
-      const { data: moderationData, error: moderationError } = await supabase.functions.invoke(
-        "moderate-forum-content",
-        {
-          body: { content: newReply },
-        }
-      );
-
-      if (moderationError) throw moderationError;
-
-      if (!moderationData?.approved) {
-        toast({
-          title: t("forum.contentNotAllowed"),
-          description: moderationData?.reason || t("forum.inappropriateContent"),
-          variant: "destructive",
-        });
-        setSendingReply(false);
-        return;
-      }
-
       const { error } = await supabase.from("forum_replies").insert({
         post_id: selectedPost.id,
         content: newReply.trim(),
         user_id: user.id,
-        : "approved",
       });
 
       if (error) throw error;
@@ -464,9 +419,8 @@ const Forum = () => {
   };
 
   return (
-    <MainLayout >
+    <MainLayout>
       <div className="container py-6 pb-24">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -483,7 +437,6 @@ const Forum = () => {
           </Button>
         </div>
 
-        {/* Category Filter */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
           <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <button
@@ -511,7 +464,6 @@ const Forum = () => {
           ))}
         </div>
 
-        {/* Posts List */}
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -607,7 +559,6 @@ const Forum = () => {
           </div>
         )}
 
-        {/* Post Detail Modal */}
         <Dialog open={!!selectedPost} onOpenChange={(open) => !open && setSelectedPost(null)}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
             {selectedPost && (
@@ -661,7 +612,6 @@ const Forum = () => {
                     </span>
                   </div>
 
-                  {/* Replies */}
                   <div className="space-y-4">
                     <h4 className="font-semibold">{t("forum.replies")}</h4>
                     {repliesLoading ? (
@@ -715,7 +665,6 @@ const Forum = () => {
                   </div>
                 </div>
 
-                {/* Reply Input */}
                 {user && (
                   <div className="flex gap-2 pt-4 border-t border-border">
                     <Input
@@ -743,7 +692,6 @@ const Forum = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Create Post Modal */}
         <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
           <DialogContent>
             <DialogHeader>
@@ -804,7 +752,6 @@ const Forum = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Post Confirmation */}
         <AlertDialog open={!!deletePostId} onOpenChange={(open) => !open && setDeletePostId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -826,7 +773,6 @@ const Forum = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Delete Reply Confirmation */}
         <AlertDialog open={!!deleteReplyId} onOpenChange={(open) => !open && setDeleteReplyId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -848,7 +794,6 @@ const Forum = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Report Modal */}
         <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
           <DialogContent>
             <DialogHeader>
