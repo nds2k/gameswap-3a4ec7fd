@@ -189,7 +189,7 @@ export const useNotifications = () => {
 
             let senderProfile = profilesCache.get(newMessage.sender_id);
             if (!senderProfile) {
-              const { data: profiles } = await supabase.rpc("get_public_profiles");
+              const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
               if (profiles) {
                 profiles.forEach((p: any) => { profilesCache.set(p.user_id, { full_name: p.full_name || "Utilisateur", avatar_url: p.avatar_url }); });
                 senderProfile = profilesCache.get(newMessage.sender_id);

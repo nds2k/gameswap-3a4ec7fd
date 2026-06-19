@@ -97,7 +97,7 @@ const Chat = () => {
 
         // Fetch profiles using the public RPC function (works with RLS)
         const userIds = participantsData?.map(p => p.user_id) || [];
-        const { data: profilesData } = await supabase.rpc("get_public_profiles");
+        const { data: profilesData } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
 
         const profilesMap = new Map(
           (profilesData || [])

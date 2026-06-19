@@ -84,7 +84,7 @@ export const useMessages = () => {
 
       // Get profiles for all participants using RPC for visibility
       const participantUserIds = [...new Set((allParticipants || []).map((p) => p.user_id))];
-      const { data: profilesData } = await supabase.rpc("get_public_profiles");
+      const { data: profilesData } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
 
       const profilesMap = new Map(
         (profilesData || [])
@@ -168,7 +168,7 @@ export const useMessages = () => {
           const newMsg = payload.new as Message;
           
           // Fetch sender profile for the new message using RPC
-          const { data: allProfiles } = await supabase.rpc("get_public_profiles");
+          const { data: allProfiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
           const profileData = (allProfiles || []).find((p: any) => p.user_id === newMsg.sender_id);
           
           onNewMessage({
@@ -190,7 +190,7 @@ export const useMessages = () => {
           const updatedMsg = payload.new as Message;
           
           if (onMessageUpdate) {
-            const { data: allProfiles } = await supabase.rpc("get_public_profiles");
+            const { data: allProfiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
             const profileData = (allProfiles || []).find((p: any) => p.user_id === updatedMsg.sender_id);
             
             onMessageUpdate({
@@ -293,13 +293,12 @@ export const useMessages = () => {
 
     // Get sender profiles using RPC for visibility
     const senderIds = [...new Set(messagesData.map((m) => m.sender_id))];
-    const { data: profilesData } = await supabase
-      .from("profiles")
-      .select("id, full_name, avatar_url")
-      .in("id", senderIds);
+    const { data: profilesData } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
 
     const profilesMap = new Map(
-      (profilesData || []).map((p: any) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+      (profilesData || [])
+        .filter((p: any) => senderIds.includes(p.user_id))
+        .map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
     );
 
     const messagesWithSender = messagesData.map((msg) => ({

@@ -69,10 +69,7 @@ export const useFriends = () => {
       userIds.delete(user.id);
 
       // Fetch profiles using the secure function
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, username")
-        .in("id", Array.from(userIds));
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
 
       const profileMap = new Map<string, FriendProfile>();
       profiles?.forEach((p) => {
@@ -126,7 +123,7 @@ export const useFriends = () => {
     if (!user) return;
     
     try {
-      // Get friend IDs first
+      // Get friend IDs
       const { data: friendships } = await supabase
         .from("friendships")
         .select("requester_id, addressee_id")

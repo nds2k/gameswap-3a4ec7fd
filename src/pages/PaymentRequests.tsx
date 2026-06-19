@@ -85,7 +85,7 @@ const PaymentRequests = () => {
         setGames(gamesMap);
       }
 
-      const { data: profilesData } = await supabase.rpc("get_public_profiles");
+      const { data: profilesData } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
       const profilesMap = new Map<string, ProfileInfo>();
       (profilesData || []).forEach((p: any) =>
         profilesMap.set(p.user_id, { user_id: p.user_id, full_name: p.full_name, username: p.username, avatar_url: p.avatar_url })

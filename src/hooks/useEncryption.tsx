@@ -77,7 +77,7 @@ export const useEncryption = () => {
     }
 
     try {
-      const { data } = await supabase.rpc("get_public_profile", { target_user_id: userId }) as { 
+      const { data } = await supabase.from("profiles").select("id, full_name, avatar_url, username").eq("id", userId).single() as { 
         data: { public_key: string | null }[] | null 
       };
       const profile = data?.[0];

@@ -47,7 +47,7 @@ export const useCommunity = () => {
       if (!pollsData) { setPolls([]); return; }
 
       const authorIds = [...new Set(pollsData.map(p => p.author_id))];
-      const { data: profiles } = await supabase.rpc("get_public_profiles");
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
       const profileMap = new Map(
         (profiles || []).filter((p: any) => authorIds.includes(p.user_id))
           .map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
@@ -93,7 +93,7 @@ export const useCommunity = () => {
       if (!data) { setStories([]); return; }
 
       const authorIds = [...new Set(data.map(s => s.author_id))];
-      const { data: profiles } = await supabase.rpc("get_public_profiles");
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
       const profileMap = new Map(
         (profiles || []).filter((p: any) => authorIds.includes(p.user_id))
           .map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])

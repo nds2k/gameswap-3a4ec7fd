@@ -81,7 +81,7 @@ const PrivateChat = () => {
         if (participantsError) throw participantsError;
 
         const userIds = participantsData?.map(p => p.user_id) || [];
-        const { data: profilesData } = await supabase.rpc("get_public_profiles");
+        const { data: profilesData } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
         const profilesMap = new Map(
           (profilesData || []).filter((p: any) => userIds.includes(p.user_id))
             .map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])

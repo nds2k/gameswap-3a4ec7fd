@@ -33,8 +33,8 @@ interface ForumPost {
   author_id: string;
   created_at: string;
   likes_count: number;
-  replies_count: number;
-  moderation_status: string;
+  comments_count: number;
+  : string;
   author?: {
     full_name: string | null;
     avatar_url: string | null;
@@ -115,7 +115,7 @@ const Forum = () => {
       let query = supabase
         .from("forum_posts")
         .select("*")
-        .eq("moderation_status", "approved")
+        .eq("", "approved")
         .order("created_at", { ascending: false });
 
       if (filterCategory !== "all") {
@@ -127,8 +127,8 @@ const Forum = () => {
       if (error) throw error;
 
       if (postsData && postsData.length > 0) {
-        const authorIds = [...new Set(postsData.map((p) => p.author_id))];
-        const { data: profiles } = await supabase.rpc("get_public_profiles");
+        const authorIds = [...new Set(postsData.map((p) => p.user_id))];
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
         const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.user_id));
 
         let userLikes: string[] = [];
@@ -142,7 +142,7 @@ const Forum = () => {
 
         const postsWithAuthors = postsData.map((post) => ({
           ...post,
-          author: filteredProfiles?.find((p: any) => p.user_id === post.author_id) || null,
+          author: filteredProfiles?.find((p: any) => p.user_id === post.user_id) || null,
           user_has_liked: userLikes.includes(post.id),
         }));
 
@@ -164,19 +164,19 @@ const Forum = () => {
         .from("forum_replies")
         .select("*")
         .eq("post_id", postId)
-        .eq("moderation_status", "approved")
+        .eq("", "approved")
         .order("created_at", { ascending: true });
 
       if (error) throw error;
 
       if (repliesData && repliesData.length > 0) {
-        const authorIds = [...new Set(repliesData.map((r) => r.author_id))];
-        const { data: profiles } = await supabase.rpc("get_public_profiles");
+        const authorIds = [...new Set(repliesData.map((r) => r.user_id))];
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
         const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.user_id));
 
         const repliesWithAuthors = repliesData.map((reply) => ({
           ...reply,
-          author: filteredProfiles?.find((p: any) => p.user_id === reply.author_id) || null,
+          author: filteredProfiles?.find((p: any) => p.user_id === reply.user_id) || null,
         }));
 
         setReplies(repliesWithAuthors);
@@ -195,11 +195,33 @@ const Forum = () => {
 
     setCreatingPost(true);
     try {
+      const { data: moderationData, error: moderationError } = await supabase.functions.invoke(
+        "moderate-forum-content",
+        {
+          body: { title: newPostTitle, content: newPostContent },
+        }
+      );
+
+      if (moderationError) throw moderationError;
+
+      const moderationStatus = moderationData?.approved ? "approved" : "rejected";
+
+      if (!moderationData?.approved) {
+        toast({
+          title: t("forum.contentNotAllowed"),
+          description: moderationData?.reason || t("forum.inappropriateContent"),
+          variant: "destructive",
+        });
+        setCreatingPost(false);
+        return;
+      }
+
       const { error } = await supabase.from("forum_posts").insert({
         title: newPostTitle.trim(),
         content: newPostContent.trim(),
         category: newPostCategory,
-        author_id: user.id,
+        user_id: user.id,
+        : moderationStatus,
       });
 
       if (error) throw error;
@@ -231,18 +253,37 @@ const Forum = () => {
 
     setSendingReply(true);
     try {
+      const { data: moderationData, error: moderationError } = await supabase.functions.invoke(
+        "moderate-forum-content",
+        {
+          body: { content: newReply },
+        }
+      );
+
+      if (moderationError) throw moderationError;
+
+      if (!moderationData?.approved) {
+        toast({
+          title: t("forum.contentNotAllowed"),
+          description: moderationData?.reason || t("forum.inappropriateContent"),
+          variant: "destructive",
+        });
+        setSendingReply(false);
+        return;
+      }
 
       const { error } = await supabase.from("forum_replies").insert({
         post_id: selectedPost.id,
         content: newReply.trim(),
-        author_id: user.id
+        user_id: user.id,
+        : "approved",
       });
 
       if (error) throw error;
 
       await supabase
         .from("forum_posts")
-        .update({ replies_count: (selectedPost.replies_count || 0) + 1 })
+        .update({ comments_count: (selectedPost.comments_count || 0) + 1 })
         .eq("id", selectedPost.id);
 
       setNewReply("");
@@ -309,7 +350,7 @@ const Forum = () => {
         .from("forum_posts")
         .delete()
         .eq("id", deletePostId)
-        .eq("author_id", user.id);
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
@@ -343,7 +384,7 @@ const Forum = () => {
         .from("forum_replies")
         .delete()
         .eq("id", deleteReplyId)
-        .eq("author_id", user.id);
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
@@ -537,9 +578,9 @@ const Forum = () => {
                       </button>
                       <span className="flex items-center gap-1 text-sm text-muted-foreground">
                         <MessageCircle className="h-4 w-4" />
-                        {post.replies_count || 0}
+                        {post.comments_count || 0}
                       </span>
-                      {user && post.author_id === user.id && (
+                      {user && post.user_id === user.id && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -617,7 +658,7 @@ const Forum = () => {
                     </button>
                     <span className="flex items-center gap-1 text-sm text-muted-foreground">
                       <MessageCircle className="h-4 w-4" />
-                      {selectedPost.replies_count || 0} {selectedPost.replies_count === 1 ? t("forum.reply") : t("forum.replies")}
+                      {selectedPost.comments_count || 0} {selectedPost.comments_count === 1 ? t("forum.reply") : t("forum.replies")}
                     </span>
                   </div>
 
@@ -652,7 +693,7 @@ const Forum = () => {
                                   locale: dateLocale,
                                 })}
                               </span>
-                              {user && reply.author_id === user.id && (
+                              {user && reply.user_id === user.id && (
                                 <button
                                   onClick={() => setDeleteReplyId(reply.id)}
                                   className="opacity-0 group-hover:opacity-100 p-1 text-destructive hover:text-destructive/80 transition-opacity"

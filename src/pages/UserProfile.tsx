@@ -69,9 +69,11 @@ const UserProfile = () => {
     if (!userId) return;
 
     try {
-      const { data: profileData } = await supabase.rpc("get_public_profile", {
-        target_user_id: userId,
-      });
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("id, full_name, username, avatar_url")
+        .eq("id", userId)
+        .single();
 
       if (profileData && profileData.length > 0) {
         setProfile({

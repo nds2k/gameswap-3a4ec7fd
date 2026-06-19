@@ -85,7 +85,7 @@ export const SendPaymentRequestModal = ({
         );
 
         if (friendIds.length > 0) {
-          const { data: profilesData } = await supabase.rpc("get_public_profiles");
+          const { data: profilesData } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
           const friendProfiles = (profilesData || [])
             .filter((p: any) => friendIds.includes(p.user_id))
             .map((p: any) => ({
