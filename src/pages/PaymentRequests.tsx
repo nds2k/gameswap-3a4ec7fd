@@ -78,7 +78,7 @@ const PaymentRequests = () => {
       if (gameIds.length > 0) {
         const { data: gamesData } = await supabase
           .from("games")
-          .select("id, title, image_url")
+          .select("id, title")
           .in("id", gameIds);
         const gamesMap = new Map<string, GameInfo>();
         (gamesData || []).forEach((g) => gamesMap.set(g.id, g));

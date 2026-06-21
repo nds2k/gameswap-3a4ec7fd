@@ -81,7 +81,7 @@ export const useRatings = () => {
         supabase.from("trades").select("*", { count: "exact", head: true })
           .eq("status", "completed")
           .or(`user1_id.eq.${userId},user2_id.eq.${userId}`),
-        supabase.rpc("get_public_profile", { target_user_id: userId }),
+        supabase.from("profiles").select("id, full_name, avatar_url, username").eq("id", userId).single(),
       ]);
 
       const totalReviews = ratings?.length || 0;

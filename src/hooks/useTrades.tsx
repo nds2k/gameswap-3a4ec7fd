@@ -45,7 +45,7 @@ export const useTrades = () => {
         ]);
 
         const listingMap = new Map((listings || []).map(l => [l.id, l]));
-        const profileMap = new Map((profiles || []).filter((p: any) => otherUserIds.includes(p.user_id)).map((p: any) => [p.user_id, p]));
+        const profileMap = new Map((profiles || []).filter((p: any) => otherUserIds.includes(p.id)).map((p: any) => [p.id, p]));
 
         setTrades(data.map(t => ({
           ...t,

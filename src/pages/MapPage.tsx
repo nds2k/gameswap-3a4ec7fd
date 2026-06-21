@@ -97,7 +97,7 @@ const MapPage = () => {
 
   const fetchSellers = useCallback(async () => {
     try {
-      const { data: profiles, error } = await supabase.rpc("get_public_profiles");
+      const { data: profiles, error } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
 
       if (error) throw error;
 

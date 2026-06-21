@@ -100,7 +100,7 @@ export const ProfileEditModal = ({ open, onOpenChange, onSuccess, currentProfile
           return;
         }
         // Check availability
-        const { data: available } = await supabase.rpc("is_username_available", { check_username: username.trim() });
+        const { data: available } = await supabase.from("profiles").select("username").eq("username", username.trim()).maybeSingle();
         if (!available) {
           toast({ title: "Pseudo indisponible", description: "Ce pseudo est déjà pris", variant: "destructive" });
           setSaving(false);

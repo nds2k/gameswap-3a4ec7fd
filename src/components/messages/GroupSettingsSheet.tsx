@@ -93,7 +93,7 @@ export const GroupSettingsSheet = ({
 
       // Fetch profiles for participants using security definer function
       const userIds = partData.map(p => p.user_id);
-      const { data: allProfiles, error: profError } = await supabase.rpc("get_public_profiles");
+      const { data: allProfiles, error: profError } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
 
       if (profError) throw profError;
 
@@ -196,7 +196,7 @@ export const GroupSettingsSheet = ({
     setSearching(true);
     try {
       // Use security definer function for public profile access
-      const { data, error } = await supabase.rpc("get_public_profiles");
+      const { data, error } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
 
       if (error) throw error;
 

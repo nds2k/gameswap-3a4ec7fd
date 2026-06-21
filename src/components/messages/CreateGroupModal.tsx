@@ -54,7 +54,7 @@ export const CreateGroupModal = ({ open, onOpenChange, onSuccess }: CreateGroupM
     setSearching(true);
     try {
       // Use security definer function for public profile access
-      const { data, error } = await supabase.rpc("get_public_profiles");
+      const { data, error } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
 
       if (error) throw error;
 

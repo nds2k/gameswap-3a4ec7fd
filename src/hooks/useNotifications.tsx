@@ -50,10 +50,10 @@ export const useNotifications = () => {
 
   const fetchProfiles = useCallback(async () => {
     if (profilesCache.size > 0) return;
-    const { data } = await supabase.rpc("get_public_profiles");
+    const { data } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
     if (data) {
       data.forEach((p: any) => {
-        profilesCache.set(p.user_id, { full_name: p.full_name || "Utilisateur", avatar_url: p.avatar_url });
+        profilesCache.set(p.id, { full_name: p.full_name || "Utilisateur", avatar_url: p.avatar_url });
       });
     }
   }, []);
@@ -191,7 +191,7 @@ export const useNotifications = () => {
             if (!senderProfile) {
               const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
               if (profiles) {
-                profiles.forEach((p: any) => { profilesCache.set(p.user_id, { full_name: p.full_name || "Utilisateur", avatar_url: p.avatar_url }); });
+                profiles.forEach((p: any) => { profilesCache.set(p.id, { full_name: p.full_name || "Utilisateur", avatar_url: p.avatar_url }); });
                 senderProfile = profilesCache.get(newMessage.sender_id);
               }
             }
