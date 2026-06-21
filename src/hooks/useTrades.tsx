@@ -40,7 +40,7 @@ export const useTrades = () => {
         const otherUserIds = [...new Set(data.map(t => t.user1_id === user.id ? t.user2_id : t.user1_id))];
 
         const [{ data: listings }, { data: profiles }] = await Promise.all([
-          supabase.from("games").select("id, title, image_url, price").in("id", listingIds),
+          supabase.from("games").select("id, title, price").in("id", listingIds),
           supabase.rpc("get_public_profiles"),
         ]);
 

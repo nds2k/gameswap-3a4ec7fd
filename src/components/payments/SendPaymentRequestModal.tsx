@@ -57,7 +57,7 @@ export const SendPaymentRequestModal = ({
         // Fetch seller's available games for sale
         const { data: gamesData } = await supabase
           .from("games")
-          .select("id, title, price, image_url")
+          .select("id, title, price")
           .eq("user_id", user.id)
           .eq("listing_type", "vente")
           .eq("status", "active")
