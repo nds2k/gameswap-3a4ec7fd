@@ -50,7 +50,6 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isInWishlist, toggleWishlist } = useWishlist();
   const { createConversation } = useMessages();
   const { createTrade } = useTrades();
   const { checkStatus, loading: sellerCheckLoading } = useSellerStatus();
