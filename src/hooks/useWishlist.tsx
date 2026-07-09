@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-export const usewishlists = () => {
+export const useWishlists = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [wishlistsIds, setwishlistsIds] = useState<Set<string>>(new Set());
