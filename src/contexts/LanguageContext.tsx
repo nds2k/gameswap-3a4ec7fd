@@ -14,7 +14,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.discover": "Découvrir",
     "nav.friends": "Amis",
     "nav.scan": "Scanner",
-    "nav.wishlist": "Wishlist",
+    "nav.wishlists": "wishlists",
     "nav.forum": "Forum",
     "nav.profile": "Profil",
     "nav.catalog": "Catalogue",
@@ -51,8 +51,8 @@ const translations: Record<Language, Record<string, string>> = {
     "discover.publish": "Publier un jeu",
     "discover.distance": "à {distance} km",
     "discover.views": "vues",
-    "discover.addToWishlist": "Ajouter à la wishlist",
-    "discover.removeFromWishlist": "Retirer de la wishlist",
+    "discover.addTowishlists": "Ajouter à la wishlists",
+    "discover.removeFromwishlists": "Retirer de la wishlists",
     
     // Friends & Messages page
     "friends.title": "Amis & Messages",
@@ -217,12 +217,12 @@ const translations: Record<Language, Record<string, string>> = {
     "postGame.publish": "Publier",
     "postGame.publishing": "Publication...",
     
-    // Wishlist
-    "wishlist.title": "Ma Wishlist",
-    "wishlist.subtitle": "Vos jeux favoris",
-    "wishlist.empty": "Votre wishlist est vide",
-    "wishlist.emptyDesc": "Ajoutez des jeux depuis la page Découvrir",
-    "wishlist.discover": "Découvrir des jeux",
+    // wishlists
+    "wishlists.title": "Ma wishlists",
+    "wishlists.subtitle": "Vos jeux favoris",
+    "wishlists.empty": "Votre wishlists est vide",
+    "wishlists.emptyDesc": "Ajoutez des jeux depuis la page Découvrir",
+    "wishlists.discover": "Découvrir des jeux",
     
     // Profile
     "profile.title": "Mon Profil",
@@ -321,7 +321,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.discover": "Discover",
     "nav.friends": "Friends",
     "nav.scan": "Scan",
-    "nav.wishlist": "Wishlist",
+    "nav.wishlists": "wishlists",
     "nav.forum": "Forum",
     "nav.profile": "Profile",
     "nav.catalog": "Catalog",
@@ -358,8 +358,8 @@ const translations: Record<Language, Record<string, string>> = {
     "discover.publish": "Publish a game",
     "discover.distance": "{distance} km away",
     "discover.views": "views",
-    "discover.addToWishlist": "Add to wishlist",
-    "discover.removeFromWishlist": "Remove from wishlist",
+    "discover.addTowishlists": "Add to wishlists",
+    "discover.removeFromwishlists": "Remove from wishlists",
     
     // Friends & Messages page
     "friends.title": "Friends & Messages",
@@ -524,12 +524,12 @@ const translations: Record<Language, Record<string, string>> = {
     "postGame.publish": "Publish",
     "postGame.publishing": "Publishing...",
     
-    // Wishlist
-    "wishlist.title": "My Wishlist",
-    "wishlist.subtitle": "Your favorite games",
-    "wishlist.empty": "Your wishlist is empty",
-    "wishlist.emptyDesc": "Add games from the Discover page",
-    "wishlist.discover": "Discover games",
+    // wishlists
+    "wishlists.title": "My wishlists",
+    "wishlists.subtitle": "Your favorite games",
+    "wishlists.empty": "Your wishlists is empty",
+    "wishlists.emptyDesc": "Add games from the Discover page",
+    "wishlists.discover": "Discover games",
     
     // Profile
     "profile.title": "My Profile",

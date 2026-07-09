@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_forum_posts_category ON public.forum_posts(catego
 CREATE INDEX IF NOT EXISTS idx_forum_posts_moderation_status ON public.forum_posts(moderation_status);
 CREATE INDEX IF NOT EXISTS idx_forum_posts_created_at ON public.forum_posts(created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_ratings_rated_user_id ON public.ratings(rated_user_id);
+CREATE INDEX IF NOT EXISTS idx_ratings_rated_id ON public.ratings(rated_id);
 CREATE INDEX IF NOT EXISTS idx_ratings_trade_id ON public.ratings(trade_id);
 
 CREATE INDEX IF NOT EXISTS idx_game_images_game_id ON public.game_images(game_id);

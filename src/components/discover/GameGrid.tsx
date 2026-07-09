@@ -1,7 +1,7 @@
 import { Heart, MapPin, MessageCircle, Zap } from "lucide-react";
 import { useState, useMemo, memo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useWishlist } from "@/hooks/useWishlist";
+import { usewishlists } from "@/hooks/usewishlists";
 import { useGames, type Game } from "@/hooks/useGames";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -113,21 +113,21 @@ interface GameCardProps {
 }
 
 const GameCard = memo(({ game, onClick, isAuthenticated }: GameCardProps) => {
-  const { isInWishlist, toggleWishlist } = useWishlist();
+  const { isInwishlists, togglewishlists } = usewishlists();
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
-  const wishlisted = isAuthenticated && isInWishlist(game.id);
+  const wishlistsed = isAuthenticated && isInwishlists(game.id);
 
   const ownerName = game.owner?.full_name || "Vendeur";
   const avatarLetter = ownerName.charAt(0).toUpperCase();
 
-  const handleWishlistClick = (e: React.MouseEvent) => {
+  const handlewishlistsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isAuthenticated) {
       navigate("/auth");
       return;
     }
-    toggleWishlist(game.id);
+    togglewishlists(game.id);
   };
 
   return (
@@ -163,14 +163,14 @@ const GameCard = memo(({ game, onClick, isAuthenticated }: GameCardProps) => {
           </div>
         )}
 
-        {/* Wishlist button */}
+        {/* wishlists button */}
         <button
-          onClick={handleWishlistClick}
+          onClick={handlewishlistsClick}
           className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
         >
           <Heart
             className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors ${
-              wishlisted ? "fill-destructive text-destructive" : "text-muted-foreground"
+              wishlistsed ? "fill-destructive text-destructive" : "text-muted-foreground"
             }`}
           />
         </button>

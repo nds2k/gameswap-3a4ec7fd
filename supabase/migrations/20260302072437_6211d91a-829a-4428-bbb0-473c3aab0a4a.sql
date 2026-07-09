@@ -31,7 +31,7 @@ CREATE POLICY "Authenticated users can insert barcode catalog"
 CREATE TABLE public.xp_awards_log (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid NOT NULL,
-  award_type text NOT NULL, -- 'sale', 'wishlist_received'
+  award_type text NOT NULL, -- 'sale', 'wishlists_received'
   reference_id text NOT NULL, -- post_id or composite key
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   UNIQUE(user_id, award_type, reference_id)

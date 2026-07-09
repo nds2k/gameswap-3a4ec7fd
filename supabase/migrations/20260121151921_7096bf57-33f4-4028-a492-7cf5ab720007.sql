@@ -58,8 +58,8 @@ CREATE TABLE public.games (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Create wishlist table
-CREATE TABLE public.wishlist (
+-- Create wishlists table
+CREATE TABLE public.wishlists (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   game_id UUID REFERENCES public.games(id) ON DELETE CASCADE NOT NULL,
@@ -73,7 +73,7 @@ ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversation_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.games ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.wishlist ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wishlists ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Profiles are viewable by everyone" 
@@ -156,18 +156,18 @@ CREATE POLICY "Users can delete their own games"
   ON public.games FOR DELETE 
   USING (auth.uid() = owner_id);
 
--- Wishlist policies
-CREATE POLICY "Users can view their own wishlist" 
-  ON public.wishlist FOR SELECT 
+-- wishlists policies
+CREATE POLICY "Users can view their own wishlists" 
+  ON public.wishlists FOR SELECT 
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can add to their wishlist" 
-  ON public.wishlist FOR INSERT 
+CREATE POLICY "Users can add to their wishlists" 
+  ON public.wishlists FOR INSERT 
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can remove from their wishlist" 
-  ON public.wishlist FOR DELETE 
+CREATE POLICY "Users can remove from their wishlists" 
+  ON public.wishlists FOR DELETE 
   USING (auth.uid() = user_id);
 
 -- Enable realtime for messages

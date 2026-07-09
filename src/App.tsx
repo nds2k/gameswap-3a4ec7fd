@@ -15,7 +15,7 @@ import Auth from "./pages/Auth";
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 
 // Lazy loaded pages
-const Wishlist = lazy(() => import("./pages/Wishlist"));
+const wishlists = lazy(() => import("./pages/wishlists"));
 const Forum = lazy(() => import("./pages/Forum"));
 const Settings = lazy(() => import("./pages/Settings"));
 const MapPage = lazy(() => import("./pages/MapPage"));
@@ -115,7 +115,7 @@ const AppRoutes = () => {
           <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
           <Route path="/" element={<Discover />} />
           <Route path="/search" element={<SearchPage />} />
-          <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+          <Route path="/wishlists" element={<ProtectedRoute><wishlists /></ProtectedRoute>} />
           <Route path="/forum" element={<ProtectedRoute><Forum /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />

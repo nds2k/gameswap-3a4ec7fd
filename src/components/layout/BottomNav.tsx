@@ -12,7 +12,7 @@ export const BottomNav = memo(() => {
     { path: "/", icon: Compass, label: "Découvrir", requiresAuth: false },
     { path: "/friends", icon: Users, label: "Amis", requiresAuth: true },
     { path: "/scanner", icon: ScanLine, label: "Scanner", requiresAuth: true, isCenter: true },
-    { path: "/wishlist", icon: Heart, label: "Wishlist", requiresAuth: true },
+    { path: "/wishlists", icon: Heart, label: "wishlists", requiresAuth: true },
     { path: "/profile", icon: User, label: "Profil", requiresAuth: true },
   ];
 

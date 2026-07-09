@@ -7,7 +7,7 @@ export interface Rating {
   id: string;
   trade_id: string;
   rater_id: string;
-  rated_user_id: string;
+  rated_id: string;
   rating: number;
   comment: string | null;
   created_at: string;
@@ -58,7 +58,7 @@ export const useRatings = () => {
       const { error } = await supabase.from("ratings").insert({
         trade_id: tradeId,
         rater_id: user.id,
-        rated_user_id: ratedUserId,
+        rated_id: ratedUserId,
         rating,
         comment: comment || null,
       });
@@ -77,7 +77,7 @@ export const useRatings = () => {
   const getUserReputation = useCallback(async (userId: string): Promise<UserReputation> => {
     try {
       const [{ data: ratings }, { count: tradesCount }, { data: profileData }] = await Promise.all([
-        supabase.from("ratings").select("rating").eq("rated_user_id", userId),
+        supabase.from("ratings").select("rating").eq("rated_id", userId),
         supabase.from("trades").select("*", { count: "exact", head: true })
           .eq("status", "completed")
           .or(`user1_id.eq.${userId},user2_id.eq.${userId}`),

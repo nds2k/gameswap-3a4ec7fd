@@ -14,7 +14,7 @@ interface NotificationsSidebarProps {
 const getNotificationIcon = (type: AppNotification["type"]) => {
   switch (type) {
     case "message": return <MessageCircle className="h-5 w-5 text-blue-500" />;
-    case "wishlist": return <Heart className="h-5 w-5 text-destructive" />;
+    case "wishlists": return <Heart className="h-5 w-5 text-destructive" />;
     case "sale": return <CreditCard className="h-5 w-5 text-green-500" />;
     case "payment_request": return <CreditCard className="h-5 w-5 text-yellow-500" />;
     case "system": default: return <Info className="h-5 w-5 text-primary" />;
@@ -25,7 +25,7 @@ const getNotificationRoute = (notification: AppNotification): string | null => {
   if (notification.data?.route && typeof notification.data.route === "string") return notification.data.route;
   switch (notification.type) {
     case "message": return "/friends";
-    case "wishlist": return "/wishlist";
+    case "wishlists": return "/wishlists";
     case "sale": return "/my-games";
     case "payment_request": return "/payment-requests";
     default: return null;

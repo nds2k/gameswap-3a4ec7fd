@@ -3,61 +3,61 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-export const useWishlist = () => {
+export const usewishlists = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
+  const [wishlistsIds, setwishlistsIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  const fetchWishlist = useCallback(async () => {
+  const fetchwishlists = useCallback(async () => {
     if (!user) {
-      setWishlistIds(new Set());
+      setwishlistsIds(new Set());
       setLoading(false);
       return;
     }
 
     try {
       const { data, error } = await supabase
-        .from("wishlist")
+        .from("wishlists")
         .select("game_id")
         .eq("user_id", user.id);
 
       if (error) throw error;
 
-      setWishlistIds(new Set(data?.map((item) => item.game_id) || []));
+      setwishlistsIds(new Set(data?.map((item) => item.game_id) || []));
     } catch (error) {
-      console.error("Error fetching wishlist:", error);
+      console.error("Error fetching wishlists:", error);
     } finally {
       setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    fetchWishlist();
-  }, [fetchWishlist]);
+    fetchwishlists();
+  }, [fetchwishlists]);
 
-  const isInWishlist = useCallback(
-    (gameId: string) => wishlistIds.has(gameId),
-    [wishlistIds]
+  const isInwishlists = useCallback(
+    (gameId: string) => wishlistsIds.has(gameId),
+    [wishlistsIds]
   );
 
-  const toggleWishlist = useCallback(
+  const togglewishlists = useCallback(
     async (gameId: string) => {
       if (!user) {
         toast({
           title: "Connexion requise",
-          description: "Connectez-vous pour ajouter des jeux à votre wishlist",
+          description: "Connectez-vous pour ajouter des jeux à votre wishlists",
           variant: "destructive",
         });
         return;
       }
 
-      const isCurrentlyWishlisted = wishlistIds.has(gameId);
+      const isCurrentlywishlistsed = wishlistsIds.has(gameId);
 
       // Optimistic update
-      setWishlistIds((prev) => {
+      setwishlistsIds((prev) => {
         const newSet = new Set(prev);
-        if (isCurrentlyWishlisted) {
+        if (isCurrentlywishlistsed) {
           newSet.delete(gameId);
         } else {
           newSet.add(gameId);
@@ -66,9 +66,9 @@ export const useWishlist = () => {
       });
 
       try {
-        if (isCurrentlyWishlisted) {
+        if (isCurrentlywishlistsed) {
           const { error } = await supabase
-            .from("wishlist")
+            .from("wishlists")
             .delete()
             .eq("user_id", user.id)
             .eq("game_id", gameId);
@@ -76,27 +76,27 @@ export const useWishlist = () => {
           if (error) throw error;
 
           toast({
-            title: "Retiré de la wishlist",
-            description: "Le jeu a été retiré de votre wishlist",
+            title: "Retiré de la wishlists",
+            description: "Le jeu a été retiré de votre wishlists",
           });
         } else {
           const { error } = await supabase
-            .from("wishlist")
+            .from("wishlists")
             .insert({ user_id: user.id, game_id: gameId });
 
           if (error) throw error;
 
           toast({
-            title: "Ajouté à la wishlist",
-            description: "Le jeu a été ajouté à votre wishlist",
+            title: "Ajouté à la wishlists",
+            description: "Le jeu a été ajouté à votre wishlists",
           });
         }
       } catch (error) {
-        console.error("Error toggling wishlist:", error);
+        console.error("Error toggling wishlists:", error);
         // Revert optimistic update
-        setWishlistIds((prev) => {
+        setwishlistsIds((prev) => {
           const newSet = new Set(prev);
-          if (isCurrentlyWishlisted) {
+          if (isCurrentlywishlistsed) {
             newSet.add(gameId);
           } else {
             newSet.delete(gameId);
@@ -106,19 +106,19 @@ export const useWishlist = () => {
 
         toast({
           title: "Erreur",
-          description: "Impossible de mettre à jour la wishlist",
+          description: "Impossible de mettre à jour la wishlists",
           variant: "destructive",
         });
       }
     },
-    [user, wishlistIds, toast]
+    [user, wishlistsIds, toast]
   );
 
   return {
-    wishlistIds,
-    isInWishlist,
-    toggleWishlist,
+    wishlistsIds,
+    isInwishlists,
+    togglewishlists,
     loading,
-    refetch: fetchWishlist,
+    refetch: fetchwishlists,
   };
 };

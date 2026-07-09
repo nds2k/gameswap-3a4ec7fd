@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useXP } from "@/hooks/useXP";
 
 /**
- * Handles one-time XP awards for sales and wishlists.
+ * Handles one-time XP awards for sales and wishlistss.
  * Prevents duplicate awards using the xp_awards_log table.
  */
 export const useXPAwards = () => {
@@ -41,8 +41,8 @@ export const useXPAwards = () => {
     }
   }, [user, awardXP]);
 
-  /** Award XP to post owner when someone wishlists their post (once per user per post) */
-  const awardWishlistXP = useCallback(async (postOwnerId: string, postId: string) => {
+  /** Award XP to post owner when someone wishlistss their post (once per user per post) */
+  const awardwishlistsXP = useCallback(async (postOwnerId: string, postId: string) => {
     // This should be called for the post owner, not the current user
     // We use a composite reference to ensure one award per user-post combination
     if (!user) return;
@@ -50,13 +50,13 @@ export const useXPAwards = () => {
     
     try {
       // We can't award XP to another user from the client directly
-      // Instead, we'll track that this wishlist action happened
+      // Instead, we'll track that this wishlists action happened
       // The XP award for the post owner would need server-side logic
       // For now, we log the intent - the complete-transaction edge function handles seller XP
     } catch (err) {
-      console.error("Error tracking wishlist XP:", err);
+      console.error("Error tracking wishlists XP:", err);
     }
   }, [user]);
 
-  return { awardSaleXP, awardWishlistXP };
+  return { awardSaleXP, awardwishlistsXP };
 };

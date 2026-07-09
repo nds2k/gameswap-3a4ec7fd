@@ -11,7 +11,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { GameDetailModal } from "@/components/games/GameDetailModal";
 
-interface WishlistGame {
+interface wishlistsGame {
   id: string;
   game_id: string;
   created_at: string;
@@ -25,18 +25,18 @@ interface WishlistGame {
   } | null;
 }
 
-interface WishlistList {
+interface wishlistsList {
   name: string;
   count: number;
 }
 
-const Wishlist = () => {
+const wishlists = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
   
-  const [wishlistItems, setWishlistItems] = useState<WishlistGame[]>([]);
-  const [lists, setLists] = useState<WishlistList[]>([]);
+  const [wishlistsItems, setwishlistsItems] = useState<wishlistsGame[]>([]);
+  const [lists, setLists] = useState<wishlistsList[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedList, setSelectedList] = useState<string | null>(null);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
@@ -48,17 +48,17 @@ const Wishlist = () => {
 
   useEffect(() => {
     if (user) {
-      fetchWishlist();
+      fetchwishlists();
     }
   }, [user]);
 
-  const fetchWishlist = async () => {
+  const fetchwishlists = async () => {
     if (!user) return;
     setLoading(true);
 
     try {
       const { data, error } = await supabase
-        .from("wishlist")
+        .from("wishlists")
         .select(`
           id,
           game_id,
@@ -77,19 +77,19 @@ const Wishlist = () => {
 
       if (error) throw error;
 
-      setWishlistItems(data || []);
+      setwishlistsItems(data || []);
 
       // Extract unique lists
       const listCounts: Record<string, number> = {};
       data?.forEach((item) => {
-        const listName = item.list_name || t("wishlist.uncategorized");
+        const listName = item.list_name || t("wishlists.uncategorized");
         listCounts[listName] = (listCounts[listName] || 0) + 1;
       });
 
       const listArray = Object.entries(listCounts).map(([name, count]) => ({ name, count }));
       setLists(listArray);
     } catch (error) {
-      console.error("Error fetching wishlist:", error);
+      console.error("Error fetching wishlists:", error);
     } finally {
       setLoading(false);
     }
@@ -117,10 +117,10 @@ const Wishlist = () => {
 
     try {
       const { error } = await supabase
-        .from("wishlist")
+        .from("wishlists")
         .update({ list_name: newName.trim() })
         .eq("user_id", user.id)
-        .eq("list_name", oldName === t("wishlist.uncategorized") ? null : oldName);
+        .eq("list_name", oldName === t("wishlists.uncategorized") ? null : oldName);
 
       if (error) throw error;
 
@@ -129,7 +129,7 @@ const Wishlist = () => {
         description: `List renamed to "${newName}"`,
       });
 
-      fetchWishlist();
+      fetchwishlists();
     } catch (error) {
       console.error("Error renaming list:", error);
       toast({
@@ -147,7 +147,7 @@ const Wishlist = () => {
 
     try {
       const { error } = await supabase
-        .from("wishlist")
+        .from("wishlists")
         .update({ list_name: listName })
         .eq("id", itemId)
         .eq("user_id", user.id);
@@ -159,40 +159,40 @@ const Wishlist = () => {
         description: listName ? `Moved to "${listName}"` : `Moved to uncategorized`,
       });
 
-      fetchWishlist();
+      fetchwishlists();
     } catch (error) {
       console.error("Error moving item:", error);
     }
   };
 
-  const handleRemoveFromWishlist = async (itemId: string) => {
+  const handleRemoveFromwishlists = async (itemId: string) => {
     if (!user) return;
 
     try {
       const { error } = await supabase
-        .from("wishlist")
+        .from("wishlists")
         .delete()
         .eq("id", itemId)
         .eq("user_id", user.id);
 
       if (error) throw error;
 
-      setWishlistItems((prev) => prev.filter((item) => item.id !== itemId));
+      setwishlistsItems((prev) => prev.filter((item) => item.id !== itemId));
 
       toast({
         title: t("common.success"),
-        description: t("discover.removeFromWishlist"),
+        description: t("discover.removeFromwishlists"),
       });
 
-      fetchWishlist();
+      fetchwishlists();
     } catch (error) {
       console.error("Error removing item:", error);
     }
   };
 
   const filteredItems = selectedList
-    ? wishlistItems.filter((item) => (item.list_name || t("wishlist.uncategorized")) === selectedList)
-    : wishlistItems;
+    ? wishlistsItems.filter((item) => (item.list_name || t("wishlists.uncategorized")) === selectedList)
+    : wishlistsItems;
 
   return (
     <MainLayout >
@@ -214,7 +214,7 @@ const Wishlist = () => {
             )}
             <div>
               <h1 className="text-2xl font-bold">
-                {selectedList || t("wishlist.title")}
+                {selectedList || t("wishlists.title")}
               </h1>
               <p className="text-muted-foreground">
                 {filteredItems.length} {filteredItems.length !== 1 ? t("profile.games") : "game"}
@@ -261,7 +261,7 @@ const Wishlist = () => {
                   </div>
                 )}
                 
-                {list.name !== t("wishlist.uncategorized") && !editingList && (
+                {list.name !== t("wishlists.uncategorized") && !editingList && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="absolute top-2 right-2 w-8 h-8 rounded-full bg-muted/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -297,10 +297,10 @@ const Wishlist = () => {
               <Heart className="h-10 w-10 text-muted-foreground" />
             </div>
             <h3 className="font-semibold text-lg mb-2">
-              {selectedList ? t("wishlist.empty") : t("wishlist.empty")}
+              {selectedList ? t("wishlists.empty") : t("wishlists.empty")}
             </h3>
             <p className="text-muted-foreground mb-4">
-              {selectedList ? t("wishlist.emptyDesc") : t("wishlist.emptyDesc")}
+              {selectedList ? t("wishlists.emptyDesc") : t("wishlists.emptyDesc")}
             </p>
           </div>
         ) : (
@@ -350,18 +350,18 @@ const Wishlist = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {lists
-                      .filter((l) => l.name !== (item.list_name || t("wishlist.uncategorized")))
+                      .filter((l) => l.name !== (item.list_name || t("wishlists.uncategorized")))
                       .map((list) => (
                         <DropdownMenuItem
                           key={list.name}
-                          onClick={() => handleMoveToList(item.id, list.name === t("wishlist.uncategorized") ? null : list.name)}
+                          onClick={() => handleMoveToList(item.id, list.name === t("wishlists.uncategorized") ? null : list.name)}
                         >
                           <Folder className="h-4 w-4 mr-2" />
                           Move to {list.name}
                         </DropdownMenuItem>
                       ))}
                     <DropdownMenuItem
-                      onClick={() => handleRemoveFromWishlist(item.id)}
+                      onClick={() => handleRemoveFromwishlists(item.id)}
                       className="text-destructive"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -405,4 +405,4 @@ const Wishlist = () => {
   );
 };
 
-export default Wishlist;
+export default wishlists;

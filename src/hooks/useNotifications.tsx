@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type NotificationType = "message" | "wishlist" | "sale" | "system" | "payment_request" | "favorite_update";
+export type NotificationType = "message" | "wishlists" | "sale" | "system" | "payment_request" | "favorite_update";
 
 export interface AppNotification {
   id: string;

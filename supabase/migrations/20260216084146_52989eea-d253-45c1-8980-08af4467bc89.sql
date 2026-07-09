@@ -28,11 +28,11 @@ CREATE TABLE public.ratings (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   trade_id uuid NOT NULL REFERENCES public.trades(id) ON DELETE CASCADE,
   rater_id uuid NOT NULL,
-  rated_user_id uuid NOT NULL,
+  rated_id uuid NOT NULL,
   rating integer NOT NULL CHECK (rating >= 1 AND rating <= 5),
   comment text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT no_self_rating CHECK (rater_id <> rated_user_id),
+  CONSTRAINT no_self_rating CHECK (rater_id <> rated_id),
   CONSTRAINT unique_rating_per_trade UNIQUE (trade_id, rater_id)
 );
 

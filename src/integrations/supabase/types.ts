@@ -982,7 +982,7 @@ export type Database = {
           comment: string | null
           created_at: string
           id: string
-          rated_user_id: string
+          rated_id: string
           rater_id: string
           rating: number
           trade_id: string
@@ -991,7 +991,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
-          rated_user_id: string
+          rated_id: string
           rater_id: string
           rating: number
           trade_id: string
@@ -1000,7 +1000,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
-          rated_user_id?: string
+          rated_id?: string
           rater_id?: string
           rating?: number
           trade_id?: string
@@ -1382,7 +1382,7 @@ export type Database = {
         }
         Relationships: []
       }
-      wishlist: {
+      wishlists: {
         Row: {
           created_at: string
           game_id: string
@@ -1406,7 +1406,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "wishlist_game_id_fkey"
+            foreignKeyName: "wishlists_game_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
