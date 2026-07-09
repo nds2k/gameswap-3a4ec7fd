@@ -113,10 +113,10 @@ interface GameCardProps {
 }
 
 const GameCard = memo(({ game, onClick, isAuthenticated }: GameCardProps) => {
-  const { isInwishlists, togglewishlists } = usewishlists();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
-  const wishlistsed = isAuthenticated && isInwishlists(game.id);
+  const wishlistsed = isAuthenticated && isInWishlist(game.id);
 
   const ownerName = game.owner?.full_name || "Vendeur";
   const avatarLetter = ownerName.charAt(0).toUpperCase();
@@ -127,7 +127,7 @@ const GameCard = memo(({ game, onClick, isAuthenticated }: GameCardProps) => {
       navigate("/auth");
       return;
     }
-    togglewishlists(game.id);
+     toggleWishlist(game.id);
   };
 
   return (

@@ -4,7 +4,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { usewishlists } from "@/hooks/useishlists";
+import { useWishlist } from "@/hooks/useWishlist";
 import { useNavigate } from "react-router-dom";
 import { useMessages } from "@/hooks/useMessages";
 import { useToast } from "@/hooks/use-toast";
@@ -50,7 +50,7 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isInwishlists, togglewishlists } = usewishlists();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const { createConversation } = useMessages();
   const { createTrade } = useTrades();
   const { checkStatus, loading: sellerCheckLoading } = useSellerStatus();
@@ -237,10 +237,10 @@ export const GameDetailModal = ({ gameId, open, onOpenChange }: GameDetailModalP
               </div>
               <div className="absolute top-3 right-12 z-10">
                 <button
-                  onClick={() => togglewishlists(game.id)}
+                  onClick={() =>  toggleWishlist(game.id)}
                   className="w-9 h-9 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
                 >
-                  <Heart className={`h-4 w-4 transition-colors ${isInwishlists(game.id) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
+                  <Heart className={`h-4 w-4 transition-colors ${isInWishlist(game.id) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
                 </button>
               </div>
             </div>
