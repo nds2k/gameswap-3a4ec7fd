@@ -50,10 +50,10 @@ export const AddFriendModal = ({
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const { data } = await supabase.from("profiles").select("id, full_name, avatar_url, username");
+        const { data } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url, username, allow_friend_requests");
         
         const filtered = data?.filter((p) => {
-          if (p.id === user?.id) return false;
+          if (p.user_id === user?.id) return false;
           const searchLower = search.toLowerCase();
           return (
             p.username?.toLowerCase().includes(searchLower) ||
@@ -63,17 +63,11 @@ export const AddFriendModal = ({
         
         setResults(filtered.slice(0, 10));
 
-        // Fetch allow_friend_requests setting for each result
+        // Build settings map from the already-fetched data
         if (filtered.length > 0) {
-          const userIds = filtered.map(p => p.id);
-          const { data: settingsData } = await supabase
-            .from("profiles")
-            .select("id, allow_friend_requests")
-            .in("id", userIds);
-          
           const settingsMap = new Map<string, boolean>();
-          settingsData?.forEach(s => {
-            settingsMap.set(s.id, s.allow_friend_requests ?? true);
+          filtered.forEach(p => {
+            settingsMap.set(p.user_id, p.allow_friend_requests ?? true);
           });
           setProfileSettings(settingsMap);
         }

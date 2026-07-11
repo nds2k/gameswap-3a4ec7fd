@@ -37,7 +37,7 @@ export const useProfileSettings = () => {
         const { data, error } = await supabase
           .from("profiles")
           .select("full_name, username, show_on_map, allow_friend_requests, location_lat, location_lng")
-          .eq("id", user.id)
+          .eq("user_id", user.id)
           .single();
 
         if (error) throw error;
@@ -84,7 +84,7 @@ export const useProfileSettings = () => {
       const { error } = await supabase
         .from("profiles")
         .update({ [columnMap[key]]: value })
-        .eq("id", user.id);
+        .eq("user_id", user.id);
 
       if (error) throw error;
       return true;
@@ -111,7 +111,7 @@ export const useProfileSettings = () => {
           location_lat: settings.locationLat,
           location_lng: settings.locationLng,
         })
-        .eq("id", user.id);
+        .eq("user_id", user.id);
 
       if (error) throw error;
 

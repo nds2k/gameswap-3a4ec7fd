@@ -124,7 +124,7 @@ const Forum = () => {
       if (error) throw error;
 
       if (postsData && postsData.length > 0) {
-        const authorIds = [...new Set(postsData.map((p) => p.user_id))];
+        const authorIds = [...new Set(postsData.map((p) => p.author_id))];
         const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username").in("id", authorIds);
         const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.id));
 
@@ -139,7 +139,7 @@ const Forum = () => {
 
         const postsWithAuthors = postsData.map((post) => ({
           ...post,
-          author: filteredProfiles?.find((p: any) => p.id === post.user_id) || null,
+          author: filteredProfiles?.find((p: any) => p.id === post.author_id) || null,
           user_has_liked: userLikes.includes(post.id),
         }));
 
@@ -166,13 +166,13 @@ const Forum = () => {
       if (error) throw error;
 
       if (repliesData && repliesData.length > 0) {
-        const authorIds = [...new Set(repliesData.map((r) => r.user_id))];
+        const authorIds = [...new Set(repliesData.map((r) => r.author_id))];
         const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, username").in("id", authorIds);
         const filteredProfiles = (profiles || []).filter((p: any) => authorIds.includes(p.id));
 
         const repliesWithAuthors = repliesData.map((reply) => ({
           ...reply,
-          author: filteredProfiles?.find((p: any) => p.id === reply.user_id) || null,
+          author: filteredProfiles?.find((p: any) => p.id === reply.author_id) || null,
         }));
 
         setReplies(repliesWithAuthors);
@@ -195,7 +195,7 @@ const Forum = () => {
         title: newPostTitle.trim(),
         content: newPostContent.trim(),
         category: newPostCategory,
-        user_id: user.id,
+        author_id: user.id,
       });
 
       if (error) throw error;
@@ -230,7 +230,7 @@ const Forum = () => {
       const { error } = await supabase.from("forum_replies").insert({
         post_id: selectedPost.id,
         content: newReply.trim(),
-        user_id: user.id,
+        author_id: user.id,
       });
 
       if (error) throw error;
@@ -531,7 +531,7 @@ const Forum = () => {
                         <MessageCircle className="h-4 w-4" />
                         {post.comments_count || 0}
                       </span>
-                      {user && post.user_id === user.id && (
+                      {user && post.author_id === user.id && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -642,7 +642,7 @@ const Forum = () => {
                                   locale: dateLocale,
                                 })}
                               </span>
-                              {user && reply.user_id === user.id && (
+                              {user && reply.author_id === user.id && (
                                 <button
                                   onClick={() => setDeleteReplyId(reply.id)}
                                   className="opacity-0 group-hover:opacity-100 p-1 text-destructive hover:text-destructive/80 transition-opacity"
